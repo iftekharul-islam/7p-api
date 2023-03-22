@@ -2,29 +2,25 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
     /**
      * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
      */
     public function index()
     {
-        $users = User::all();
-
-        return UserResource::collection($users);
+        info(Auth()->user());
+        $users = User::with('roles:name')->get();
+        return $users;
     }
 
     /**
      * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
      */
     public function create()
     {
@@ -33,101 +29,61 @@ class UserController extends Controller
 
     /**
      * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string',
-            'email' => 'required|email|unique:users',
-            'password' => 'required|string',
-            'avatar' => 'nullable|image|max:1024',
+            'name' => 'required',
+            'email' => 'required|unique:users,email',
+            'password' => 'required|string|min:6'
         ]);
-
-        if ($request->hasFile('avatar'))
-            $avatar = $request->file('avatar')->store('users/avatar');
-
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'avatar' => $avatar ?? null
+            'password' => Hash::make($request->password)
         ]);
-
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        if ($request->designation_id)
-            $user->employee()->create($request->all());
-
-        return response()->json([
-            'user' => $user,
-            'access_token' => $token,
-            'token_type' => "Bearer",
-            "message" => "User Created Successfully"
-        ]);
+        $user->syncRoles(Role::find($request->role));
+        return $user;
     }
 
     /**
      * Display the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
      */
-    public function show(User $user)
+    public function show(string $id)
     {
-        return new UserResource($user);
+        $users = User::with(['roles.permissions'])->find($id);
+        return $users;
     }
 
     /**
      * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
      */
-    public function edit($id)
+    public function edit(string $id)
     {
         //
     }
 
     /**
      * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, User $user)
+    public function update(Request $request, string $id)
     {
-
-        $request->validate([
-            'name' => 'required|string',
-            'email' => 'required|email|unique:users', $user->id,
-            'password' => 'required|string'
-        ]);
-
-        $user->update([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password)
-        ]);
-
-        return response()->json("User updated successfully", 200);
+        //
     }
 
     /**
      * Remove the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
      */
-    public function destroy($id)
+    public function destroy(string $id)
     {
-        $user = User::findOrFail($id);
-        if ($user)
-            $user->delete();
+        //
+    }
 
-        return response()->json("User Deleted Successfully");
+    public function userRole(Request $request)
+    {
+        $user = User::find($request->user_id);
+        $role = Role::find($request->role_id);
+        $user->syncRoles($role);
+        return true;
     }
 }
