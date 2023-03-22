@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserPermissionController;
@@ -32,4 +33,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::apiResource('permissions', PermissionController::class);
     Route::post('permissions-update/{id}', [PermissionController::class, 'update']);
     Route::get('user-permission', [PermissionController::class, 'userPermission']);
+
+    Route::apiResource('products', ProductController::class);
+    Route::post('products-update/{id}', [ProductController::class, 'update']);
 });
