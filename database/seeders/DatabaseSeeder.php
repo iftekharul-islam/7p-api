@@ -2,22 +2,33 @@
 
 namespace Database\Seeders;
 
+// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+
+use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class DatabaseSeeder extends Seeder
 {
     /**
      * Seed the application's database.
-     *
-     * @return void
      */
-    public function run()
+    public function run(): void
     {
-        $this->call([
-            PermissionSeeder::class,
-            UserSeeder::class,
-            DesignationSeeder::class,
-            DemodataSeeder::class,
+        User::create([
+            'name' => 'Test User',
+            'email' => 'admin@example.com',
+            'password' => Hash::make('123456')
         ]);
+
+        Role::create(['name' => 'Admin']);
+        Role::create(['name' => 'Employee']);
+
+        Permission::create(['name' => 'Permission-1']);
+        Permission::create(['name' => 'Permission-2']);
+        Permission::create(['name' => 'Permission-3']);
+        Permission::create(['name' => 'Permission-4']);
     }
 }

@@ -2,36 +2,24 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Spatie\Permission\Models\Permission;
 
 class PermissionController extends Controller
 {
     /**
      * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
      */
     public function index()
     {
-        $roles = auth()
-            ->user()
-            ->roles()
-            ->with('permissions')
-            ->get();
-
-        $permissions = [];
-        foreach ($roles as $role) {
-            foreach ($role->permissions as $permission) {
-                array_push($permissions, $permission->name);
-            }
-        }
+        $permissions = Permission::get();
         return $permissions;
     }
 
     /**
      * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
      */
     public function create()
     {
@@ -40,57 +28,85 @@ class PermissionController extends Controller
 
     /**
      * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
     {
-        //
+        $request->validate([
+            'name' => 'required|unique:permissions,name'
+        ]);
+        $role = Permission::create([
+            'name' => $request->name,
+            'guard_name' => 'api'
+        ]);
+        if (!$role) {
+            return response()->json([
+                'message' => 'Somthing Went Wrong!',
+                'status' => 401,
+                'data' => []
+            ]);
+        }
+        return response()->json([
+            'message' => 'Permission created successfully!',
+            'status' => 201,
+            'data' => []
+        ]);
     }
 
     /**
      * Display the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
      */
-    public function show($id)
+    public function show(string $id)
     {
-        //
+        $permission = Permission::find($id);
+        return $permission;
     }
 
     /**
      * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
      */
-    public function edit($id)
+    public function edit(string $id)
     {
         //
     }
 
     /**
      * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, string $id)
     {
-        //
+        $request->validate([
+            'name' => 'required|unique:roles,name,except,id'
+        ]);
+        $permission = Permission::whereId($id)->update(
+            [
+                'name' => $request->name,
+                'guard_name' => 'api'
+            ]
+        );
+        if (!$permission) {
+            return response()->json([
+                'message' => 'Somthing Went Wrong!',
+                'status' => 401,
+                'data' => []
+            ]);
+        }
+        return response()->json([
+            'message' => 'Permission update successfully!',
+            'status' => 201,
+            'data' => []
+        ]);
     }
 
     /**
      * Remove the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
      */
-    public function destroy($id)
+    public function destroy(string $id)
     {
         //
+    }
+
+    public function userPermission()
+    {
+        return User::with('roles.permissions')->find(Auth()->user()->id);
     }
 }

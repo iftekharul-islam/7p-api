@@ -56,7 +56,7 @@ class DiscoverEvents
                 $listener = new ReflectionClass(
                     static::classFromFile($listener, $basePath)
                 );
-            } catch (ReflectionException $e) {
+            } catch (ReflectionException) {
                 continue;
             }
 
@@ -65,7 +65,7 @@ class DiscoverEvents
             }
 
             foreach ($listener->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
-                if (! Str::is('handle*', $method->name) ||
+                if ((! Str::is('handle*', $method->name) && ! Str::is('__invoke', $method->name)) ||
                     ! isset($method->getParameters()[0])) {
                     continue;
                 }

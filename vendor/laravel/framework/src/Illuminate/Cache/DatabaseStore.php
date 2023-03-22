@@ -130,7 +130,7 @@ class DatabaseStore implements LockProvider, Store
 
         try {
             return $this->table()->insert(compact('key', 'value', 'expiration'));
-        } catch (Exception $e) {
+        } catch (Exception) {
             $result = $this->table()->where('key', $key)->update(compact('value', 'expiration'));
 
             return $result > 0;
@@ -153,7 +153,7 @@ class DatabaseStore implements LockProvider, Store
 
         try {
             return $this->table()->insert(compact('key', 'value', 'expiration'));
-        } catch (QueryException $e) {
+        } catch (QueryException) {
             return $this->table()
                 ->where('key', $key)
                 ->where('expiration', '<=', $this->getTime())
@@ -371,7 +371,7 @@ class DatabaseStore implements LockProvider, Store
     {
         $result = serialize($value);
 
-        if ($this->connection instanceof PostgresConnection && Str::contains($result, "\0")) {
+        if ($this->connection instanceof PostgresConnection && str_contains($result, "\0")) {
             $result = base64_encode($result);
         }
 

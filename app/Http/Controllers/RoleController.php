@@ -2,37 +2,24 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\PermissionEvent;
-use App\Http\Resources\RoleCollection;
+use GuzzleHttp\Psr7\Message;
 use Illuminate\Http\Request;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
-use App\Http\Resources\RoleResource;
-use App\Models\Module;
 
 class RoleController extends Controller
 {
     /**
      * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
      */
     public function index()
     {
-        $roles = Role::with('users')->withCount('users')->get();
-
-        $userPermission = ['roles_create', 'roles_view', 'roles_edit', 'roles_delete'];
-        $permission = checkPermission(auth()->user(), $userPermission);
-
-        return [
-            'roles' => RoleCollection::collection($roles),
-            'permission' => $permission
-        ];
+        $roles = Role::get();
+        return $roles;
     }
 
     /**
      * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
      */
     public function create()
     {
@@ -41,104 +28,100 @@ class RoleController extends Controller
 
     /**
      * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|unique:roles,name',
+            'name' => 'required|unique:roles,name'
         ]);
-
-        try {
-            $role = Role::create(['name' => $request->input('name')]);
-        } catch (\Throwable $th) {
-            return message($th->getMessage(), 400);
+        $role = Role::create([
+            'name' => $request->name,
+            'guard_name' => 'web'
+        ]);
+        if (!$role) {
+            return response()->json([
+                'message' => 'Somthing Went Wrong!',
+                'status' => 401,
+                'data' => []
+            ]);
         }
-
         return response()->json([
-            "message" => "Role Created Successfully"
-        ], 201);
+            'message' => 'Role created successfully!',
+            'status' => 201,
+            'data' => []
+        ]);
     }
 
     /**
      * Display the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
      */
-    public function show(Role $role)
+    public function show(string $id)
     {
-        $role->load('permissions');
-
-        return RoleResource::make($role);
+        $role = Role::with('permissions')->find($id);
+        return $role;
     }
 
     /**
      * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
      */
-    public function edit($id)
+    public function edit(string $id)
     {
         //
     }
 
     /**
      * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, string $id)
     {
+        $request->validate([
+            'name' => 'required|unique:roles,name,except,id'
+        ]);
+        $role = Role::whereId($id)->update(
+            [
+                'name' => $request->name,
+                'guard_name' => 'api'
+            ]
+        );
+        if (!$role) {
+            return response()->json([
+                'message' => 'Somthing Went Wrong!',
+                'status' => 401,
+                'data' => []
+            ]);
+        }
+        return response()->json([
+            'message' => 'Role update successfully!',
+            'status' => 201,
+            'data' => []
+        ]);
     }
 
     /**
      * Remove the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
      */
-    public function destroy($id)
+    public function destroy(string $id)
     {
-        $role = Role::with('users')->withCount('users')->find($id);
-
-        if ($role->name == 'Admin')
-            return message("You can't delete Admin role", 401);
-        if ($role->users_count > 0)
-            return message("You can't delete role with Employee", 401);
-        if ($role->delete())
-            return message('Role archived successfully');
-
-        return message('Something went wrong', 401);
+        //
     }
 
-
-    public function getPermission()
+    public function rolePermission(Request $request)
     {
-        $modules = Module::with('permissions')->get();
-        return response()->json($modules);
+        $role = Role::find($request->role_id);
+        $permission = Permission::find($request->permission_id);
+        $role->syncPermissions($permission);
+        return true;
     }
 
-
-    public function updatePermission(Request $request, Role $role)
+    public function roleOption()
     {
-        foreach ($request->all() as $value) {
-            if ($value['attach']) {
-                $role->givePermissionTo($value['permission_id']);
-            } else {
-                $role->revokePermissionTo($value['permission_id']);
-            }
-        }
-
-        event(new PermissionEvent($role));
-
-        return response()->json([
-            'message' => 'Permission updated Successfully'
-        ]);
+        $role = Role::get();
+        $role->transform(function ($item) {
+            return [
+                'value' => $item['id'],
+                'label' => $item['name'],
+            ];
+        });
+        return $role;
     }
 }
