@@ -12,10 +12,10 @@ class UserController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         info(Auth()->user());
-        $users = User::with('roles:name')->get();
+        $users = User::with('roles:name')->paginate($request->get('perPage', 10));
         return $users;
     }
 
@@ -43,7 +43,12 @@ class UserController extends Controller
             'password' => Hash::make($request->password)
         ]);
         $user->syncRoles(Role::find($request->role));
-        return $user;
+
+        return response()->json([
+            'message' => 'Product created successfully!',
+            'status' => 201,
+            'data' => []
+        ], 201);
     }
 
     /**

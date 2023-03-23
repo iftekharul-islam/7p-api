@@ -3,13 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Products;
+use App\Models\Stocks;
+use App\Models\Vendors;
 use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $products = Products::with('vendor')->get();
+        $products = Products::with('vendor')->paginate($request->get('perPage', 10));
         return $products;
     }
 
@@ -26,6 +28,10 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
+        $request->validate([
+            'stock_id' => 'required',
+            'vendor_id' => 'required',
+        ]);
 
         Products::create([
             'stock_id' => $request->stock_id,
@@ -47,7 +53,7 @@ class ProductController extends Controller
             'message' => 'Product created successfully!',
             'status' => 201,
             'data' => []
-        ]);
+        ], 201);
     }
 
     /**
@@ -78,5 +84,56 @@ class ProductController extends Controller
     public function destroy(string $id)
     {
         //
+    }
+
+    public function addStock(Request $request)
+    {
+        $request->validate([
+            'stock_number' => 'required'
+        ]);
+
+        Stocks::create([
+            'stock_number' => $request->stock_number,
+            'description' => $request->description,
+            'section_id' => $request->section_id,
+            'weight' => $request->weight,
+            'order_quantity' => $request->order_quantity,
+            'minimum_stock_quantity' => $request->minimum_stock_quantity,
+            'last_cost' => $request->last_cost,
+            'upc' => $request->upc,
+            'vendor_sku' => $request->vendor_sku,
+            'bin' => $request->bin,
+            'image_url' => $request->image_url,
+        ]);
+
+        return response()->json([
+            'message' => 'Product created successfully!',
+            'data' => []
+        ], 201);
+    }
+
+
+    public function stockOption()
+    {
+        $stocks = Stocks::get();
+        $stocks->transform(function ($item) {
+            return [
+                'value' => $item['id'],
+                'label' => $item['stock_number'] . ' - ' . $item['description'],
+                'data' => $item,
+            ];
+        });
+        return $stocks;
+    }
+    public function vendorOption()
+    {
+        $vendors = Vendors::get();
+        $vendors->transform(function ($item) {
+            return [
+                'value' => $item['id'],
+                'label' => $item['name']
+            ];
+        });
+        return $vendors;
     }
 }

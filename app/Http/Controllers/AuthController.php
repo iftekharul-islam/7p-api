@@ -12,16 +12,23 @@ class AuthController extends Controller
     {
         $user = User::where('email', $request->email)->first();
         if (!$user)
-            return response()->json(['message' => 'No account found!!!'], 401);
+            return response()->json(['errors' => ['email' => 'No account found!!!']], 422);
 
         if (!Hash::check($request->password, $user->password)) {
-            return response()->json(['message' => 'Password not matched!!!'], 401);
+            return response()->json(['errors' => ['password' => 'Password not matched!!!']], 422);
         }
 
         $token = $user->createToken('Token Name')->plainTextToken;
 
+        $permission = User::with('roles.permissions')->find($user->id);
+        $permissions = [];
+        foreach ($permission->roles[0]->permissions as $key => $value) {
+            array_push($permissions, $value->name);
+        };
+
         $data['user'] = $user;
         $data['accessToken'] = $token;
+        $data['permissions'] = $permissions;
         return response()->json($data, 200);
     }
 }

@@ -19,19 +19,22 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        User::create([
+        $user = User::create([
             'name' => 'Test User',
             'email' => 'admin@example.com',
             'password' => Hash::make('123456')
         ]);
 
-        Role::create(['name' => 'Admin']);
+        $role = Role::create(['name' => 'Admin']);
+        $user->syncRoles($role);
         Role::create(['name' => 'Employee']);
 
-        Permission::create(['name' => 'Permission-1']);
-        Permission::create(['name' => 'Permission-2']);
-        Permission::create(['name' => 'Permission-3']);
-        Permission::create(['name' => 'Permission-4']);
+        Permission::create(['name' => 'user']);
+        Permission::create(['name' => 'role']);
+        Permission::create(['name' => 'product']);
+
+        $permission = Permission::get();
+        $role->syncPermissions($permission);
 
         Vendors::create(['name' => 'Vendor A']);
         Vendors::create(['name' => 'Vendor B']);

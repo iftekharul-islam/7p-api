@@ -49,7 +49,7 @@ class PermissionController extends Controller
             'message' => 'Permission created successfully!',
             'status' => 201,
             'data' => []
-        ]);
+        ], 201);
     }
 
     /**
@@ -107,6 +107,12 @@ class PermissionController extends Controller
 
     public function userPermission()
     {
-        return User::with('roles.permissions')->find(Auth()->user()->id);
+        if (!Auth()->user()->id) return [];
+        $permission = User::with('roles.permissions')->find(Auth()->user()->id);
+        $permissions = [];
+        foreach ($permission->roles[0]->permissions as $key => $value) {
+            array_push($permissions, $value->name);
+        };
+        return $permissions;
     }
 }

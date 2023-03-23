@@ -12,9 +12,9 @@ class RoleController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $roles = Role::get();
+        $roles = Role::paginate($request->get('perPage', 10));
         return $roles;
     }
 
@@ -49,7 +49,7 @@ class RoleController extends Controller
             'message' => 'Role created successfully!',
             'status' => 201,
             'data' => []
-        ]);
+        ], 201);
     }
 
     /**
@@ -108,9 +108,20 @@ class RoleController extends Controller
     public function rolePermission(Request $request)
     {
         $role = Role::find($request->role_id);
+        if ($role->id == 1) {
+            return response()->json([
+                'message' => 'Role Permission update successfully!',
+                'status' => 201,
+                'data' => []
+            ]);
+        }
         $permission = Permission::find($request->permission_id);
         $role->syncPermissions($permission);
-        return true;
+        return response()->json([
+            'message' => 'Role Permission update successfully!',
+            'status' => 201,
+            'data' => []
+        ]);
     }
 
     public function roleOption()
