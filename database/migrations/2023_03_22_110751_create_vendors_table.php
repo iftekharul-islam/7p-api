@@ -13,7 +13,20 @@ return new class extends Migration
     {
         Schema::create('vendors', function (Blueprint $table) {
             $table->id();
+            $table->string('image')->nullable();
             $table->string('name');
+            $table->string('zip_code')->nullable();
+            $table->string('state')->nullable();
+            $table->string('country')->nullable();
+            $table->string('email');
+            $table->string('phone_number');
+            $table->string('contact_person_name')->nullable();
+            $table->string('account_link')->nullable();
+            $table->string('account_login')->nullable();
+            $table->string('account_password')->nullable();
+            $table->string('bank_info')->nullable();
+            $table->string('paypal_info')->nullable();
+            $table->text('notes')->nullable();
             $table->timestamps();
         });
     }
