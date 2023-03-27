@@ -2,17 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Products;
-use App\Models\Stocks;
-use App\Models\Vendors;
+use App\Models\Product;
+use App\Models\Stock;
+use App\Models\Vendor;
 use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $products = Products::with('vendor')->paginate($request->get('perPage', 10));
-        return $products;
+        return Product::with(['vendor', 'stock'])->paginate($request->get('perPage', 10));
     }
 
     /**
@@ -33,27 +32,20 @@ class ProductController extends Controller
             'vendor_id' => 'required',
         ]);
 
-        Products::create([
-            'stock_id' => $request->stock_id,
-            'name' => $request->name,
-            'sku_weight' => $request->sku_weight,
-            're_order_qty' => $request->re_order_qty,
-            'min_order' => $request->min_order,
-            'adjusment' => $request->adjusment,
-            'unit' => $request->unit,
-            'qty' => $request->qty,
-            'unit_price' => $request->unit_price,
-            'vendor_id' => $request->vendor_id,
-            'vendor_sku' => $request->vendor_sku,
-            'sku_name' => $request->sku_name,
-            'lead_time_days' => $request->lead_time_days,
-        ]);
-
-        return response()->json([
-            'message' => 'Product created successfully!',
-            'status' => 201,
-            'data' => []
-        ], 201);
+        try {
+            Product::create($request->all());
+            return response()->json([
+                'message' => 'Product created successfully!',
+                'status' => 201,
+                'data' => []
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'status' => 403,
+                'data' => []
+            ], 403);
+        }
     }
 
     /**
@@ -61,6 +53,7 @@ class ProductController extends Controller
      */
     public function show(string $id)
     {
+        return Product::with(['vendor', 'stock'])->find($id);
     }
 
     /**
@@ -76,6 +69,21 @@ class ProductController extends Controller
      */
     public function update(Request $request, string $id)
     {
+        try {
+            $product = Product::findOrFail($id);
+            $product->update($request->all());
+            return response()->json([
+                'message' => 'Product created successfully!',
+                'status' => 201,
+                'data' => []
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'status' => 403,
+                'data' => []
+            ], 403);
+        }
     }
 
     /**
@@ -83,7 +91,20 @@ class ProductController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        $data = Product::find($id);
+        if ($data) {
+            $data->delete();
+            return response()->json([
+                'message' => 'Product delete successfully!',
+                'status' => 201,
+                'data' => []
+            ], 201);
+        }
+        return response()->json([
+            'message' => "Product didn't found!",
+            'status' => 203,
+            'data' => []
+        ], 203);
     }
 
     public function addStock(Request $request)
@@ -92,7 +113,7 @@ class ProductController extends Controller
             'stock_number' => 'required'
         ]);
 
-        Stocks::create([
+        Stock::create([
             'stock_number' => $request->stock_number,
             'description' => $request->description,
             'section_id' => $request->section_id,
@@ -115,7 +136,7 @@ class ProductController extends Controller
 
     public function stockOption()
     {
-        $stocks = Stocks::get();
+        $stocks = Stock::get();
         $stocks->transform(function ($item) {
             return [
                 'value' => $item['id'],
@@ -127,7 +148,7 @@ class ProductController extends Controller
     }
     public function vendorOption()
     {
-        $vendors = Vendors::get();
+        $vendors = Vendor::get();
         $vendors->transform(function ($item) {
             return [
                 'value' => $item['id'],

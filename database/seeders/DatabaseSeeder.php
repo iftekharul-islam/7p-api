@@ -4,9 +4,9 @@ namespace Database\Seeders;
 
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
-use App\Models\Sections;
+use App\Models\Section;
 use App\Models\User;
-use App\Models\Vendors;
+use App\Models\Vendor;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Permission;
@@ -32,18 +32,19 @@ class DatabaseSeeder extends Seeder
         Permission::create(['name' => 'user']);
         Permission::create(['name' => 'role']);
         Permission::create(['name' => 'product']);
+        Permission::create(['name' => 'vendor']);
 
         $permission = Permission::get();
         $role->syncPermissions($permission);
 
-        Vendors::create(['name' => 'Vendor A']);
-        Vendors::create(['name' => 'Vendor B']);
-        Vendors::create(['name' => 'Vendor C']);
-        Vendors::create(['name' => 'Vendor D']);
+        Vendor::create(['name' => 'Vendor A', 'email' => 'a@gmail.com', 'phone_number' => '01688848996']);
+        Vendor::create(['name' => 'Vendor B', 'email' => 'b@gmail.com', 'phone_number' => '01366659884']);
+        Vendor::create(['name' => 'Vendor C', 'email' => 'c@gmail.com', 'phone_number' => '01658448996']);
+        Vendor::create(['name' => 'Vendor D', 'email' => 'd@gmail.com', 'phone_number' => '01688954996']);
 
-        Sections::create(['name' => 'Sections A']);
-        Sections::create(['name' => 'Sections B']);
-        Sections::create(['name' => 'Sections C']);
-        Sections::create(['name' => 'Sections D']);
+        Section::create(['name' => 'Section A']);
+        Section::create(['name' => 'Section B']);
+        Section::create(['name' => 'Section C']);
+        Section::create(['name' => 'Section D']);
     }
 }
