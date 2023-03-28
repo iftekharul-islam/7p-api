@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserPermissionController;
@@ -24,8 +25,9 @@ Route::post('login', [AuthController::class, 'login']);
 
 Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('users', [UserController::class, 'index']);
-    Route::post('users', [UserController::class, 'store']);
     Route::get('users/{id}', [UserController::class, 'show']);
+    Route::post('users', [UserController::class, 'store']);
+    Route::post('users/{id}', [UserController::class, 'update']);
     Route::post('user-role', [UserController::class, 'userRole']);
     Route::get('user-permission', [PermissionController::class, 'userPermission']);
 
@@ -54,7 +56,14 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('vendors/{id}', [VendorController::class, 'update']);
     Route::post('destroy-vendors/{id}', [VendorController::class, 'destroy']);
 
+    Route::get('orders', [PurchaseController::class, 'index']);
+    Route::get('orders/{id}', [PurchaseController::class, 'show']);
+    Route::post('orders', [PurchaseController::class, 'store']);
+    Route::post('orders/{id}', [PurchaseController::class, 'update']);
+    Route::post('destroy-orders/{id}', [PurchaseController::class, 'destroy']);
+
     Route::get('role-options', [RoleController::class, 'roleOption']);
     Route::get('stock-options', [ProductController::class, 'stockOption']);
     Route::get('vendor-options', [ProductController::class, 'vendorOption']);
+    Route::get('product-options/{id}', [ProductController::class, 'productOptionbyVendor']);
 });
