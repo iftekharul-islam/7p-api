@@ -59,7 +59,14 @@ class VendorController extends Controller
     public function update(Request $request, string $id)
     {
         try {
-            $product = Vendor::findOrFail($id);
+            $product = Vendor::find($id);
+            if (!$product) {
+                return response()->json([
+                    'message' => 'Product not found!',
+                    'status' => 203,
+                    'data' => []
+                ], 203);
+            }
             $product->update($request->all());
             return response()->json([
                 'message' => 'Vendor created successfully!',

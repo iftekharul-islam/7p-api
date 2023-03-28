@@ -33,14 +33,10 @@ class DatabaseSeeder extends Seeder
         Permission::create(['name' => 'role']);
         Permission::create(['name' => 'product']);
         Permission::create(['name' => 'vendor']);
+        Permission::create(['name' => 'order']);
 
         $permission = Permission::get();
         $role->syncPermissions($permission);
-
-        Vendor::create(['name' => 'Vendor A', 'email' => 'a@gmail.com', 'phone_number' => '01688848996']);
-        Vendor::create(['name' => 'Vendor B', 'email' => 'b@gmail.com', 'phone_number' => '01366659884']);
-        Vendor::create(['name' => 'Vendor C', 'email' => 'c@gmail.com', 'phone_number' => '01658448996']);
-        Vendor::create(['name' => 'Vendor D', 'email' => 'd@gmail.com', 'phone_number' => '01688954996']);
 
         Section::create(['name' => 'Section A']);
         Section::create(['name' => 'Section B']);
