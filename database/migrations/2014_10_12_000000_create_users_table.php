@@ -17,8 +17,16 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->unsignedBigInteger('vendor_id')->nullable();
+            $table->string('zip_code')->nullable();
+            $table->string('state')->nullable();
+            $table->string('remote')->nullable();
+            $table->unsignedBigInteger('section_id')->nullable();
+            $table->unsignedBigInteger('station_id')->nullable();
+            $table->json('permit_manufactures')->nullable();
             $table->rememberToken();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

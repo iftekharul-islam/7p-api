@@ -157,4 +157,17 @@ class ProductController extends Controller
         });
         return $vendors;
     }
+
+    public function productOptionbyVendor($id)
+    {
+        $products = Product::where('vendor_id', $id)->get();
+        $products->transform(function ($item) {
+            return [
+                'value' => $item['id'],
+                'label' => $item['name'],
+                'data' => $item
+            ];
+        });
+        return $products;
+    }
 }

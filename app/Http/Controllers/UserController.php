@@ -37,15 +37,26 @@ class UserController extends Controller
             'email' => 'required|unique:users,email',
             'password' => 'required|string|min:6'
         ]);
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password)
+        $data = $request->only([
+            'name',
+            'email',
+            'password',
+            'vendor_id',
+            'zip_code',
+            'state',
+            'remote',
+            'section_id',
+            'station_id',
+            'permit_manufactures'
         ]);
+        $data['password'] = Hash::make($request->password);
+        $data['permit_manufactures'] = json_encode($request->permit_manufactures);
+
+        $user = User::create($data);
         $user->syncRoles(Role::find($request->role));
 
         return response()->json([
-            'message' => 'Product created successfully!',
+            'message' => 'User created successfully!',
             'status' => 201,
             'data' => []
         ], 201);
@@ -56,8 +67,7 @@ class UserController extends Controller
      */
     public function show(string $id)
     {
-        $users = User::with(['roles.permissions'])->find($id);
-        return $users;
+        return User::with(['roles.permissions'])->find($id);
     }
 
     /**
@@ -73,7 +83,37 @@ class UserController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+        $user = User::find($id);
+        if (!$user) {
+            return response()->json([
+                'message' => 'User not found!',
+                'status' => 203,
+                'data' => []
+            ], 203);
+        }
+        $request->validate([
+            'name' => 'required',
+            'email' => 'required|unique:users,email,' . $id
+        ]);
+        $data = $request->only([
+            'name',
+            'email',
+            'password',
+            'vendor_id',
+            'zip_code',
+            'state',
+            'remote',
+            'section_id',
+            'station_id',
+            'permit_manufactures'
+        ]);
+
+        $user->update($data);
+        return response()->json([
+            'message' => 'User update Successfully!',
+            'status' => 201,
+            'data' => []
+        ], 201);
     }
 
     /**
