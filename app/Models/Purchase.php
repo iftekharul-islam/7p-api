@@ -30,4 +30,14 @@ class Purchase extends Model
     {
         return $this->hasOne(Vendor::class, 'id', 'vendor_id');
     }
+
+    /**
+     * Get all of the comments for the Purchase
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function products()
+    {
+        return $this->hasMany(PurchaseProduct::class, 'purchase_id', 'po_number');
+    }
 }

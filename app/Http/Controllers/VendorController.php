@@ -12,9 +12,12 @@ class VendorController extends Controller
      */
     public function index(Request $request)
     {
-        return Vendor::paginate($request->get('perPage', 10));
-
-        // return $products;
+        $vendors = Vendor::query();
+        if ($request->q) {
+            $vendors = $vendors->where('vendor_name', 'like', '%' . $request->q . '%');
+        }
+        $vendors = $vendors->paginate($request->get('perPage', 10));
+        return $vendors;
     }
 
     /**
@@ -23,7 +26,7 @@ class VendorController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required',
+            'vendor_name' => 'required',
             'email' => 'required',
             'phone_number' => 'required',
         ]);
