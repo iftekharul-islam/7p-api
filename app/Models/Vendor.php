@@ -7,22 +7,22 @@ use Illuminate\Database\Eloquent\Model;
 
 class Vendor extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
-        'image',
-        'name',
+        'vendor_name',
+        'email',
         'zip_code',
         'state',
-        'country',
-        'email',
         'phone_number',
+        'country',
+        'image',
         'contact_person_name',
-        'account_link',
-        'account_login',
-        'account_password',
+        'link',
+        'login_id',
+        'password',
         'bank_info',
         'paypal_info',
         'notes'
     ];
+
+    use HasFactory;
 }
