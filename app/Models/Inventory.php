@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Inventory extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
         'stock_no_unique',
@@ -62,7 +62,6 @@ class Inventory extends Model
     public function last_product ()
     {
         return $this->hasOne(PurchasedInvProduct::class, 'stock_no', 'stock_no_unique')
-            ->where('is_deleted', '0')
             ->latest();
     }
 

@@ -6,6 +6,7 @@ use App\Models\Purchase;
 use App\Models\PurchaseProduct;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PurchaseController extends Controller
 {
@@ -21,7 +22,13 @@ class PurchaseController extends Controller
             ->pluck('purchase_id');
 
         $purchases = Purchase::query();
-        $purchases = $purchases->with('vendor', 'products');
+        $purchases->with('vendor', 'products');
+        $purchases->withCount(['products as total_balance' => function($another_query) {
+            $another_query->select(DB::raw('SUM(receive_quantity)'));
+        } ]);
+        $purchases->withCount(['products as total_products' => function($another_query) {
+            $another_query->select(DB::raw('SUM(balance_quantity)'));
+        } ]);
 
         if (isset($request->status)) {
             if ($request->status == 1) {
@@ -59,20 +66,26 @@ class PurchaseController extends Controller
                 'notes',
                 'user_id'
             ]);
+
+            $data['po_date'] = Carbon::parse($request->po_date)->format('y-m-d');
             $data['po_number'] = $this->generateStockNoUnique();
             $data['user_id'] = auth()->user()->id;
+
             $purchase = Purchase::create($data);
+
             $products = [];
+
             foreach ($request->skus as $key => $value) {
                 $product['purchase_id'] = $data['po_number'];
                 $product['product_id'] = $value['product_id'];
                 $product['stock_no'] = $value['stock_no'];
                 $product['vendor_sku'] = $value['vendor_sku'];
                 $product['vendor_sku_name'] = $value['vendor_sku_name'];
-                $product['quantity'] = $value['quantity'];
+                $product['quantity'] = $value['quantity'] ?? '';
                 $product['price'] = $value['unit_price'];
                 $product['sub_total'] = $value['sub_total'];
-                $product['eta'] = $value['eta'];
+                $product['eta'] = Carbon::parse($value['eta'])->format('y-m-d');
+                $product['receive_quantity'] = $value['quantity'];
                 $product['balance_quantity'] = $value['quantity'];
                 $product['user_id'] = auth()->user()->id;
                 $product['created_at'] = Carbon::now();
@@ -86,6 +99,8 @@ class PurchaseController extends Controller
                 'status' => 201,
                 'data' => []
             ], 201);
+
+
         } catch (\Exception $e) {
             return response()->json([
                 'message' => $e->getMessage(),
