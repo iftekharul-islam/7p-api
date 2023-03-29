@@ -14,11 +14,18 @@ class PurchasedInvProductController extends Controller
      */
     public function index(Request $request)
     {
-
         $product = PurchasedInvProduct::query();
         $product = $product->with(['vendor', 'inventory']);
         if ($request->q) {
-            $product = $product->where('stock_no', 'like', '%' . $request->q . '%');
+            $product = $product->where('stock_no', 'like', '%' . $request->q . '%')
+                ->orWhere('vendor_sku', 'like', '%' . $request->q . '%')
+                ->orWhere('vendor_sku_name', 'like', '%' . $request->q . '%')
+                ->orWhereHas('inventory', function ($q) use ($request) {
+                    $q->where('stock_name_discription', 'like', '%' . $request->q . '%');
+                })
+                ->orWhereHas('vendor', function ($q) use ($request) {
+                    $q->where('vendor_name', 'like', '%' . $request->q . '%');
+                });
         }
         if ($request->sort && $request->sortColumn) {
             $product = $product->orderBy($request->sortColumn, $request->sort);
@@ -189,7 +196,7 @@ class PurchasedInvProductController extends Controller
         $vendors->transform(function ($item) {
             return [
                 'value' => $item['id'],
-                'label' => $item['name']
+                'label' => $item['vendor_name']
             ];
         });
         return $vendors;
@@ -197,11 +204,11 @@ class PurchasedInvProductController extends Controller
 
     public function productOptionbyVendor($id)
     {
-        $products = Product::where('vendor_id', $id)->get();
+        $products = PurchasedInvProduct::where('vendor_id', $id)->get();
         $products->transform(function ($item) {
             return [
                 'value' => $item['id'],
-                'label' => $item['name'],
+                'label' => $item['stock_no'] . ' - ' . $item['vendor_sku'] . ' - ' . $item['vendor_sku_name'],
                 'data' => $item
             ];
         });
