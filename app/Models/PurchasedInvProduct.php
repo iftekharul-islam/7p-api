@@ -21,15 +21,13 @@ class PurchasedInvProduct extends Model
         'user_id',
     ];
 
-    public function purchasedInvProduct_details ()
+    public function inventory()
     {
-        return $this->hasMany(Inventory::class, 'stock_no_unique', 'stock_no')
-            ->where('is_deleted', '0');
+        return $this->hasOne(Inventory::class, 'stock_no_unique', 'stock_no');
     }
 
-    public function vendor ()
+    public function vendor()
     {
-        return $this->belongsTo(Vendor::class, 'vendor_id', 'id')
-            ->where('is_deleted', '0');
+        return $this->belongsTo(Vendor::class, 'vendor_id', 'id');
     }
 }

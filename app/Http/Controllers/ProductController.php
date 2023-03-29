@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Inventory;
 use App\Models\Product;
+use App\Models\PurchasedInvProduct;
 use App\Models\Stock;
 use App\Models\Vendor;
 use Illuminate\Http\Request;
@@ -32,8 +34,22 @@ class ProductController extends Controller
             'vendor_id' => 'required',
         ]);
 
+        $data = $request->only([
+            'stock_no',
+            'unit',
+            'unit_price',
+            'unit_qty',
+            'vendor_id',
+            'vendor_sku',
+            'vendor_sku_name',
+            'lead_time_days',
+            'user_id',
+        ]);
+
+        $data['user_id'] = auth()->user()->id;
+
         try {
-            Product::create($request->all());
+            PurchasedInvProduct::create($data);
             return response()->json([
                 'message' => 'Product created successfully!',
                 'status' => 201,
@@ -109,38 +125,45 @@ class ProductController extends Controller
 
     public function addStock(Request $request)
     {
-        $request->validate([
-            'stock_number' => 'required'
+        $data = $request->only([
+            'stock_no_unique',
+            'stock_name_discription',
+            'section_id',
+            'sku_weight',
+            're_order_qty',
+            'min_reorder',
+            'last_cost',
+            'upc',
+            'wh_bin',
+            'warehouse'
         ]);
+        $data['stock_no_unique'] = $request->stock_no_unique ?? $this->generateStockNoUnique();
+        $data['user_id'] = auth()->user()->id;
 
-        Stock::create([
-            'stock_number' => $request->stock_number,
-            'description' => $request->description,
-            'section_id' => $request->section_id,
-            'weight' => $request->weight,
-            'order_quantity' => $request->order_quantity,
-            'minimum_stock_quantity' => $request->minimum_stock_quantity,
-            'last_cost' => $request->last_cost,
-            'upc' => $request->upc,
-            'vendor_sku' => $request->vendor_sku,
-            'bin' => $request->bin,
-            'image_url' => $request->image_url,
-        ]);
+        Inventory::create($data);
 
         return response()->json([
-            'message' => 'Product created successfully!',
+            'message' => 'Stock created successfully!',
             'data' => []
         ], 201);
+    }
+
+    private function generateStockNoUnique()
+    {
+        $stockNoUnique = Inventory::orderBy('id', 'desc')->first();
+
+        return sprintf("1%05d", (($stockNoUnique->id ?? 0) + 1));
     }
 
 
     public function stockOption()
     {
-        $stocks = Stock::get();
+        $stocks = Inventory::get();
         $stocks->transform(function ($item) {
             return [
                 'value' => $item['id'],
-                'label' => $item['stock_number'] . ' - ' . $item['description'],
+                'label' => $item['stock_no_unique'] . ' - ' . $item['stock_name_discription'],
+                'stock_no' => $item['stock_no_unique'],
                 'data' => $item,
             ];
         });

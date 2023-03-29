@@ -2,7 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PermissionController;
-use App\Http\Controllers\ProductController;
+use App\Http\Controllers\PurchasedInvProductController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
@@ -43,12 +43,12 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('permissions/{id}', [PermissionController::class, 'show']);
     Route::post('permissions-update/{id}', [PermissionController::class, 'update']);
 
-    Route::get('products', [ProductController::class, 'index']);
-    Route::get('products/{id}', [ProductController::class, 'show']);
-    Route::post('products', [ProductController::class, 'store']);
-    Route::post('products/{id}', [ProductController::class, 'update']);
-    Route::post('destroy-products/{id}', [ProductController::class, 'destroy']);
-    Route::post('add-stock-products', [ProductController::class, 'addStock']);
+    Route::get('products', [PurchasedInvProductController::class, 'index']);
+    Route::get('products/{id}', [PurchasedInvProductController::class, 'show']);
+    Route::post('products', [PurchasedInvProductController::class, 'store']);
+    Route::post('products/{id}', [PurchasedInvProductController::class, 'update']);
+    Route::post('destroy-products/{id}', [PurchasedInvProductController::class, 'destroy']);
+    Route::post('add-stock-products', [PurchasedInvProductController::class, 'addStock']);
 
     Route::get('vendors', [VendorController::class, 'index']);
     Route::get('vendors/{id}', [VendorController::class, 'show']);
@@ -63,7 +63,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('destroy-orders/{id}', [PurchaseController::class, 'destroy']);
 
     Route::get('role-options', [RoleController::class, 'roleOption']);
-    Route::get('stock-options', [ProductController::class, 'stockOption']);
-    Route::get('vendor-options', [ProductController::class, 'vendorOption']);
-    Route::get('product-options/{id}', [ProductController::class, 'productOptionbyVendor']);
+    Route::get('stock-options', [PurchasedInvProductController::class, 'stockOption']);
+    Route::get('vendor-options', [PurchasedInvProductController::class, 'vendorOption']);
+    Route::get('product-options/{id}', [PurchasedInvProductController::class, 'productOptionbyVendor']);
 });
