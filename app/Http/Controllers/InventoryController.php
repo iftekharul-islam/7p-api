@@ -10,9 +10,11 @@ class InventoryController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        //
+        return $inventories = Inventory::with('qty_user', 'section', 'last_product.vendor', 'purchase_products')
+            ->groupBy('inventories.stock_no_unique')
+            ->paginate($request->get('perPage', 10));
     }
 
     /**

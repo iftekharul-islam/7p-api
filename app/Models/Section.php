@@ -26,6 +26,4 @@ class Section extends Model
         'ret_phone_number',
         'is_deleted',
     ];
-
-
 }
