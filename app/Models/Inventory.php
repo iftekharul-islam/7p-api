@@ -39,38 +39,38 @@ class Inventory extends Model
     ];
 
 
-    public function options ()
+    public function options()
     {
         return $this->hasMany('App\Option', 'stock_number', 'stock_no_unique');
     }
 
-    public function inventoryUnitRelation ()
+    public function inventoryUnitRelation()
     {
         return $this->hasMany('App\InventoryUnit', 'stock_no_unique', 'stock_no_unique');
     }
 
-    public function adjustments ()
+    public function adjustments()
     {
         return $this->hasMany('App\InventoryAdjustment', 'stock_no_unique', 'stock_no_unique')->orderBy('created_at', 'DESC');
     }
 
-    public function purchase_products ()
+    public function purchase_products()
     {
-        return $this->hasMany(PurchaseProduct::class, 'stock_no', 'stock_no_unique')->latest();
+        return $this->hasMany(PurchasedProduct::class, 'stock_no', 'stock_no_unique')->latest();
     }
 
-    public function last_product ()
+    public function last_product()
     {
         return $this->hasOne(PurchasedInvProduct::class, 'stock_no', 'stock_no_unique')
             ->latest();
     }
 
-    public function qty_user ()
+    public function qty_user()
     {
         return $this->belongsTo(User::class, 'qty_user_id', 'id');
     }
 
-    public function section ()
+    public function section()
     {
         return $this->belongsTo(Section::class, 'section_id', 'id');
     }
