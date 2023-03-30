@@ -1,6 +1,8 @@
+
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\PurchasedInvProductController;
 use App\Http\Controllers\PurchaseController;
@@ -43,11 +45,11 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('permissions/{id}', [PermissionController::class, 'show']);
     Route::post('permissions-update/{id}', [PermissionController::class, 'update']);
 
-    Route::get('products', [PurchasedInvProductController::class, 'index']);
-    Route::get('products/{id}', [PurchasedInvProductController::class, 'show']);
-    Route::post('products', [PurchasedInvProductController::class, 'store']);
-    Route::post('products/{id}', [PurchasedInvProductController::class, 'update']);
-    Route::post('destroy-products/{id}', [PurchasedInvProductController::class, 'destroy']);
+    Route::get('purchased-products', [PurchasedInvProductController::class, 'index']);
+    Route::get('purchased-products/{id}', [PurchasedInvProductController::class, 'show']);
+    Route::post('purchased-products', [PurchasedInvProductController::class, 'store']);
+    Route::post('purchased-products/{id}', [PurchasedInvProductController::class, 'update']);
+    Route::post('destroy-purchased-products/{id}', [PurchasedInvProductController::class, 'destroy']);
     Route::post('add-stock-products', [PurchasedInvProductController::class, 'addStock']);
 
     Route::get('vendors', [VendorController::class, 'index']);
@@ -56,12 +58,18 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('vendors/{id}', [VendorController::class, 'update']);
     Route::post('destroy-vendors/{id}', [VendorController::class, 'destroy']);
 
-    Route::get('orders', [PurchaseController::class, 'index']);
-    Route::get('orders/{id}', [PurchaseController::class, 'show']);
-    Route::post('orders', [PurchaseController::class, 'store']);
-    Route::post('orders/{id}', [PurchaseController::class, 'update']);
-    Route::post('destroy-orders/{id}', [PurchaseController::class, 'destroy']);
-    Route::post('receive-orders', [PurchaseController::class, 'receiveOrders']);
+    Route::get('purchased-orders', [PurchaseController::class, 'index']);
+    Route::get('purchased-orders/{id}', [PurchaseController::class, 'show']);
+    Route::post('purchased-orders', [PurchaseController::class, 'store']);
+    Route::post('purchased-orders/{id}', [PurchaseController::class, 'update']);
+    Route::post('destroy-purchased-orders/{id}', [PurchaseController::class, 'destroy']);
+    Route::post('receive-purchased-orders', [PurchaseController::class, 'receiveOrders']);
+
+    Route::get('inventories', [InventoryController::class, 'index']);
+    Route::get('inventories/{id}', [InventoryController::class, 'show']);
+    Route::post('inventories', [InventoryController::class, 'store']);
+    Route::post('inventories/{id}', [InventoryController::class, 'update']);
+    Route::post('destroy-inventories/{id}', [InventoryController::class, 'destroy']);
 
     Route::get('role-options', [RoleController::class, 'roleOption']);
     Route::get('stock-options', [PurchasedInvProductController::class, 'stockOption']);
