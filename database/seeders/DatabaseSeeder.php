@@ -37,10 +37,5 @@ class DatabaseSeeder extends Seeder
 
         $permission = Permission::get();
         $role->syncPermissions($permission);
-
-        Section::create(['name' => 'Section A']);
-        Section::create(['name' => 'Section B']);
-        Section::create(['name' => 'Section C']);
-        Section::create(['name' => 'Section D']);
     }
 }
