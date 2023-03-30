@@ -61,6 +61,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('orders', [PurchaseController::class, 'store']);
     Route::post('orders/{id}', [PurchaseController::class, 'update']);
     Route::post('destroy-orders/{id}', [PurchaseController::class, 'destroy']);
+    Route::post('receive-orders', [PurchaseController::class, 'receiveOrders']);
 
     Route::get('role-options', [RoleController::class, 'roleOption']);
     Route::get('stock-options', [PurchasedInvProductController::class, 'stockOption']);

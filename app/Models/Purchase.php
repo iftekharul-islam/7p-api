@@ -38,6 +38,6 @@ class Purchase extends Model
      */
     public function products()
     {
-        return $this->hasMany(PurchaseProduct::class, 'purchase_id', 'po_number');
+        return $this->hasMany(PurchasedProduct::class, 'purchase_id', 'po_number');
     }
 }
