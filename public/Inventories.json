@@ -1,0 +1,37 @@
+{
+    "2": {
+        "DROPSHIP": true,
+        "DROPSHIP_SKU": "Imrul",
+        "DROPSHIP_COST": "760"
+    },
+    "3": {
+        "DROPSHIP": false,
+        "DROPSHIP_SKU": "",
+        "DROPSHIP_COST": 0
+    },
+    "4": {
+        "DROPSHIP": false,
+        "DROPSHIP_SKU": "",
+        "DROPSHIP_COST": 0
+    },
+    "8": {
+        "DROPSHIP": false,
+        "DROPSHIP_SKU": "",
+        "DROPSHIP_COST": 0
+    },
+    "9": {
+        "DROPSHIP": false,
+        "DROPSHIP_SKU": "",
+        "DROPSHIP_COST": 0
+    },
+    "7": {
+        "DROPSHIP": false,
+        "DROPSHIP_SKU": "",
+        "DROPSHIP_COST": 0
+    },
+    "6": {
+        "DROPSHIP": false,
+        "DROPSHIP_SKU": "",
+        "DROPSHIP_COST": 0
+    }
+}

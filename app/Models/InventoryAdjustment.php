@@ -2,8 +2,6 @@
 
 namespace App\Models;
 
-use App\Inventory;
-use App\InventoryUnit;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -12,17 +10,17 @@ class InventoryAdjustment extends Model
     use HasFactory;
     protected $table = "inventory_adjustments";
 
-    public function user ()
+    public function user()
     {
         return $this->belongsTo('App\User', 'user_id', 'id');
     }
 
-    public function inventory ()
+    public function inventory()
     {
-        return $this->belongsTo('App\Inventory', 'stock_no_unique', 'stock_no_unique');
+        return $this->belongsTo(Inventory::class, 'stock_no_unique', 'stock_no_unique');
     }
 
-    public function getTypeAttribute ($value)
+    public function getTypeAttribute($value)
     {
         if ($value == 1) {
             return 'Item Shipped';
@@ -47,18 +45,18 @@ class InventoryAdjustment extends Model
         }
     }
 
-    public function scopeSearchStockNumber ($query, $stock_no_unique)
+    public function scopeSearchStockNumber($query, $stock_no_unique)
     {
         $stock_no_unique = trim($stock_no_unique);
 
-        if ( empty($stock_no_unique) ) {
+        if (empty($stock_no_unique)) {
             return;
         }
 
         return $query->where('stock_no_unique', $stock_no_unique);
     }
 
-    public static function shipItem ($child_sku, $id, $item_quantity, $tracking)
+    public static function shipItem($child_sku, $id, $item_quantity, $tracking)
     {
         $units = InventoryUnit::where('child_sku', $child_sku)->get();
 
@@ -82,7 +80,7 @@ class InventoryAdjustment extends Model
         return $succeeded;
     }
 
-    public static function adjustInventory ($type, $stock_no, $qty, $note = null, $identifier = null)
+    public static function adjustInventory($type, $stock_no, $qty, $note = null, $identifier = null)
     {
 
         if ($stock_no == 'ToBeAssigned' || $stock_no == null) {
@@ -156,7 +154,7 @@ class InventoryAdjustment extends Model
 
         if ($adjustment_qty != 0) {
 
-            $adjustment = new \App\InventoryAdjustment;
+            $adjustment = new InventoryAdjustment();
             $adjustment->stock_no_unique = $stock_no;
             $adjustment->type = $type;
             $adjustment->quantity = $adjustment_qty;
@@ -166,7 +164,6 @@ class InventoryAdjustment extends Model
             $adjustment->save();
 
             return $adjustment->id;
-
         }
 
         return 1;
