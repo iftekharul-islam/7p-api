@@ -142,41 +142,6 @@ class PurchasedInvProductController extends Controller
         ], 203);
     }
 
-
-
-    public function addStock(Request $request)
-    {
-        $data = $request->only([
-            'stock_no_unique',
-            'stock_name_discription',
-            'section_id',
-            'sku_weight',
-            're_order_qty',
-            'min_reorder',
-            'last_cost',
-            'upc',
-            'wh_bin',
-            'warehouse'
-        ]);
-        $data['stock_no_unique'] = $request->stock_no_unique ?? $this->generateStockNoUnique();
-        $data['user_id'] = auth()->user()->id;
-
-        Inventory::create($data);
-
-        return response()->json([
-            'message' => 'Stock created successfully!',
-            'data' => []
-        ], 201);
-    }
-
-    private function generateStockNoUnique()
-    {
-        $stockNoUnique = Inventory::orderBy('id', 'desc')->first();
-
-        return sprintf("1%05d", (($stockNoUnique->id ?? 0) + 1));
-    }
-
-
     public function stockOption()
     {
         $stocks = Inventory::get();

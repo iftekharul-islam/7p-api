@@ -50,7 +50,6 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('purchased-products', [PurchasedInvProductController::class, 'store']);
     Route::post('purchased-products/{id}', [PurchasedInvProductController::class, 'update']);
     Route::post('destroy-purchased-products/{id}', [PurchasedInvProductController::class, 'destroy']);
-    Route::post('add-stock-products', [PurchasedInvProductController::class, 'addStock']);
 
     Route::get('vendors', [VendorController::class, 'index']);
     Route::get('vendors/{id}', [VendorController::class, 'show']);
@@ -70,8 +69,10 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('inventories', [InventoryController::class, 'store']);
     Route::post('inventories/{id}', [InventoryController::class, 'update']);
     Route::post('destroy-inventories/{id}', [InventoryController::class, 'destroy']);
+    Route::post('update-bin-&-qty', [InventoryController::class, 'updateBinQty']);
 
     Route::get('role-options', [RoleController::class, 'roleOption']);
+    Route::get('section-options', [InventoryController::class, 'sectionOption']);
     Route::get('stock-options', [PurchasedInvProductController::class, 'stockOption']);
     Route::get('vendor-options', [PurchasedInvProductController::class, 'vendorOption']);
     Route::get('product-options/{id}', [PurchasedInvProductController::class, 'productOptionbyVendor']);

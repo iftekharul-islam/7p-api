@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\InventoryAdjustment;
 use App\Models\Purchase;
 use App\Models\PurchasedProduct;
 use Carbon\Carbon;
@@ -35,6 +36,16 @@ class PurchaseController extends Controller
             } else {
                 $purchases->whereNotIn('po_number', $open_purchase_ids);
             }
+        }
+        if (isset($request->q)) {
+            $purchases->where('po_number', 'like', '%' . $request->q . '%')
+                ->orWhere('o_status', 'like', '%' . $request->q . '%')
+                ->orWhereHas('products', function ($item) use ($request) {
+                    $item->where('stock_no', 'like', '%' . $request->q . '%');
+                })
+                ->orWhereHas('vendor', function ($item) use ($request) {
+                    $item->where('vendor_name', 'like', '%' . $request->q . '%');
+                });
         }
         $purchases = $purchases->orderBy('id', 'DESC')->paginate($request->get('perPage', 10));
         return $purchases;
@@ -218,6 +229,7 @@ class PurchaseController extends Controller
                     'balance_quantity' => $value['balance_quantity']
                 ]);
             }
+            InventoryAdjustment::adjustInventory(6, $value['stock_no'],  $value['new_received'], $purchaseProduct->purchase_id, $purchaseProduct->id);
         }
 
         return response()->json([
