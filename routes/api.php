@@ -70,6 +70,8 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('inventories/{id}', [InventoryController::class, 'update']);
     Route::post('destroy-inventories/{id}', [InventoryController::class, 'destroy']);
     Route::post('update-bin-&-qty', [InventoryController::class, 'updateBinQty']);
+    Route::post('calculate-ordering', [InventoryController::class, 'calculateOrdering']);
+
 
     Route::get('role-options', [RoleController::class, 'roleOption']);
     Route::get('section-options', [InventoryController::class, 'sectionOption']);

@@ -46,7 +46,7 @@ class Inventory extends Model
 
     public function inventoryUnitRelation()
     {
-        return $this->hasMany('App\InventoryUnit', 'stock_no_unique', 'stock_no_unique');
+        return $this->hasMany(InventoryUnit::class, 'stock_no_unique', 'stock_no_unique');
     }
 
     public function adjustments()

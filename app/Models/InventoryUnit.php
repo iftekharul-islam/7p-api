@@ -8,21 +8,24 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class InventoryUnit extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
+
+    //TODO need to change name from database
+    // protected $table = "inventory_unit";
 
     protected $table = "inventory_units";
 
-    public function inventory ()
+    public function inventory()
     {
         return $this->belongsTo('App\Inventory', 'stock_no_unique', 'stock_no_unique');
     }
 
-    public function items ()
+    public function items()
     {
         return $this->hasMany('App\Item', 'child_sku', 'child_sku');
     }
 
-    public function options ()
+    public function options()
     {
         return $this->hasMany('App\Option', 'child_sku', 'child_sku');
     }
@@ -31,7 +34,7 @@ class InventoryUnit extends Model
     {
         return $this->hasOne('App\PurchaseProduct', 'stock_no', 'stock_no_unique')
             ->where('balance_quantity', '>', 0)
-            ->where('is_deleted', '0')
+            // ->where('is_deleted', '0')
             ->oldest();
     }
 }
