@@ -33,5 +33,25 @@
         "DROPSHIP": false,
         "DROPSHIP_SKU": "",
         "DROPSHIP_COST": 0
+    },
+    "3786": {
+        "DROPSHIP": false,
+        "DROPSHIP_SKU": "",
+        "DROPSHIP_COST": 0
+    },
+    "2443": {
+        "DROPSHIP": true,
+        "DROPSHIP_SKU": "asdas",
+        "DROPSHIP_COST": 0
+    },
+    "3064": {
+        "DROPSHIP": true,
+        "DROPSHIP_SKU": "wqeqweqwe",
+        "DROPSHIP_COST": 0
+    },
+    "3058": {
+        "DROPSHIP": false,
+        "DROPSHIP_SKU": "",
+        "DROPSHIP_COST": 0
     }
 }

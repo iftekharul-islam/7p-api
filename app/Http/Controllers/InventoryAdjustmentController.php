@@ -32,10 +32,13 @@ class InventoryAdjustmentController extends Controller
 
     public function ProductionRejects(Request $request)
     {
-        $rejects = Rejection::with('rejection_reason_info')
-            ->whereNull('scrap');
-        // ->searchItem($reject_item);
-        return $rejects->paginate($request->get('perPage', 10));
+        logger($request->q);
+        $rejects = Rejection::with('item.inventoryunit', 'rejection_reason_info')
+//            ->whereNull('scrap')
+            ->where('item_id', $request->q);
+        $data = $rejects->paginate($request->get('perPage', 10));
+        logger($data);
+        return $data;
     }
 
 

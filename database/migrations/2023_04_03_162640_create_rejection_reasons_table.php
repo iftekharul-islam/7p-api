@@ -13,6 +13,11 @@ return new class extends Migration
     {
         Schema::create('rejection_reasons', function (Blueprint $table) {
             $table->id();
+            $table->tinyInteger('sort_order');
+            $table->unsignedBigInteger('department_id')->index('department_id')->nullable();
+            $table->unsignedBigInteger('station_id')->index('station_id')->nullable();
+            $table->string('rejection_message');
+            $table->softDeletes();
             $table->timestamps();
         });
     }
