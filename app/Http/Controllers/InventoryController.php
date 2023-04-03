@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Inventory;
 use App\Models\InventoryAdjustment;
+use App\Models\Item;
 use App\Models\Section;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class InventoryController extends Controller
 {
@@ -34,7 +37,16 @@ class InventoryController extends Controller
             $sort_by = $request->get('sort_by');
         }
 
-        $inventories = Inventory::with('qty_user', 'section', 'last_product.vendor', 'purchase_products')
+        $total = Inventory::searchSection($request->get('section_ids'))
+            ->searchVendor($request->get('vendor_id'))
+            ->searchCriteria($request->get('search_for_first'), $request->get('search_in_first'), $request->get('operator_first'))
+            ->searchCriteria($request->get('search_for_second'), $request->get('search_in_second'), $request->get('operator_second'))
+            ->searchCriteria($request->get('search_for_third'), $request->get('search_in_third'), $request->get('operator_third'))
+            ->searchCriteria($request->get('search_for_fourth'), $request->get('search_in_fourth'), $request->get('operator_fourth'))
+            ->selectRaw('SUM(CASE WHEN qty_on_hand > 0 THEN qty_on_hand * last_cost ELSE 0 END ) as cost')
+            ->first();
+
+        $inventories = Inventory::with('qty_user', 'section', 'last_product.vendor', 'purchase_products', 'inventoryUnitRelation')
             ->searchSection($request->get('section_ids'))
             ->searchVendor($request->get('vendor_id'))
             ->searchCriteria($request->get('search_for_first'), $request->get('search_in_first'), $request->get('operator_first'))
@@ -44,7 +56,12 @@ class InventoryController extends Controller
             ->orderBy($sort_by, $request->get('sorted') ?? 'ASC')
             ->groupBy('inventories.stock_no_unique');
 
-        return $inventories->paginate($request->get('perPage', 10));
+        $inventories = $inventories->paginate($request->get('perPage', 10));
+
+        return [
+            'total_cost' => $total,
+            'inventories' => $inventories
+        ];
     }
 
     /**
@@ -255,5 +272,76 @@ class InventoryController extends Controller
             ];
         });
         return $stocks;
+    }
+
+    public function calculateOrdering(Request $request)
+    {
+        // return "A";
+        $divisor = $request->get('divisor');
+        $start = Carbon::parse($request->get('start_date'))->format('Y-m-d');
+        $end = Carbon::parse($request->get('end_date'))->format('Y-m-d');
+
+        $items = Item::leftJoin('inventory_units', 'inventory_units.child_sku', '=', 'items.child_sku')
+            ->where('items.is_deleted', '=', '0')
+            ->selectRaw(
+                'inventory_units.stock_no_unique,
+                         SUM(CASE WHEN items.item_status  NOT IN (5,6) AND ' .
+                    ' items.created_at > "' . $start . ' 00:00:00" AND items.created_at < "' . $end .
+                    ' 23:59:59" THEN inventory_units.unit_qty * items.item_quantity ELSE 0 END ) as total'
+            )
+            ->groupBy('inventory_units.stock_no_unique')
+            ->get();
+
+        if (!$items) {
+            Log::info('calculateOrdering:  Sales Query Failed.');
+            return false;
+        }
+
+        $inventoryTbl = Inventory::where('is_deleted', '0')->get();
+
+        if (!$inventoryTbl) {
+            Log::info('calculateOrdering: Stock # Query Failed.');
+            return false;
+        }
+
+        foreach ($inventoryTbl as $stock) {
+
+            // switch ($request->get('interval')) {
+            //     case 'sales_30':
+            //        $total = $stock->sales_30;
+            //        break;
+            //     case 'sales_90':
+            //        $total = $stock->sales_90;
+            //        break;
+            //     case 'sales_180':
+            //        $total = $stock->sales_180;
+            //        break;
+            // }
+
+            $sales = $items->where('stock_no_unique', $stock->stock_no_unique)->first();
+
+            if ($sales) {
+                $total = $sales->total / $divisor;
+
+                if ($total < 5) {
+                    $stock->min_reorder = 0;
+                } else if ($total < 10) {
+                    $stock->min_reorder = round((($total - 1) / 10) + .5) * 10;
+                } else if ($total < 50) {
+                    $stock->min_reorder = round($total / 10) * 10;
+                } else if ($total >= 50) {
+                    $stock->min_reorder = round($total / 50) * 50;
+                }
+            } else {
+                $stock->min_reorder = 0;
+            }
+
+            $stock->save();
+        }
+
+        return response()->json([
+            'message' => 'Inventory Ordering Quantities Updated!',
+            'status' => 201
+        ], 201);
     }
 }

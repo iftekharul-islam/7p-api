@@ -46,12 +46,12 @@ class Inventory extends Model
 
     public function inventoryUnitRelation()
     {
-        return $this->hasMany('App\InventoryUnit', 'stock_no_unique', 'stock_no_unique');
+        return $this->hasMany(InventoryUnit::class, 'stock_no_unique', 'stock_no_unique');
     }
 
     public function adjustments()
     {
-        return $this->hasMany('App\InventoryAdjustment', 'stock_no_unique', 'stock_no_unique')->orderBy('created_at', 'DESC');
+        return $this->hasMany(InventoryAdjustment::class, 'stock_no_unique', 'stock_no_unique')->orderBy('created_at', 'DESC');
     }
 
     public function purchase_products()
