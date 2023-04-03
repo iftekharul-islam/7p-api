@@ -2,6 +2,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\InventoryAdjustmentController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\PurchasedInvProductController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserPermissionController;
 use App\Http\Controllers\VendorController;
+use App\Models\InventoryAdjustment;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -72,6 +74,10 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('update-bin-&-qty', [InventoryController::class, 'updateBinQty']);
     Route::post('calculate-ordering', [InventoryController::class, 'calculateOrdering']);
 
+    Route::get('view-adjustments', [InventoryAdjustmentController::class, 'viewAdjustment']);
+    Route::get('adjust-inventory', [InventoryAdjustmentController::class, 'adjustInventory']);
+    Route::get('production-rejects', [InventoryAdjustmentController::class, 'ProductionRejects']);
+    Route::post('update-adjust-inventory', [InventoryAdjustmentController::class, 'updateAdjustInventory']);
 
     Route::get('role-options', [RoleController::class, 'roleOption']);
     Route::get('section-options', [InventoryController::class, 'sectionOption']);
