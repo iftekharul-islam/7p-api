@@ -33,15 +33,13 @@ class InventoryAdjustmentController extends Controller
     public function ProductionRejects(Request $request)
     {
         logger($request->q);
-        $rejects = Rejection::with('item.inventoryunit', 'rejection_reason_info')
-//            ->whereNull('scrap')
+        $rejects = Rejection::with('item.inventoryunit', 'rejection_reason_info', 'user')
+            ->whereNull('scrap')
             ->where('item_id', $request->q);
         $data = $rejects->paginate($request->get('perPage', 10));
         logger($data);
         return $data;
     }
-
-
 
     public function updateAdjustInventory(Request $request)
     {
@@ -88,31 +86,48 @@ class InventoryAdjustmentController extends Controller
                             //only saves last adjustment ??
                             $reject->scrap = InventoryAdjustment::adjustInventory(5, $stock_no->stock_no_unique, $reject->reject_qty * $stock_no->unit_qty, $reject->id, $reject->item->id);
                             $reject->save();
-                            return redirect()->action('InventoryAdjustmentController@index', ['tab' => 'production', 'reject_item' => $request->get('reject_item')])
-                                ->with('success', 'Inventory adjusted for Reject Item ' . $request->get('reject_item'));
+
+                            return response()->json([
+                                'message' => 'Inventory adjusted for Reject Item ' . $request->get('reject_item'),
+                                'status' => 201,
+                                'data' => []
+                            ], 201);
                         } else {
                             $reject->scrap = 0;
                             $reject->save();
-                            return redirect()->action('InventoryAdjustmentController@index', ['tab' => 'production', 'reject_item' => $request->get('reject_item')])
-                                ->withErrors('Reject Item ' . $request->get('reject_item') . ' ignored, no stock number found');
+
+                            return response()->json([
+                                'message' => 'Reject Item ' . $request->get('reject_item') . ' ignored, no stock number found',
+                                'status' => 203,
+                                'data' => []
+                            ], 203);
                         }
                     }
                 } else {
                     $reject->scrap = 0;
                     $reject->save();
-                    return redirect()->action('InventoryAdjustmentController@index', ['tab' => 'production', 'reject_item' => $request->get('reject_item')])
-                        ->withErrors('Reject Item ' . $request->get('reject_item') . ' ignored, no stock number found');
+                    return response()->json([
+                        'message' => 'Reject Item ' . $request->get('reject_item') . ' ignored, no stock number found',
+                        'status' => 203,
+                        'data' => []
+                    ], 203);
                 }
             } elseif ($request->get('action') == 'ignore') {
 
                 $reject->scrap = 0;
                 $reject->save();
 
-                return redirect()->action('InventoryAdjustmentController@index', ['tab' => 'production', 'reject_item' => $request->get('reject_item')])
-                    ->with('success', 'Reject Item ' . $request->get('reject_item') . ' ignored.');
+                return response()->json([
+                    'message' => 'Reject Item ' . $request->get('reject_item') . ' ignored.',
+                    'status' => 201,
+                    'data' => []
+                ], 201);
             } else {
-                return redirect()->action('InventoryAdjustmentController@index', ['tab' => 'production', 'reject_item' => $request->get('reject_item')])
-                    ->withErrors('Error when processing Item ' . $request->get('reject_item'));
+                return response()->json([
+                    'message' => 'Error when processing Item ' . $request->get('reject_item'),
+                    'status' => 203,
+                    'data' => []
+                ], 203);
             }
         } elseif ($request->has('reject_quantity') && $request->has('receive_stock_no')) {
         } else {

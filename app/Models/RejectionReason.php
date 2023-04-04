@@ -9,6 +9,11 @@ class RejectionReason extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'rejection_message',
+        'sort_order'
+    ];
+
     public static function getReasons()
     {
         return RejectionReason::orderBy('sort_order')

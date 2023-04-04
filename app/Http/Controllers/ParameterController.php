@@ -2,23 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\RejectionReason;
+use App\Models\Parameter;
 use Illuminate\Http\Request;
 
-class RejectionReasonController extends Controller
+class ParameterController extends Controller
 {
     public function index(Request $request)
     {
-        $reason = RejectionReason::query();
+        $reason = Parameter::query();
         if ($request->q) {
             $reason = $reason->where('rejection_message', 'like', '%' . $request->q . '%');
         }
-        return $reason->where('is_deleted', '0')->orderBy('sort_order')->paginate($request->get('perPage', 10));
+        return $reason->where('is_deleted', '0')->paginate($request->get('perPage', 10));
     }
 
     public function sortOrder($direction, $id)
     {
-        $reason = RejectionReason::find($id);
+        $reason = Parameter::find($id);
 
         if (!$reason) {
             return response()->json([
@@ -40,7 +40,7 @@ class RejectionReasonController extends Controller
             ], 203);
         }
 
-        $switch = RejectionReason::where('sort_order', $new_order)->get();
+        $switch = Parameter::where('sort_order', $new_order)->get();
 
         if (count($switch) > 1) {
             return response()->json([
@@ -67,23 +67,20 @@ class RejectionReasonController extends Controller
 
     public function show(string $id)
     {
-        return RejectionReason::find($id);
+        return Parameter::find($id);
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'rejection_message' => 'required',
+            'parameter_value' => 'required',
         ]);
 
         $data = $request->only([
-            'rejection_message',
+            'parameter_value',
         ]);
-
-        $data['sort_order'] = RejectionReason::max('sort_order') + 1;
-
         try {
-            RejectionReason::create($data);
+            Parameter::create($data);
             return response()->json([
                 'message' => 'Rejection Reason created successfully!',
                 'status' => 201,
@@ -101,10 +98,10 @@ class RejectionReasonController extends Controller
     public function update(Request $request, string $id)
     {
         $request->validate([
-            'station_name' => 'required',
+            'parameter_value' => 'required',
         ]);
         try {
-            $station = RejectionReason::find($id);
+            $station = Parameter::find($id);
             if (!$station) {
                 return response()->json([
                     'message' => 'Station not found!',
@@ -136,17 +133,17 @@ class RejectionReasonController extends Controller
 
     public function destroy(string $id)
     {
-        $data = RejectionReason::find($id);
+        $data = Parameter::find($id);
         if ($data) {
             $data->delete();
             return response()->json([
-                'message' => 'Reason delete successfully!',
+                'message' => 'Parameter delete successfully!',
                 'status' => 201,
                 'data' => []
             ], 201);
         }
         return response()->json([
-            'message' => "Reason didn't found!",
+            'message' => "Parameter didn't found!",
             'status' => 203,
             'data' => []
         ], 203);

@@ -72,7 +72,7 @@ class VendorController extends Controller
             }
             $product->update($request->all());
             return response()->json([
-                'message' => 'Vendor created successfully!',
+                'message' => 'Vendor update successfully!',
                 'status' => 201,
                 'data' => []
             ], 201);
