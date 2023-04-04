@@ -11,7 +11,7 @@ class ParameterController extends Controller
     {
         $reason = Parameter::query();
         if ($request->q) {
-            $reason = $reason->where('rejection_message', 'like', '%' . $request->q . '%');
+            $reason = $reason->where('parameter_value', 'like', '%' . $request->q . '%');
         }
         return $reason->where('is_deleted', '0')->paginate($request->get('perPage', 10));
     }
