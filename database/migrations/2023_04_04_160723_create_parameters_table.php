@@ -13,6 +13,9 @@ return new class extends Migration
     {
         Schema::create('parameters', function (Blueprint $table) {
             $table->id();
+            $table->string('Xstore_id');
+            $table->string('parameter_value');
+            $table->softDeletes();
             $table->timestamps();
         });
     }
