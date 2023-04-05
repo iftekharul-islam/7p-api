@@ -18,9 +18,6 @@ use App\Http\Controllers\TemplateController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserPermissionController;
 use App\Http\Controllers\VendorController;
-use App\Models\InventoryAdjustment;
-use App\Models\Parameter;
-use App\Models\Section;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -126,8 +123,9 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('template', [TemplateController::class, 'index']);
     Route::get('template/{id}', [TemplateController::class, 'show']);
     Route::post('template', [TemplateController::class, 'store']);
-    Route::post('manufacture/{id}', [ManufactureController::class, 'update']);
+    Route::post('template/{id}', [TemplateController::class, 'update']);
     Route::post('destroy-template/{id}', [TemplateController::class, 'destroy']);
+    Route::post('manufacture/{id}', [ManufactureController::class, 'update']);
     Route::get('manufacture-access/{id}', [ManufactureController::class, 'getAccess']);
     Route::post('manufacture-access', [ManufactureController::class, 'updateAccess']);
 
