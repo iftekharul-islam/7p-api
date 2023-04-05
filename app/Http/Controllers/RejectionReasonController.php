@@ -13,7 +13,7 @@ class RejectionReasonController extends Controller
         if ($request->q) {
             $reason = $reason->where('rejection_message', 'like', '%' . $request->q . '%');
         }
-        return $reason->where('is_deleted', '0')->orderBy('sort_order')->paginate($request->get('perPage', 10));
+        return $reason->where('is_deleted', '0')->orderBy('sort_order')->get();
     }
 
     public function sortOrder($direction, $id)
