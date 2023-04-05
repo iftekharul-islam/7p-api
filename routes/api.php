@@ -4,14 +4,17 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\InventoryAdjustmentController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\ManufactureController;
 use App\Http\Controllers\ParameterController;
 use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\ProductionCategoryController;
 use App\Http\Controllers\PurchasedInvProductController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\RejectionReasonController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SectionController;
 use App\Http\Controllers\StationController;
+use App\Http\Controllers\TemplateController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserPermissionController;
 use App\Http\Controllers\VendorController;
@@ -105,6 +108,28 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('parameters/{direction}/{id}', [ParameterController::class, 'sortOrder']);
     Route::post('parameters', [ParameterController::class, 'store']);
     Route::post('destroy-parameters/{id}', [ParameterController::class, 'destroy']);
+
+    Route::get('categories', [ProductionCategoryController::class, 'index']);
+    Route::get('categories/{id}', [ProductionCategoryController::class, 'show']);
+    Route::post('categories', [ProductionCategoryController::class, 'store']);
+    Route::post('categories/{id}', [ProductionCategoryController::class, 'update']);
+    Route::post('destroy-categories/{id}', [ProductionCategoryController::class, 'destroy']);
+
+    Route::get('manufacture', [ManufactureController::class, 'index']);
+    Route::get('manufacture/{id}', [ManufactureController::class, 'show']);
+    Route::post('manufacture', [ManufactureController::class, 'store']);
+    Route::post('manufacture/{id}', [ManufactureController::class, 'update']);
+    Route::post('destroy-manufacture/{id}', [ManufactureController::class, 'destroy']);
+    Route::get('manufacture-access/{id}', [ManufactureController::class, 'getAccess']);
+    Route::post('manufacture-access', [ManufactureController::class, 'updateAccess']);
+
+    Route::get('template', [TemplateController::class, 'index']);
+    Route::get('template/{id}', [TemplateController::class, 'show']);
+    Route::post('template', [TemplateController::class, 'store']);
+    Route::post('manufacture/{id}', [ManufactureController::class, 'update']);
+    Route::post('destroy-template/{id}', [TemplateController::class, 'destroy']);
+    Route::get('manufacture-access/{id}', [ManufactureController::class, 'getAccess']);
+    Route::post('manufacture-access', [ManufactureController::class, 'updateAccess']);
 
     Route::get('role-options', [RoleController::class, 'roleOption']);
     Route::get('section-options', [InventoryController::class, 'sectionOption']);
