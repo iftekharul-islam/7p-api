@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Template;
+use App\Models\TemplateOption;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class TemplateController extends Controller
@@ -212,19 +214,55 @@ class TemplateController extends Controller
     }
 
     /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Template $template)
-    {
-        //
-    }
-
-    /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Template $template)
+    public function update(Request $request, $id)
     {
-        return "A";
+        $template = Template::find($id);
+
+        if (!$template) {
+            return response()->json([
+                'message' => "Template didn't found!",
+                'status' => 203,
+                'data' => []
+            ], 203);
+        }
+
+        $template->template_name = $request->get('template_name');
+        $template->repeated_fields = $request->get('repeated_fields');
+        $template->delimited_char = $request->get('delimited_char');
+        $template->show_header = $request->get('show_header');
+        $template->break_kits = $request->get('break_kits');
+        $template->is_active = $request->get('is_active');
+        $template->save();
+
+        TemplateOption::where('template_id', $id)->delete();
+
+        $optionData = [];
+        foreach ( $request->options ?? [] as $option ) {
+            $optionData [] = [
+                'template_id' => $id,
+                'line_item_field' => $option['line_item_field'],
+                'option_name' => $option['option_name'],
+                'option_category' => $option['option_category'],
+                'value' => $option['value'],
+                'width' => $option['width'],
+                'format' => $option['format'],
+                'template_order' => $option['template_order'],
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now()
+
+            ];
+        }
+        if(count($optionData)){
+            TemplateOption::insert($optionData);
+        }
+
+        return response()->json([
+            'message' => 'Template with template option updated successfully!',
+            'status' => 201,
+            'data' => []
+        ], 201);
     }
 
     /**
