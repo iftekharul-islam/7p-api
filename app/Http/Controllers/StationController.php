@@ -84,4 +84,16 @@ class StationController extends Controller
             ], 403);
         }
     }
+
+    public function stationOption()
+    {
+        $station = Station::get();
+        $station->transform(function ($item) {
+            return [
+                'value' => $item['id'],
+                'label' => $item['station_name']
+            ];
+        });
+        return $station;
+    }
 }

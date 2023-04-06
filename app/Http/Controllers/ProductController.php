@@ -10,9 +10,16 @@ class ProductController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        //
+        $products = Product::with('manufacture')->where('is_deleted', '0');
+        if ($request->q) {
+            $products = $products->where('product_model', 'like', '%' . $request->q . '%');
+        }
+        //    ->searchInOption($request->get('search_in'), $request->get("search_for"))
+        // ->searchProductionCategory($request->get('product_production_category'))
+
+        return $products->latest()->orderBy('id', 'desc')->paginate($request->get('perPage', 10));
     }
 
     /**
@@ -58,8 +65,21 @@ class ProductController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Product $product)
+    public function destroy(string $id)
     {
-        //
+        $data = Product::find($id);
+        if ($data) {
+            $data->delete();
+            return response()->json([
+                'message' => 'Product delete successfully!',
+                'status' => 201,
+                'data' => []
+            ], 201);
+        }
+        return response()->json([
+            'message' => "Product didn't found!",
+            'status' => 203,
+            'data' => []
+        ], 203);
     }
 }

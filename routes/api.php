@@ -2,11 +2,13 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BatchRouteController;
 use App\Http\Controllers\InventoryAdjustmentController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ManufactureController;
 use App\Http\Controllers\ParameterController;
 use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductionCategoryController;
 use App\Http\Controllers\PurchasedInvProductController;
 use App\Http\Controllers\PurchaseController;
@@ -125,9 +127,17 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('template', [TemplateController::class, 'store']);
     Route::post('template/{id}', [TemplateController::class, 'update']);
     Route::post('destroy-template/{id}', [TemplateController::class, 'destroy']);
-    Route::post('manufacture/{id}', [ManufactureController::class, 'update']);
-    Route::get('manufacture-access/{id}', [ManufactureController::class, 'getAccess']);
-    Route::post('manufacture-access', [ManufactureController::class, 'updateAccess']);
+
+    Route::get('product', [ProductController::class, 'index']);
+    Route::get('product/{id}', [TemplateController::class, 'show']);
+    Route::post('product', [TemplateController::class, 'store']);
+    Route::post('product/{id}', [TemplateController::class, 'update']);
+    Route::post('destroy-product/{id}', [ProductController::class, 'destroy']);
+
+    Route::get('route', [BatchRouteController::class, 'index']);
+    Route::get('route/{id}', [BatchRouteController::class, 'show']);
+    Route::post('route', [BatchRouteController::class, 'store']);
+    Route::post('route/{id}', [BatchRouteController::class, 'update']);
 
     Route::get('role-options', [RoleController::class, 'roleOption']);
     Route::get('section-options', [InventoryController::class, 'sectionOption']);
@@ -135,4 +145,6 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('vendor-options', [PurchasedInvProductController::class, 'vendorOption']);
     Route::get('product-options/{id}', [PurchasedInvProductController::class, 'productOptionbyVendor']);
     Route::get('section-options', [SectionController::class, 'sectionOption']);
+    Route::get('station-options', [StationController::class, 'stationOption']);
+    Route::get('template-options', [TemplateController::class, 'templateOption']);
 });
