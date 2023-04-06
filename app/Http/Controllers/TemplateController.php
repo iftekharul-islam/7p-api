@@ -232,20 +232,20 @@ class TemplateController extends Controller
         $template->repeated_fields = $request->get('repeated_fields');
         $template->delimited_char = $request->get('delimited_char');
         $template->show_header = $request->get('show_header');
-        $template->break_kits = $request->get('break_kits');
+        $template->break_kits = $request->get('break_kits') ? '1' : '0';
         $template->is_active = $request->get('is_active');
         $template->save();
 
         TemplateOption::where('template_id', $id)->delete();
 
         $optionData = [];
-        foreach ( $request->options ?? [] as $option ) {
-            $optionData [] = [
+        foreach ($request->options ?? [] as $option) {
+            $optionData[] = [
                 'template_id' => $id,
                 'line_item_field' => $option['line_item_field'],
                 'option_name' => $option['option_name'],
                 'option_category' => $option['option_category'],
-                'value' => $option['value'],
+                'value' => $option['value'] ?? 'Not set',
                 'width' => $option['width'],
                 'format' => $option['format'],
                 'template_order' => $option['template_order'],
@@ -254,7 +254,7 @@ class TemplateController extends Controller
 
             ];
         }
-        if(count($optionData)){
+        if (count($optionData)) {
             TemplateOption::insert($optionData);
         }
 
@@ -284,5 +284,17 @@ class TemplateController extends Controller
             'status' => 203,
             'data' => []
         ], 203);
+    }
+
+    public function templateOption()
+    {
+        $template = Template::get();
+        $template->transform(function ($item) {
+            return [
+                'value' => $item['id'],
+                'label' => $item['template_name']
+            ];
+        });
+        return $template;
     }
 }

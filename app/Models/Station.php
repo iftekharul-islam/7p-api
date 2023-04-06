@@ -35,7 +35,7 @@ class Station extends Model
     public function route_list()
     {
 
-        return $this->belongsToMany('App\BatchRoute', 'batch_route_station', 'station_id', 'batch_route_id')
+        return $this->belongsToMany(BatchRoute::class, 'batch_route_station', 'station_id', 'batch_route_id')
             ->where('batch_routes.is_deleted', 0)
             ->orderBy('batch_routes.batch_route_name');
     }

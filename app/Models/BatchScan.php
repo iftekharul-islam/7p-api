@@ -5,12 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Product extends Model
+class BatchScan extends Model
 {
     use HasFactory;
-
-    public function manufacture()
-    {
-        return $this->hasOne(Manufacture::class, 'id', 'manufacture_id');
-    }
 }
