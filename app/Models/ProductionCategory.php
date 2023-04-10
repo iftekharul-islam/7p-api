@@ -14,4 +14,9 @@ class ProductionCategory extends Model
         'production_category_description',
         'production_category_display_order'
     ];
+
+    public function getDescriptionWithCodeAttribute()
+    {
+        return sprintf("%s : %s", $this->production_category_code, $this->production_category_description);
+    }
 }
