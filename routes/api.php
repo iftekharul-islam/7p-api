@@ -15,6 +15,7 @@ use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\RejectionReasonController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SectionController;
+use App\Http\Controllers\SpecificationSheetController;
 use App\Http\Controllers\StationController;
 use App\Http\Controllers\TemplateController;
 use App\Http\Controllers\UserController;
@@ -139,6 +140,12 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('route', [BatchRouteController::class, 'store']);
     Route::post('route/{id}', [BatchRouteController::class, 'update']);
 
+    Route::get('specification-product', [SpecificationSheetController::class, 'index']);
+    Route::get('specification-product/{id}', [TemplateController::class, 'show']);
+    Route::post('specification-product', [TemplateController::class, 'store']);
+    Route::post('specification-product/{id}', [TemplateController::class, 'update']);
+    Route::post('destroy-specification-product/{id}', [ProductController::class, 'destroy']);
+
     Route::get('role-options', [RoleController::class, 'roleOption']);
     Route::get('section-options', [InventoryController::class, 'sectionOption']);
     Route::get('stock-options', [PurchasedInvProductController::class, 'stockOption']);
@@ -147,4 +154,10 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('section-options', [SectionController::class, 'sectionOption']);
     Route::get('station-options', [StationController::class, 'stationOption']);
     Route::get('template-options', [TemplateController::class, 'templateOption']);
+    Route::get('searchable-fields-options', [SpecificationSheetController::class, 'searchableFieldsOption']);
+    Route::get('production-categories-options', [SpecificationSheetController::class, 'productionCategoriesOption']);
+    Route::get('web-image-status-options', [SpecificationSheetController::class, 'webImageStatusOption']);
+    Route::get('make-sample-data-options', [SpecificationSheetController::class, 'makeSampleDataOption']);
+    Route::get('statuses-options', [SpecificationSheetController::class, 'statusesOption']);
+    Route::get('skus', [SpecificationSheetController::class, 'skus']);
 });

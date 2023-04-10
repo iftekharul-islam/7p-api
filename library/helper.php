@@ -18,4 +18,12 @@ class Helper
 
         return $zeroStations;
     }
+    public static $specSheetSampleDataArray = [
+        'Yes'              => 'Yes',
+        'No'               => 'No',
+        'Redo Sample'      => 'Redo Sample',
+        'Complete'         => 'Complete',
+        'Sample Approve'   => 'Sample Approve',
+        'Graphic Complete' => 'Graphic Complete',
+    ];
 }
