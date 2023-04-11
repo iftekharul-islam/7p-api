@@ -142,7 +142,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
 
     Route::get('specification-product', [SpecificationSheetController::class, 'index']);
     Route::get('specification-product/{id}', [TemplateController::class, 'show']);
-    Route::post('specification-product', [TemplateController::class, 'store']);
+    Route::post('specification-product', [SpecificationSheetController::class, 'store']);
     Route::post('specification-product/{id}', [TemplateController::class, 'update']);
     Route::post('destroy-specification-product/{id}', [ProductController::class, 'destroy']);
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Product;
 use App\Models\ProductionCategory;
 use App\Models\SpecificationSheet;
 use Illuminate\Http\Request;
@@ -35,9 +36,42 @@ class SpecificationSheetController extends Controller
         return $specSheets;
     }
 
-    public function create()
+    //get store function
+    public function store(Request $request)
     {
-        return redirect(url("products_specifications/step/1"));
+        $specSheet = false;
+        $previous_sku = trim($request->get('previous_sku', ''));
+        if (!empty($previous_sku)) {
+            $specSheet = SpecificationSheet::where('sku', $previous_sku)
+                ->first();
+            if (!$specSheet) {
+                return response()->json([
+                    'message' => 'Not a valid product sku is chosen to copy!',
+                    'status' => 203,
+                    'data' => []
+                ], 203);
+            } else {
+                $newSpecSheet = $specSheet->replicate();
+                $newSpecSheet->product_sku = trim($request->get('sku'));
+                $newSpecSheet->save();
+            }
+        } else {
+            $specSheet = $this->insertOrUpdateSpec($request);
+        }
+        if ($specSheet == false) {
+            return response()->json([
+                'message' => 'Product name cannot be empty',
+                'status' => 203,
+                'data' => []
+            ], 203);
+        }
+        //session()->flush('proposed_sku');
+
+        return response()->json([
+            'message' => 'Spec sheet is created successfully',
+            'status' => 201,
+            'data' => []
+        ], 201);
     }
 
     public function show($id)
@@ -258,7 +292,7 @@ class SpecificationSheetController extends Controller
         if (is_null($specSheet)) {
             $specSheet = new SpecificationSheet();
             // product sku is one time insert able. only on insertion time.
-            $specSheet->product_sku = trim($request->get('product_sku'));
+            $specSheet->product_sku = trim($request->get('sku'));
             $specSheet->status = 0;
         } else {
             $specSheet->status = intval($request->get('status'));
@@ -288,34 +322,34 @@ class SpecificationSheetController extends Controller
         $specSheet->product_general_note = trim($request->get('product_general_note'));
 
         /* spec table data */
-        $table_data = [];
-        foreach (array_chunk($request->get('spec_table_data'), 10) as $row) {
-            if (empty($row[0])) {
-                continue;
-            }
-            $table_data[] = $row;
-        }
+        // $table_data = [];
+        // foreach (array_chunk($request->get('spec_table_data'), 10) as $row) {
+        //     if (empty($row[0])) {
+        //         continue;
+        //     }
+        //     $table_data[] = $row;
 
-        $specSheet->spec_table_data = json_encode($table_data);
+
+        $specSheet->spec_table_data = json_encode($request->get('spec_table_data'));
 
 
         /* Special note segment */
-        $i = 0;
-        $arr = [];
-        foreach ($request->get('special_note') as $note) {
-            // if special note col is left empty, don't insert
-            if (empty(trim($note))) {
-                continue;
-            }
-            $arr[] = [
-                trim($note),
-                trim($request->get('option_name')[$i]),
-                trim($request->get('details')[$i]),
-            ];
-            ++$i;
-        }
+        // $i = 0;
+        // $arr = [];
+        // foreach ($request->get('special_note') as $note) {
+        //     // if special note col is left empty, don't insert
+        //     if (empty(trim($note))) {
+        //         continue;
+        //     }
+        //     $arr[] = [
+        //         trim($note),
+        //         trim($request->get('option_name')[$i]),
+        //         trim($request->get('details')[$i]),
+        //     ];
+        //     ++$i;
+        // }
 
-        $specSheet->special_note = json_encode($arr);
+        $specSheet->special_note = json_encode($request->get('special_note'));
         /* special note segment ends */
 
         $specSheet->product_note = trim($request->get('product_note'));
@@ -326,40 +360,40 @@ class SpecificationSheetController extends Controller
         $specSheet->cost_of_1000 = floatval($request->get('cost_of_1000'));
         $specSheet->cost_of_10000 = floatval($request->get('cost_of_10000'));
 
-        $i = 0;
-        $arr = [];
-        $j = 0;
+        // $i = 0;
+        // $arr = [];
+        // $j = 0;
 
-        foreach ($request->get('parts_name') as $part) {
-            if (empty(trim($part))) {
-                continue;
-            }
-            $arr[] = [
-                trim($part),
-                $request->get('cost_variation')[$j++],
-                $request->get('cost_variation')[$j++],
-                $request->get('cost_variation')[$j++],
-                $request->get('cost_variation')[$j++],
-                trim($request->get('supplier_name')[$i]),
-            ];
-            ++$i;
-        }
+        // foreach ($request->get('parts_name') as $part) {
+        //     if (empty(trim($part))) {
+        //         continue;
+        //     }
+        //     $arr[] = [
+        //         trim($part),
+        //         $request->get('cost_variation')[$j++],
+        //         $request->get('cost_variation')[$j++],
+        //         $request->get('cost_variation')[$j++],
+        //         $request->get('cost_variation')[$j++],
+        //         trim($request->get('supplier_name')[$i]),
+        //     ];
+        //     ++$i;
+        // }
 
-        $specSheet->content_cost_info = json_encode($arr);
+        $specSheet->content_cost_info = json_encode($request->get('cost_variation'));
 
         $specSheet->delivery_cost_variation = json_encode($request->get('delivery_cost_variation'));
 
         $specSheet->labor_expense_cost_variation = json_encode($request->get('labor_expense_cost_variation'));
 
         if ($request->hasFile('product_images')) {
-            $paths = $this->image_manipulator($request->file('product_images'), $request->get('product_sku'));
+            $paths = $this->image_manipulator($request->file('product_images'), $request->get('sku'));
             $specSheet->images = json_encode($paths);
         }
 
         if ($request->has('delete_product_details_image') && strtolower($request->get('delete_product_details_image', 'no')) == 'yes') {
             $specSheet->product_details_file = json_encode([]); // delete the image already in
         } elseif ($request->hasFile('product_details_file')) {
-            $paths = $this->image_manipulator($request->file('product_details_file'), $request->get('product_sku'));
+            $paths = $this->image_manipulator($request->file('product_details_file'), $request->get('sku'));
             $specSheet->product_details_file = json_encode($paths);
         }
         $specSheet->save();
@@ -381,7 +415,6 @@ class SpecificationSheetController extends Controller
                 $paths[] = sprintf("%s/%s", url($destinationPath), $fileName);
             }
         }
-
         return $paths;
     }
 
