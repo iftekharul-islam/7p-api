@@ -130,9 +130,9 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('destroy-template/{id}', [TemplateController::class, 'destroy']);
 
     Route::get('product', [ProductController::class, 'index']);
-    Route::get('product/{id}', [TemplateController::class, 'show']);
-    Route::post('product', [TemplateController::class, 'store']);
-    Route::post('product/{id}', [TemplateController::class, 'update']);
+    Route::get('product/{id}', [ProductController::class, 'show']);
+    Route::post('product', [ProductController::class, 'store']);
+    Route::post('product/{id}', [ProductController::class, 'update']);
     Route::post('destroy-product/{id}', [ProductController::class, 'destroy']);
 
     Route::get('route', [BatchRouteController::class, 'index']);
@@ -141,10 +141,10 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('route/{id}', [BatchRouteController::class, 'update']);
 
     Route::get('specification-product', [SpecificationSheetController::class, 'index']);
-    Route::get('specification-product/{id}', [TemplateController::class, 'show']);
+    Route::get('specification-product/{id}', [SpecificationSheetController::class, 'show']);
     Route::post('specification-product', [SpecificationSheetController::class, 'store']);
-    Route::post('specification-product/{id}', [TemplateController::class, 'update']);
-    Route::post('destroy-specification-product/{id}', [ProductController::class, 'destroy']);
+    Route::post('specification-product/{id}', [SpecificationSheetController::class, 'update']);
+    Route::post('destroy-specification-product/{id}', [SpecificationSheetController::class, 'destroy']);
 
     Route::get('role-options', [RoleController::class, 'roleOption']);
     Route::get('section-options', [InventoryController::class, 'sectionOption']);
@@ -159,5 +159,8 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('web-image-status-options', [SpecificationSheetController::class, 'webImageStatusOption']);
     Route::get('make-sample-data-options', [SpecificationSheetController::class, 'makeSampleDataOption']);
     Route::get('statuses-options', [SpecificationSheetController::class, 'statusesOption']);
+    Route::get('production-category-options', [ProductionCategoryController::class, 'productionCategoryOption']);
+    Route::get('product-searchable-fields-options', [ProductController::class, 'searchableFieldsOption']);
+
     Route::get('skus', [SpecificationSheetController::class, 'skus']);
 });

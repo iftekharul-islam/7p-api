@@ -11,15 +11,15 @@ class SpecificationSheet extends Model
     protected $table = 'product_specification_sheet';
 
     public static $statuses = [
-        0 => 'Initial',
-        1 => 'Need graphic artwork',
-        2 => 'Graphic Artwork Approval',
-        3 => 'Need production automation',
-        4 => 'Need web photo',
-        5 => 'Ready to publish',
-        6 => 'Published/Live',
-        7 => 'Add Product Info',
-        8 => 'SKU Production Approval',
+        'Initial',
+        'Need graphic artwork',
+        'Graphic Artwork Approval',
+        'Need production automation',
+        'Need web photo',
+        'Ready to publish',
+        'Published/Live',
+        'Add Product Info',
+        'SKU Production Approval',
     ];
 
     public static $webImageStatus = [
@@ -46,6 +46,15 @@ class SpecificationSheet extends Model
         'Complete'         => 'Complete',
         'Sample Approve'   => 'Sample Approve',
         'Graphic Complete' => 'Graphic Complete',
+    ];
+
+    protected $casts = [
+        'spec_table_data' => 'array',
+        'images' => 'array',
+        'special_note' => 'array',
+        'content_cost_info' => 'array',
+        'delivery_cost_variation' => 'array',
+        'labor_expense_cost_variation' => 'array',
     ];
 
     public function production_category()
