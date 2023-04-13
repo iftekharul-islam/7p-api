@@ -79,6 +79,7 @@ class Product extends Model
         if (!$production_category || !is_array($production_category)) {
             return;
         }
+
         $stripped_values = $this->trimmer($production_category, 'all');
 
         if (count($stripped_values) == 0 || (count($stripped_values) == 1 && $stripped_values[0] == '0')) {

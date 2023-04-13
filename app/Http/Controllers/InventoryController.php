@@ -8,6 +8,7 @@ use App\Models\Item;
 use App\Models\Section;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class InventoryController extends Controller
@@ -343,5 +344,25 @@ class InventoryController extends Controller
             'message' => 'Inventory Ordering Quantities Updated!',
             'status' => 201
         ], 201);
+    }
+
+    public function stockImageOption()
+    {
+        $stocks = Inventory::select(
+            DB::raw('CONCAT(stock_no_unique, " - ", stock_name_discription) AS description'),
+            'stock_no_unique',
+            'warehouse'
+        )
+            ->where('is_deleted', '0')
+            ->orderBy('stock_no_unique')
+            ->get();
+        $stocks->transform(function ($item) {
+            return [
+                'value' => $item['stock_no_unique'],
+                'label' => $item['description'],
+                'image' => $item['warehouse'],
+            ];
+        });
+        return $stocks;
     }
 }

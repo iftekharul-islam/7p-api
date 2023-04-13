@@ -17,7 +17,7 @@ class InventoryUnit extends Model
 
     public function inventory()
     {
-        return $this->belongsTo('App\Inventory', 'stock_no_unique', 'stock_no_unique');
+        return $this->belongsTo(Inventory::class, 'stock_no_unique', 'stock_no_unique');
     }
 
     public function items()

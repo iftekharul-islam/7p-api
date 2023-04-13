@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BatchRouteController;
 use App\Http\Controllers\InventoryAdjustmentController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\LogisticsController;
 use App\Http\Controllers\ManufactureController;
 use App\Http\Controllers\ParameterController;
 use App\Http\Controllers\PermissionController;
@@ -21,6 +22,7 @@ use App\Http\Controllers\TemplateController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserPermissionController;
 use App\Http\Controllers\VendorController;
+use App\Models\BatchRoute;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -146,6 +148,9 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('specification-product/{id}', [SpecificationSheetController::class, 'update']);
     Route::post('destroy-specification-product/{id}', [SpecificationSheetController::class, 'destroy']);
 
+    Route::get('config-child-sku', [LogisticsController::class, 'index']);
+    Route::get('update-config-child-sku', [LogisticsController::class, 'updateSKUs']);
+
     Route::get('role-options', [RoleController::class, 'roleOption']);
     Route::get('section-options', [InventoryController::class, 'sectionOption']);
     Route::get('stock-options', [PurchasedInvProductController::class, 'stockOption']);
@@ -161,6 +166,9 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('statuses-options', [SpecificationSheetController::class, 'statusesOption']);
     Route::get('production-category-options', [ProductionCategoryController::class, 'productionCategoryOption']);
     Route::get('product-searchable-fields-options', [ProductController::class, 'searchableFieldsOption']);
+    Route::get('batch-route-options', [BatchRouteController::class, 'batchRouteOptions']);
+    // get getStockWithImageOptions
+    Route::get('stock-image-options', [InventoryController::class, 'stockImageOption']);
 
     Route::get('skus', [SpecificationSheetController::class, 'skus']);
 });

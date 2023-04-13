@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BatchRoute;
+use App\Models\Option;
 use App\Models\Station;
 use App\Models\Template;
 use Illuminate\Http\Request;
@@ -103,5 +104,17 @@ class BatchRouteController extends Controller
             'status' => 201,
             'data' => []
         ], 201);
+    }
+
+    public function batchRouteOptions()
+    {
+        $batch_route = BatchRoute::where('is_deleted', '0')->orderBy('batch_route_name')->get();
+        $batch_route->transform(function ($item) {
+            return [
+                'value' => $item['id'],
+                'label' => $item['batch_route_name']
+            ];
+        });
+        return $batch_route;
     }
 }
