@@ -3,10 +3,12 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BatchRouteController;
+use App\Http\Controllers\EmailTemplateController;
 use App\Http\Controllers\InventoryAdjustmentController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\LogisticsController;
 use App\Http\Controllers\ManufactureController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ParameterController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProductController;
@@ -23,6 +25,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserPermissionController;
 use App\Http\Controllers\VendorController;
 use App\Models\BatchRoute;
+use App\Models\EmailTemplate;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -142,6 +145,22 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('route', [BatchRouteController::class, 'store']);
     Route::post('route/{id}', [BatchRouteController::class, 'update']);
 
+    Route::get('orders', [OrderController::class, 'index']);
+    Route::get('route/{id}', [BatchRouteController::class, 'show']);
+    Route::post('route', [BatchRouteController::class, 'store']);
+    Route::post('route/{id}', [BatchRouteController::class, 'update']);
+    Route::get('order-operator-options', [OrderController::class, 'operatorOption']);
+    Route::get('order-search-options', [OrderController::class, 'searchOption']);
+    Route::get('order-status-options', [OrderController::class, 'statusOption']);
+    Route::get('order-store-options', [OrderController::class, 'storeOption']);
+
+
+    Route::get('email-template', [EmailTemplateController::class, 'index']);
+    Route::get('email-template/{id}', [EmailTemplateController::class, 'show']);
+    Route::post('email-template', [EmailTemplateController::class, 'store']);
+    Route::post('email-template/{id}', [EmailTemplateController::class, 'update']);
+    Route::post('destroy-email-template/{id}', [EmailTemplateController::class, 'destroy']);
+
     Route::get('specification-product', [SpecificationSheetController::class, 'index']);
     Route::get('specification-product/{id}', [SpecificationSheetController::class, 'show']);
     Route::post('specification-product', [SpecificationSheetController::class, 'store']);
@@ -150,6 +169,8 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
 
     Route::get('config-child-sku', [LogisticsController::class, 'index']);
     Route::get('update-config-child-sku', [LogisticsController::class, 'updateSKUs']);
+
+    Route::post('send-bulk-email', [EmailTemplateController::class, 'sendBulkEmail']);
 
     Route::get('role-options', [RoleController::class, 'roleOption']);
     Route::get('section-options', [InventoryController::class, 'sectionOption']);
@@ -167,8 +188,9 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('production-category-options', [ProductionCategoryController::class, 'productionCategoryOption']);
     Route::get('product-searchable-fields-options', [ProductController::class, 'searchableFieldsOption']);
     Route::get('batch-route-options', [BatchRouteController::class, 'batchRouteOptions']);
-    // get getStockWithImageOptions
     Route::get('stock-image-options', [InventoryController::class, 'stockImageOption']);
+    Route::get('email-template-options', [EmailTemplateController::class, 'emailTemplateOptions']);
+    Route::get('email-template-keywords', [EmailTemplateController::class, 'emailTemplateKeywords']);
 
     Route::get('skus', [SpecificationSheetController::class, 'skus']);
 });
