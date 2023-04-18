@@ -177,4 +177,24 @@ class ProductController extends Controller
         };
         return $searchable_fields;
     }
+
+    public function productOption(Request $request)
+    {
+        $searchAble = sprintf("%%%s%%", str_replace(' ', '%', trim($request->get('query'))));
+
+        $product = Product::where('product_model', "LIKE", $searchAble)
+            ->orWhere('id_catalog', 'LIKE', $searchAble)
+            ->orWhere('product_name', 'LIKE', $searchAble)
+            ->where('is_deleted', '0')
+            ->selectRaw('id_catalog, product_model, product_name, product_thumb, product_price')
+            ->get();
+        $result = [];
+        foreach ($product as $model) {
+            $result[] = [
+                'label' => $model->product_model . ' - ' . $model->product_name,
+                'data' => $model
+            ];
+        }
+        return $result;
+    }
 }

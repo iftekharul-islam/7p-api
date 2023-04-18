@@ -8,6 +8,42 @@ use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
+    public static function listMethods($carrier = null)
+    {
+        $methods = array(
+            '' => 'DEFAULT SHIPPING',
+            'MN*' => 'MANUAL SHIPPING',
+            'US*FIRST_CLASS' => 'USPS FIRST_CLASS',
+            'US*PRIORITY' => 'USPS PRIORITY',
+            'US*EXPRESS' => 'USPS EXPRESS',
+            'UP*S_GROUND' => 'UPS GROUND',
+            'UP*S_3DAYSELECT' => 'UPS 3DAYSELECT',
+            'UP*S_AIR_2DAY' => 'UPS AIR_2DAY',
+            'UP*S_AIR_2DAYAM' => 'UPS AIR_2DAYAM',
+            'UP*S_AIR_1DAYSAVER' => 'UPS AIR_1DAYSAVER',
+            'UP*S_AIR_1DAY' => 'UPS AIR_1DAY',
+            'UP*S_SUREPOST' => 'UPS SUREPOST',
+            'FX*_SMART_POST' => 'FEDEX SMARTPOST',
+            'FX*_GROUND_HOME_DELIVERY' => 'FEDEX GROUND_HOME_DELIVERY',
+            'FX*_FEDEX_GROUND' => 'FEDEX GROUND',
+            'FX*_FEDEX_2_DAY' => 'FEDEX 2_DAY',
+            'FX*_FEDEX_EXPRESS_SAVER' => 'FEDEX EXPRESS_SAVER',
+            'FX*_STANDARD_OVERNIGHT' => 'FEDEX STANDARD_OVERNIGHT',
+            'FX*_PRIORITY_OVERNIGHT' => 'FEDEX PRIORITY_OVERNIGHT',
+            'DL*_SMARTMAIL_PARCEL_EXPEDITED_MAX' => 'DHL SMARTMAIL PARCEL EXPEDITED MAX',
+            'DL*_SMARTMAIL_PARCEL_EXPEDITED' => 'DHL SMARTMAIL PARCEL EXPEDITED',
+            'DL*_SMARTMAIL_PARCEL_GROUND' => 'DHL SMARTMAIL PARCEL GROUND',
+            'DL*_SMARTMAIL_PARCEL_PLUS_EXPEDITED' => 'DHL SMARTMAIL PARCEL PLUS EXPEDITED',
+            'DL*_SMARTMAIL_PARCEL_PLUS_GROUND' => 'DHL SMARTMAIL PARCEL PLUS GROUND',
+            'DL*_PARCEL_INTERNATIONAL_DIRECT' => 'DHL PARCEL INTERNATIONAL DIRECT',
+            'EN*USFC' => 'ENDCIA USPS FIRST CLASS',
+            'EN*USPM' => 'ENDCIA USPS PRIORITY',
+            'EN*USCG' => 'ENDCIA USPS GROUND',
+        );
+
+        return $methods;
+    }
+
     public function index(Request $request)
     {
         if ($request->has('start_date')) {
@@ -104,6 +140,18 @@ class OrderController extends Controller
     {
         $stores = [];
         foreach (Store::list('%', '%', 'none') ?? [] as $key => $value) {
+            $stores[] = [
+                'label' => $value,
+                'value' => $key,
+            ];
+        };
+        return $stores;
+    }
+
+    public function shipOption()
+    {
+        $stores = [];
+        foreach ($this->listMethods() ?? [] as $key => $value) {
             $stores[] = [
                 'label' => $value,
                 'value' => $key,

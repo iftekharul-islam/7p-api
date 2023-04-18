@@ -153,7 +153,8 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('order-search-options', [OrderController::class, 'searchOption']);
     Route::get('order-status-options', [OrderController::class, 'statusOption']);
     Route::get('order-store-options', [OrderController::class, 'storeOption']);
-
+    Route::get('order-ship-options', [OrderController::class, 'shipOption']);
+    Route::post('order-product-options', [ProductController::class, 'productOption']);
 
     Route::get('email-template', [EmailTemplateController::class, 'index']);
     Route::get('email-template/{id}', [EmailTemplateController::class, 'show']);
