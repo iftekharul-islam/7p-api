@@ -146,9 +146,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('route/{id}', [BatchRouteController::class, 'update']);
 
     Route::get('orders', [OrderController::class, 'index']);
-    Route::get('route/{id}', [BatchRouteController::class, 'show']);
-    Route::post('route', [BatchRouteController::class, 'store']);
-    Route::post('route/{id}', [BatchRouteController::class, 'update']);
+    Route::post('orders', [OrderController::class, 'store']);
     Route::get('order-operator-options', [OrderController::class, 'operatorOption']);
     Route::get('order-search-options', [OrderController::class, 'searchOption']);
     Route::get('order-status-options', [OrderController::class, 'statusOption']);
