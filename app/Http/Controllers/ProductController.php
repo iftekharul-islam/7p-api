@@ -12,14 +12,10 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $products = Product::with('manufacture')->where('is_deleted', '0');
-        if ($request->q) {
-            $products = $products->where('product_model', 'like', '%' . $request->q . '%');
-        }
-        //    ->searchInOption($request->get('search_in'), $request->get("search_for"))
-        // ->searchProductionCategory($request->get('product_production_category'))
-
-        return $products->latest()->orderBy('id', 'desc')->paginate($request->get('perPage', 10));
+        $products = Product::where('is_deleted', '0')
+            ->searchInOption($request->get('search_in'), $request->get("search_for"))
+            ->searchProductionCategory($request->get('product_production_category'));
+        return $products->paginate($request->get('perPage', 10));
     }
 
     /**
@@ -35,15 +31,69 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $id_catalog = trim($request->get('id_catalog'));
+        $product_model = trim($request->get('product_model'));
+        $checkExisting = Product::where('id_catalog', $id_catalog)
+            ->orWhere('product_model', $product_model)
+            ->first();
+        if ($checkExisting) {
+            return response()->json([
+                'message' => 'Product already exists either with id catalog or model!',
+                'status' => 203,
+                'data' => []
+            ], 203);
+        }
+
+        $data = $request->only([
+            'id_catalog',
+            'product_model',
+            'product_upc',
+            'product_asin',
+            'product_default_cost',
+            'product_url',
+            'product_name',
+            'ship_weight',
+            'product_production_category',
+            'product_price',
+            'product_sale_price',
+            'product_wholesale_price',
+            'product_thumb',
+            'product_description',
+            'height',
+            'width',
+        ]);
+        try {
+            Product::create($data);
+            return response()->json([
+                'message' => 'Production created successfully!',
+                'status' => 201,
+                'data' => []
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'status' => 403,
+                'data' => []
+            ], 403);
+        }
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Product $product)
+    public function show(string $id)
     {
-        //
+        $product = Product::query()
+            ->where('is_deleted', '0')
+            ->find($id);
+        if (!$product) {
+            return response()->json([
+                'message' => 'Product Not Found',
+                'status' => 203,
+                'data' => []
+            ], 203);
+        }
+        return $product;
     }
 
     /**
@@ -57,9 +107,42 @@ class ProductController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Product $product)
+    public function update(Request $request, string $id)
     {
-        //
+        $product = Product::find($id);
+        if (!$product) {
+            return response()->json([
+                'message' => 'Product not found!',
+                'status' => 203,
+                'data' => []
+            ], 203);
+        }
+        $data = $request->only([
+            'id_catalog',
+            'product_upc',
+            'product_asin',
+            'product_default_cost',
+            'product_url',
+            'product_name',
+            'ship_weight',
+            'product_production_category',
+            'product_price',
+            'product_sale_price',
+            'product_wholesale_price',
+            'product_thumb',
+            'product_description',
+            'manufacture_id',
+            'height',
+            'width'
+        ]);
+        $product->product_note = $request->get("product_note") . "@" . $request->get("msg_flag");
+
+        $product->update($data);
+        return response()->json([
+            'message' => 'Product update successfully!',
+            'status' => 201,
+            'data' => []
+        ], 201);
     }
 
     /**
@@ -81,5 +164,37 @@ class ProductController extends Controller
             'status' => 203,
             'data' => []
         ], 203);
+    }
+
+    public function searchableFieldsOption()
+    {
+        $searchable_fields = [];
+        foreach (Product::$searchable_fields ?? [] as $key => $value) {
+            $searchable_fields[] = [
+                'label' => $value,
+                'value' => $key,
+            ];
+        };
+        return $searchable_fields;
+    }
+
+    public function productOption(Request $request)
+    {
+        $searchAble = sprintf("%%%s%%", str_replace(' ', '%', trim($request->get('query'))));
+
+        $product = Product::where('product_model', "LIKE", $searchAble)
+            ->orWhere('id_catalog', 'LIKE', $searchAble)
+            ->orWhere('product_name', 'LIKE', $searchAble)
+            ->where('is_deleted', '0')
+            ->selectRaw('id_catalog, product_model, product_name, product_thumb, product_price')
+            ->get();
+        $result = [];
+        foreach ($product as $model) {
+            $result[] = [
+                'label' => $model->product_model . ' - ' . $model->product_name,
+                'data' => $model
+            ];
+        }
+        return $result;
     }
 }

@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Product;
 use App\Models\ProductionCategory;
 use App\Models\SpecificationSheet;
+use App\Models\Vendor;
 use Illuminate\Http\Request;
-
-use function PHPSTORM_META\map;
 
 class SpecificationSheetController extends Controller
 {
@@ -35,52 +35,65 @@ class SpecificationSheetController extends Controller
         return $specSheets;
     }
 
-    public function create()
+    //get store function
+    public function store(Request $request)
     {
-        return redirect(url("products_specifications/step/1"));
+        if (!$request->hasFile('product_images')) {
+            return response()->json([
+                'message' => 'Product image cannot be empty',
+                'status' => 203,
+                'data' => []
+            ], 203);
+        }
+        $specSheet = false;
+        $previous_sku = trim($request->get('previous_sku', ''));
+        if (!empty($previous_sku)) {
+            $specSheet = SpecificationSheet::where('product_sku', $previous_sku)
+                ->first();
+            if (!$specSheet) {
+                return response()->json([
+                    'message' => 'Not a valid product sku is chosen to copy!',
+                    'status' => 203,
+                    'data' => []
+                ], 203);
+            } else {
+                $newSpecSheet = $specSheet->replicate();
+                $newSpecSheet->product_sku = trim($request->get('sku'));
+                $newSpecSheet->save();
+            }
+        } else {
+            $specSheet = $this->insertOrUpdateSpec($request);
+        }
+        if ($specSheet == false) {
+            return response()->json([
+                'message' => 'Product name cannot be empty',
+                'status' => 203,
+                'data' => []
+            ], 203);
+        }
+        //session()->flush('proposed_sku');
+
+        return response()->json([
+            'message' => 'Spec sheet is created successfully',
+            'status' => 201,
+            'data' => []
+        ], 201);
     }
 
     public function show($id)
     {
-        // redirect to edit page
-        return $this->edit($id);
-        $spec = SpecificationSheet::find($id);
-        if (!$spec) {
-            return app()->abort(404);
-        }
-
-        return $spec;
-    }
-
-    public function edit($id)
-    {
-        $spec = SpecificationSheet::find($id);
-        if (!$spec) {
-            return app()->abort(404);
-        }
-
-        $production_categories = ProductionCategory::where('is_deleted', 0)
-            ->get()
-            ->pluck('description_with_code', 'id')
-            ->prepend('Select a production category', '0');
-
-        $vendors = Vendor::where('is_deleted', 0)
-            ->orderBy('vendor_name')
-            ->get()
-            ->pluck('vendor_name', 'vendor_name')
-            ->prepend('Select a vendor', 0);
-
-        return view('product_specifications.edit')
-            ->with('vendors', $vendors)
-            ->with('spec', $spec)
-            ->with('production_categories', $production_categories);
+        return SpecificationSheet::find($id);
     }
 
     public function update(Request $request, $id)
     {
         $spec = SpecificationSheet::find($id);
         if (!$spec) {
-            return app()->abort(404);
+            return response()->json([
+                'message' => 'Spec sheet not found!',
+                'status' => 203,
+                'data' => []
+            ], 203);
         }
 
         if (trim($request->get('previous_sku'))) {
@@ -88,11 +101,11 @@ class SpecificationSheetController extends Controller
             $specSheet = SpecificationSheet::where('product_sku', $request->get('previous_sku'))
                 ->orderBy('id', 'desc')->first();
             if (!$specSheet) {
-                return redirect()
-                    ->back()
-                    ->withErrors([
-                        'error' => 'Cannot find pull SKU ' . $request->get('previous_sku') . '<br>Please verify SKU.',
-                    ]);
+                return response()->json([
+                    'message' => 'Cannot find pull SKU ' . $request->get('previous_sku') . '<br>Please verify SKU.',
+                    'status' => 203,
+                    'data' => []
+                ], 203);
             } else {
                 $specSheet = $specSheet->toArray();
             }
@@ -103,23 +116,28 @@ class SpecificationSheetController extends Controller
 
             SpecificationSheet::where('id', $id)->update($specSheet);
 
-            return redirect()
-                ->back()
-                ->with('success', $request->get('product_sku') . ' SKU contain update from SKU ' . $request->get('previous_sku'));
+            return response()->json([
+                'message' => $request->get('product_sku') . ' SKU contain update from SKU ' . $request->get('previous_sku'),
+                'status' => 201,
+                'data' => []
+            ], 201);
         } else {
 
 
             $updatedSpecSheet = $this->insertOrUpdateSpec($request, $spec);
             if ($updatedSpecSheet == false) {
-                return redirect()
-                    ->back()
-                    ->withErrors([
-                        'error' => 'Product name cannot be empty.',
-                    ]);
+                return response()->json([
+                    'message' => 'Product name cannot be empty.',
+                    'status' => 203,
+                    'data' => []
+                ], 203);
             }
-            //session()->flush('proposed_sku');
 
-            return redirect("/products_specifications/$id")->with('success', 'Spec sheet is updated successfully.');
+            return response()->json([
+                'message' => 'Spec sheet is updated successfully.',
+                'status' => 201,
+                'data' => []
+            ], 201);
         }
     }
 
@@ -142,111 +160,6 @@ class SpecificationSheetController extends Controller
         return redirect('/products_specifications')->with('success', 'New SKU ' . $proposed_sku . ' Created.');
     }
 
-    public function getSteps(Request $request, $id = 1)
-    {
-        /*
-		 * Specification has two steps.
-		 * if none of them
-		 * exit
-		 */
-        switch ($id) {
-            case 1:
-                $production_categories = ProductionCategory::where('is_deleted', 0)
-                    ->get()
-                    ->pluck('description_with_code', 'id')
-                    ->prepend('Select a production category', '0');
-
-                return view('product_specifications.spec_sheet_step_1')->with('production_categories', $production_categories);
-            case 2:
-                /*
-				 * If the proposed sku is not found in the url
-				 * and, proposed sku doesn't match the session stored sku
-				 * redirect to home
-				 */
-                if (!$request->has('sku')) {
-                    return redirect()
-                        ->to('/products_specifications/step')
-                        ->withErrors([
-                            'error' => 'SKU cannot be generated or modified by user',
-                        ]);
-                }
-                $production_categories = ProductionCategory::where('is_deleted', 0)
-                    ->get()
-                    ->pluck('description_with_code', 'id')
-                    ->prepend('Select a production category', '0');
-
-                $vendors = Vendor::where('is_deleted', 0)
-                    ->get()
-                    ->pluck('vendor_name', 'vendor_name')
-                    ->prepend('Select a vendor', 0);
-
-                return view('product_specifications.spec_sheet_step_2')
-                    ->with('vendors', $vendors)
-                    ->with('sku', $request->get('sku'))
-                    ->with('production_categories', $production_categories)
-                    ->with('selected_production_category', $request->get('production_category'));
-                break;
-            default:
-                break;
-        }
-    }
-
-    public function postSteps(Request $request, $id = 1)
-    {
-        switch ($id) {
-            case 1:
-                $production_category = ProductionCategory::find($request->get('production_category'));
-                if (!$production_category) {
-                    return redirect()
-                        ->to('/products_specifications/step')
-                        ->withErrors([
-                            'error' => 'Not a valid production category',
-                        ]);
-                }
-                $proposed_sku = $this->generateSKU($production_category->production_category_code, $request->get('gift-wrap'));
-                //session()->put('proposed_sku', $proposed_sku);
-
-                return redirect()->to(sprintf("products_specifications/step/2?sku=%s&production_category=%d", $proposed_sku, $request->get('production_category')));
-            case 2:
-                $specSheet = false;
-                $previous_sku = trim($request->get('previous_sku', ''));
-                if (!empty($previous_sku)) {
-                    $specSheet = SpecificationSheet::where('product_sku', $previous_sku)
-                        ->first();
-                    if (!$specSheet) {
-                        return redirect()
-                            ->back() #->withInput()
-                            ->withErrors([
-                                'error' => 'Not a valid product sku is chosen to copy',
-                            ]);
-                    } else {
-                        $newSpecSheet = $specSheet->replicate();
-                        $newSpecSheet->product_sku = trim($request->get('product_sku'));
-                        $newSpecSheet->save();
-                    }
-                } else {
-                    $specSheet = $this->insertOrUpdateSpec($request);
-                }
-                if ($specSheet == false) {
-                    return redirect()
-                        ->back()
-                        ->withInput()
-                        ->withErrors([
-                            'error' => 'Product name cannot be empty.',
-                        ]);
-                }
-                //session()->flush('proposed_sku');
-
-                return redirect('/products_specifications')->with('success', 'Spec sheet is created successfully.');
-            default:
-                return redirect()
-                    ->to('/products_specifications/step')
-                    ->withErrors([
-                        'error' => 'Invalid request',
-                    ]);
-        }
-    }
-
     private function insertOrUpdateSpec(Request $request, $specSheet = null)
     {
         $product_name = trim($request->get('product_name'));
@@ -258,13 +171,15 @@ class SpecificationSheetController extends Controller
         if (is_null($specSheet)) {
             $specSheet = new SpecificationSheet();
             // product sku is one time insert able. only on insertion time.
-            $specSheet->product_sku = trim($request->get('product_sku'));
+            $specSheet->product_sku = trim($request->get('sku'));
             $specSheet->status = 0;
         } else {
             $specSheet->status = intval($request->get('status'));
         }
         $specSheet->product_name = $product_name;
         $specSheet->web_image_status = intval(trim($request->get('web_image_status')));
+        $specSheet->status = $request->get('status');
+        // $specSheet->details = $request->get('details');
         $specSheet->product_description = trim($request->get('product_description'));
         $specSheet->product_weight = floatval($request->get('product_weight'));
         $specSheet->product_length = floatval($request->get('product_length'));
@@ -274,7 +189,7 @@ class SpecificationSheetController extends Controller
         $specSheet->packaging_size = trim($request->get('packaging_size'));
         $specSheet->packaging_weight = floatval($request->get('packaging_weight'));
         $specSheet->total_weight = floatval($request->get('total_weight'));
-        $specSheet->production_category_id = intval($request->get('production_category'));
+        $specSheet->production_category_id = intval($request->get('production_category_id'));
         $specSheet->art_work_location = trim($request->get('art_work_location'));
         $specSheet->production_image_location = trim($request->get('production_image_location'));
         $specSheet->temperature = trim($request->get('temperature'));
@@ -287,35 +202,9 @@ class SpecificationSheetController extends Controller
         $specSheet->make_sample = trim($request->get('make_sample'));
         $specSheet->product_general_note = trim($request->get('product_general_note'));
 
-        /* spec table data */
-        $table_data = [];
-        foreach (array_chunk($request->get('spec_table_data'), 10) as $row) {
-            if (empty($row[0])) {
-                continue;
-            }
-            $table_data[] = $row;
-        }
+        $specSheet->spec_table_data = $request->get('spec_table_data');
 
-        $specSheet->spec_table_data = json_encode($table_data);
-
-
-        /* Special note segment */
-        $i = 0;
-        $arr = [];
-        foreach ($request->get('special_note') as $note) {
-            // if special note col is left empty, don't insert
-            if (empty(trim($note))) {
-                continue;
-            }
-            $arr[] = [
-                trim($note),
-                trim($request->get('option_name')[$i]),
-                trim($request->get('details')[$i]),
-            ];
-            ++$i;
-        }
-
-        $specSheet->special_note = json_encode($arr);
+        $specSheet->special_note = $request->get('special_note_arr');
         /* special note segment ends */
 
         $specSheet->product_note = trim($request->get('product_note'));
@@ -326,40 +215,20 @@ class SpecificationSheetController extends Controller
         $specSheet->cost_of_1000 = floatval($request->get('cost_of_1000'));
         $specSheet->cost_of_10000 = floatval($request->get('cost_of_10000'));
 
-        $i = 0;
-        $arr = [];
-        $j = 0;
+        $specSheet->content_cost_info = $request->get('cost_variation');
+        $specSheet->delivery_cost_variation = ($request->get('delivery_cost_variation'));
 
-        foreach ($request->get('parts_name') as $part) {
-            if (empty(trim($part))) {
-                continue;
-            }
-            $arr[] = [
-                trim($part),
-                $request->get('cost_variation')[$j++],
-                $request->get('cost_variation')[$j++],
-                $request->get('cost_variation')[$j++],
-                $request->get('cost_variation')[$j++],
-                trim($request->get('supplier_name')[$i]),
-            ];
-            ++$i;
-        }
-
-        $specSheet->content_cost_info = json_encode($arr);
-
-        $specSheet->delivery_cost_variation = json_encode($request->get('delivery_cost_variation'));
-
-        $specSheet->labor_expense_cost_variation = json_encode($request->get('labor_expense_cost_variation'));
+        $specSheet->labor_expense_cost_variation = ($request->get('labor_expense_cost_variation'));
 
         if ($request->hasFile('product_images')) {
-            $paths = $this->image_manipulator($request->file('product_images'), $request->get('product_sku'));
+            $paths = $this->image_manipulator($request->file('product_images'), $request->get('sku'));
             $specSheet->images = json_encode($paths);
         }
 
         if ($request->has('delete_product_details_image') && strtolower($request->get('delete_product_details_image', 'no')) == 'yes') {
             $specSheet->product_details_file = json_encode([]); // delete the image already in
         } elseif ($request->hasFile('product_details_file')) {
-            $paths = $this->image_manipulator($request->file('product_details_file'), $request->get('product_sku'));
+            $paths = $this->image_manipulator($request->file('product_details_file'), $request->get('sku'));
             $specSheet->product_details_file = json_encode($paths);
         }
         $specSheet->save();
@@ -381,7 +250,6 @@ class SpecificationSheetController extends Controller
                 $paths[] = sprintf("%s/%s", url($destinationPath), $fileName);
             }
         }
-
         return $paths;
     }
 
@@ -403,17 +271,19 @@ class SpecificationSheetController extends Controller
         return $sku;
     }
 
-    public function destroy(Request $request, $id)
+    public function destroy($id)
     {
         $spec = SpecificationSheet::find($id);
         if ($spec) {
-            $spec->is_deleted = 1;
+            $spec->is_deleted = '1';
             $spec->save();
         }
 
-        return redirect()
-            ->to('/products_specifications')
-            ->with('success', 'Spec is deleted successfully');
+        return response()->json([
+            'message' => 'Spec is deleted successfully',
+            'status' => 201,
+            'data' => []
+        ], 201);
     }
 
     private function addProduct($specSheet)
@@ -515,11 +385,11 @@ class SpecificationSheetController extends Controller
     {
         $production_category = ProductionCategory::find($request->get('production_category'));
         if (!$production_category) {
-            return redirect()
-                ->to('/products_specifications/step')
-                ->withErrors([
-                    'error' => 'Not a valid production category',
-                ]);
+            return response()->json([
+                'message' => 'Not a valid production category',
+                'status' => 203,
+                'data' => []
+            ], 203);
         }
         $proposed_sku = $this->generateSKU($production_category->production_category_code, $request->get('gift-wrap'));
         return ['sku' => $proposed_sku];

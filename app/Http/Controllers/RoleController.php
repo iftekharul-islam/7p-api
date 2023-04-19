@@ -132,12 +132,8 @@ class RoleController extends Controller
         }
         foreach ($request->all() as $value) {
             if ($value['attach']) {
-                info($role);
-                info("A");
-                info($value['permission_id']);
                 $role->givePermissionTo($value['permission_id']);
             } else {
-                info("B");
                 $role->revokePermissionTo($value['permission_id']);
             }
         }

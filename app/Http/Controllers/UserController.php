@@ -14,7 +14,6 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
-        info(Auth()->user());
         $users = User::with('roles:name')->paginate($request->get('perPage', 10));
         return $users;
     }

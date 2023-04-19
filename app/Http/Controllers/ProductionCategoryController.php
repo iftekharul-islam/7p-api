@@ -99,4 +99,15 @@ class ProductionCategoryController extends Controller
             'data' => []
         ], 203);
     }
+    public function productionCategoryOption()
+    {
+        $productionCategory = ProductionCategory::where('is_deleted', '0')->get();
+        $productionCategory->transform(function ($item, $key) {
+            return [
+                'label' => $item->production_category_description,
+                'value' => $item->id
+            ];
+        });
+        return $productionCategory;
+    }
 }
