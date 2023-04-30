@@ -16,6 +16,83 @@ use Ship\Shipper;
 
 class OrderController extends Controller
 {
+    private static $state_abbrev = array(
+        'alabama' => 'AL',
+        'alaska' => 'AK',
+        'arizona' => 'AZ',
+        'arkansas' => 'AR',
+        'california' => 'CA',
+        'colorado' => 'CO',
+        'connecticut' => 'CT',
+        'delaware' => 'DE',
+        'florida' => 'FL',
+        'georgia' => 'GA',
+        'hawaii' => 'HI',
+        'idaho' => 'ID',
+        'illinois' => 'IL',
+        'indiana' => 'IN',
+        'iowa' => 'IA',
+        'kansas' => 'KS',
+        'kentucky' => 'KY',
+        'louisiana' => 'LA',
+        'maine' => 'ME',
+        'maryland' => 'MD',
+        'massachusetts' => 'MA',
+        'michigan' => 'MI',
+        'minnesota' => 'MN',
+        'mississippi' => 'MS',
+        'missouri' => 'MO',
+        'montana' => 'MT',
+        'nebraska' => 'NE',
+        'nevada' => 'NV',
+        'new hampshire' => 'NH',
+        'new jersey' => 'NJ',
+        'new mexico' => 'NM',
+        'new york' => 'NY',
+        'north carolina' => 'NC',
+        'north dakota' => 'ND',
+        'ohio' => 'OH',
+        'oklahoma' => 'OK',
+        'oregon' => 'OR',
+        'pennsylvania' => 'PA',
+        'rhode island' => 'RI',
+        'south carolina' => 'SC',
+        'south dakota' => 'SD',
+        'tennessee' => 'TN',
+        'texas' => 'TX',
+        'utah' => 'UT',
+        'vermont' => 'VT',
+        'virginia' => 'VA',
+        'washington' => 'WA',
+        'west virginia' => 'WV',
+        'wisconsin' => 'WI',
+        'wyoming' => 'WY',
+        'british columbia' => 'BC',
+        'newfoundland and labrador' => 'NL',
+        'prince edward island' => 'PE',
+        'nova scotia' => 'NS',
+        'new brunswick' => 'NB',
+        'quebec' => 'QC',
+        'ontario' => 'ON',
+        'manitoba' => 'MB',
+        'saskatchewan' => 'SK',
+        'alberta' => 'AB',
+        'yukon' => 'YT',
+        'northwest territories' => 'NT',
+        'nunavut' => 'NU',
+        'district of columbia' => 'DC',
+        'virgin islands' => 'VI',
+        'guam' => 'GU',
+    );
+    public static function stateAbbreviation($state)
+    {
+        if (isset(static::$state_abbrev[strtolower($state)])) {
+            return static::$state_abbrev[strtolower($state)];
+        } else {
+            return $state;
+        }
+    }
+
     public static function listMethods($carrier = null)
     {
         $methods = array(
@@ -84,6 +161,7 @@ class OrderController extends Controller
             ->search($request->get('search_for_second'), $request->get('operator_second'), $request->get('search_in_second'))
             ->latest();
         $orders = $orders->paginate($request->get('perPage', 10));
+        info($orders);
 
         $total = Order::where('is_deleted', '0')
             ->storeId($request->get('store'))
@@ -99,6 +177,21 @@ class OrderController extends Controller
             'order' => $orders,
             'total' => $total
         ];
+    }
+
+    public function show(string $id)
+    {
+        $product = Order::with('customer', 'items')
+            ->where('is_deleted', '0')
+            ->find($id);
+        if (!$product) {
+            return response()->json([
+                'message' => 'Order Not Found',
+                'status' => 203,
+                'data' => []
+            ], 203);
+        }
+        return $product;
     }
 
     public function store(Request $request)
@@ -134,8 +227,6 @@ class OrderController extends Controller
             Log::error('Failed to insert customer id - Update new');
         }
 
-
-
         $customer->ship_company_name = $request->get('ship_company_name');
         $customer->bill_company_name = $request->get('bill_company_name');
         $customer->ship_full_name = $request->get('ship_full_name');
@@ -148,7 +239,7 @@ class OrderController extends Controller
         $customer->ship_address_2 = $request->get('ship_address_2');
         $customer->bill_address_2 = $request->get('bill_address_2');
         $customer->ship_city = $request->get('ship_city');
-        $customer->ship_state = Helper::stateAbbreviation($request->get('ship_state'));
+        $customer->ship_state = $this->stateAbbreviation($request->get('ship_state'));
         $customer->bill_city = $request->get('bill_city');
         $customer->bill_state = $request->get('bill_state');
         $customer->ship_zip = $request->get('ship_zip');
@@ -169,12 +260,12 @@ class OrderController extends Controller
             }
 
             if (!$isVerified && $customer->ignore_validation == FALSE) {
-                $customer->is_address_verified = 0;
+                $customer->is_address_verified = '0';
                 if ($order->order_status == 4) {
                     $order->order_status = 11;
                 }
             } else if (!$isVerified) {
-                $customer->is_address_verified = 0;
+                $customer->is_address_verified = '0';
             }
 
             $customer->save();
@@ -239,29 +330,21 @@ class OrderController extends Controller
 
         $order->save();
 
-        // $item_ids = $request->get('item_id');
-        // $item_skus = $request->get('item_sku');
-        // $item_options = $request->get('item_option');
-        // $item_quantities = $request->get('item_quantity');
-        // $item_descriptions = $request->get('item_description');
-        // $item_prices = $request->get('item_price');
-        // $child_skus = $request->get('child_sku');
-
         $grand_sub_total = 0;
 
-        if (count($request->get('items'))) {
+        if (!count($request->get('items') ?? [])) {
             return response()->json([
                 'message' => 'Empty Items',
-                'staus' => 203,
-                'data' => []
+                'status' => 203,
+                'data' => $order
             ], 203);
         }
-        foreach ($request->get('items') as $index => $item) {
+        foreach ($request->get('items') as $index => $data) {
 
             $options = [];
-            $exploded = explode("\r\n", trim($item['options'], "\r\n"));
+            $exploded = explode("\r\n", trim($data['options'] ?? '', "\r\n"));
 
-            foreach ($exploded as $key => $line) {
+            foreach ($exploded ?? [] as $key => $line) {
                 $pieces = explode("=", trim($line));
                 if (isset($pieces[1])) {
                     $item_option_key = trim($pieces[0]);
@@ -288,16 +371,14 @@ class OrderController extends Controller
                 }
             }
 
-
-
-            $product = Product::where('product_model', $item['sku'])->first();
+            $product = Product::where('product_model', $data['child_sku'])->first();
 
             $item = new Item();
             $item->order_id = $order->order_id;
             $item->store_id = $order->store_id;
             $item->order_5p = $order->id;
-            $item->item_code = $item['sku'];
-            $item->item_unit_price = $item['price'];
+            $item->item_code = $data['child_sku'];
+            $item->item_unit_price = $data['item_unit_price'];
             $item->item_option = json_encode($options);
 
             if ($product) {
@@ -308,7 +389,6 @@ class OrderController extends Controller
             } else {
                 $item->item_description = 'PRODUCT NOT FOUND';
             }
-
             $item->child_sku = Helper::getChildSku($item);;
 
             $item->data_parse_type = 'manual';
@@ -318,7 +398,7 @@ class OrderController extends Controller
             }
 
 
-            $item->item_quantity = $item['quantity'];
+            $item->item_quantity = $data['item_quantity'];
             $item->save();
 
             $grand_sub_total += ((int)$item->item_quantity * (float)$item->item_unit_price);
@@ -333,23 +413,27 @@ class OrderController extends Controller
             $order->insurance +
             $order->adjustments +
             $order->tax_charge);
-
         $order->save();
 
         if ($request->has('note')) {
             Order::note(trim($request->get('note')), $order->id);
         }
 
-        $responseType = $isVerified ? "success" : "error";
+        $responseType = $isVerified ? 201 : 201;
 
-        Notification::orderConfirm($order);
+        //TODO: Send email to customer
+        // Notification::orderConfirm($order);
         $message = $isVerified ? sprintf("Order %s is entered.", $order->order_id) : sprintf("Order %s saved but address is unverified", $order->order_id);
         $note_text = "Order Entered Manually";
 
 
         Order::note($note_text, $order->id);
 
-        return redirect()->action('OrderController@details', ['order_id' => $order->id])->with($responseType, $message);
+        return response()->json([
+            'message' => $message,
+            'status' => $responseType,
+            'data' => $order
+        ], $responseType);
     }
 
     public function operatorOption()

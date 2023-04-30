@@ -6,7 +6,7 @@ use App\Batch;
 use App\Http\Controllers\ZakekeController;
 use App\Item;
 use App\ItemShip;
-use App\Order;
+use App\Models\Order;
 use App\Ship;
 use App\ShipmentManifest;
 use App\Wap;

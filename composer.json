@@ -29,7 +29,9 @@
       "App\\": "app/",
       "Database\\Factories\\": "database/factories/",
       "Database\\Seeders\\": "database/seeders/",
-      "Monogram\\": "library/"
+      "library\\": "library/",
+      "Market\\": "library/Market",
+      "Ship\\": "library/Ship"
     }
   },
   "autoload-dev": {

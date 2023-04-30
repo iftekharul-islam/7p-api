@@ -7,6 +7,7 @@ use App\Models\Inventory;
 use App\Models\Option;
 use App\Models\Parameter;
 use App\Models\StoreItem;
+use Illuminate\Support\Str;
 
 class Helper
 {
@@ -138,7 +139,6 @@ class Helper
         }, array_keys($item_options));
 
         // $store_id = $item->store_id;
-
         // get the keys available as parameter
         $parameters = Parameter::where('is_deleted', '0')
             ->get()
@@ -233,6 +233,7 @@ class Helper
         $option = Option::where('child_sku', $child_sku)->first();
 
         if (!$option) {
+            //TODO: Xstore_id is missing here
             $option = new Option();
             $option->child_sku = $child_sku;
             $option->unique_row_value = static::generateUniqueRowId();
@@ -250,7 +251,6 @@ class Helper
             }
             $option->parameter_option = json_encode($option_array);
             $option->save();
-            $option->save();
 
             Inventory::saveinventoryUnit($child_sku, "ToBeAssigned", '1');
         }
@@ -260,7 +260,7 @@ class Helper
 
     public static function generateUniqueRowId()
     {
-        return sprintf("%s_%s", strtotime("now"), str_random(5));
+        return sprintf("%s_%s", strtotime("now"), Str::random(5));
     }
 
     public static function textToHTMLFormName($text)
