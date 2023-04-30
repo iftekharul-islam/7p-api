@@ -184,4 +184,24 @@ class Inventory extends Model
             return $q->where('vendor_id', $vendor);
         });
     }
+
+    public static function saveinventoryUnit($child_sku, $stock_no_unique, $unit_qty)
+    {
+
+        $inventoryUnit = InventoryUnit::where('child_sku', $child_sku)
+            ->where('stock_no_unique', $stock_no_unique)
+            ->first();
+        // If not found
+        if (!$inventoryUnit) {
+            // Insert new inventory record in inventory table
+            $inventoryUnit = new InventoryUnit();
+            $inventoryUnit->child_sku = $child_sku;
+            $inventoryUnit->stock_no_unique = $stock_no_unique;
+            $inventoryUnit->unit_qty = $unit_qty;
+            $inventoryUnit->save();
+        } else {
+            $inventoryUnit->unit_qty = $unit_qty;
+            $inventoryUnit->save();
+        }
+    }
 }
