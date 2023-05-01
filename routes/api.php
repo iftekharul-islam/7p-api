@@ -6,6 +6,7 @@ use App\Http\Controllers\BatchRouteController;
 use App\Http\Controllers\EmailTemplateController;
 use App\Http\Controllers\InventoryAdjustmentController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\ItemController;
 use App\Http\Controllers\LogisticsController;
 use App\Http\Controllers\ManufactureController;
 use App\Http\Controllers\OrderController;
@@ -166,6 +167,12 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('specification-product', [SpecificationSheetController::class, 'store']);
     Route::post('specification-product/{id}', [SpecificationSheetController::class, 'update']);
     Route::post('destroy-specification-product/{id}', [SpecificationSheetController::class, 'destroy']);
+
+    Route::get('items-list', [ItemController::class, 'index']);
+    Route::get('graphic-items-list', [ItemController::class, 'indexGraphic']);
+    Route::get('item-search-options', [ItemController::class, 'searchOption']);
+    Route::get('item-status-options', [ItemController::class, 'statusOption']);
+    Route::get('item-store-options', [ItemController::class, 'storeOption']);
 
     Route::get('config-child-sku', [LogisticsController::class, 'index']);
     Route::get('update-config-child-sku', [LogisticsController::class, 'updateSKUs']);
