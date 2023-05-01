@@ -274,4 +274,76 @@ class Helper
     {
         return str_replace("_", " ", $text);
     }
+
+    public static function optionTransformer(
+        $json,
+        $show_keys = 1,
+        $html_bold = 0,
+        $html_upsell = 0,
+        $parameters = 1,
+        $eps = 1,
+        $separator = "\n"
+    ) {
+        $pre = '';
+        $post = '';
+        $upsell_pre = '';
+        $upsell_post = '';
+        $delete_keys = array();
+
+        if ($html_bold == 1) {
+            $pre = '<strong style="font-size: 110%;">';
+            $post = '</strong>';
+        }
+
+        if ($html_upsell == 1) {
+            $upsell_pre = '<span style="font-size: 150%;color:red;">';
+            $upsell_post = '</span>';
+        }
+
+        if ($parameters == 0) {
+
+            $delete_keys = Parameter::selectRaw('REPLACE(LOWER(parameter_value)," ","_") as parameter')
+                ->where('is_deleted', '0')
+                ->get()
+                ->pluck('parameter')
+                ->toArray();
+        } else {
+            $delete_keys = array();
+        }
+
+        $delete_keys[] = 'confirmation_of_order_details';
+
+        if ($eps == 0) {
+            $delete_keys[] = 'custom_eps_download_link';
+            $delete_keys[] = 'photo';
+            $delete_keys[] = 'photo_2';
+            $delete_keys[] = 'graphic';
+        }
+
+        $formatted_string = '';
+        $array = json_decode($json, true);
+
+        if ($array) {
+            foreach ($array as $key => $value) {
+                $ckey = preg_replace('/^[\pZ\pC]+|[\pZ\pC]+$/u', '', trim(strtolower($key)));
+                if (in_array($ckey, $delete_keys)) {
+                    unset($array[$key]);
+                } else if (strtolower(str_replace([',', ' '], '', $value)) == 'nothankyou') {
+                    unset($array[$key]);
+                } else if (strtolower(substr($value, 0, 3)) == 'yes') {
+                    if ($show_keys == 1) {
+                        $formatted_string .= str_replace("_", " ", $key) . ' = ';
+                    }
+                    $formatted_string .= sprintf("%s%s%s%s%s%s", $pre, $upsell_pre, $value, $upsell_post, $post, $separator);
+                } else {
+                    if ($show_keys == 1) {
+                        $formatted_string .= str_replace("_", " ", $key) . ' = ';
+                    }
+                    $formatted_string .= sprintf("%s%s%s%s", $pre, $value, $post, $separator);
+                }
+            }
+        }
+
+        return $formatted_string;
+    }
 }
