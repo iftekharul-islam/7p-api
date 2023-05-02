@@ -93,7 +93,7 @@ class ItemController extends Controller
                 ->searchBatchDate($request->get('scan_start_date'), $request->get('scan_end_date'))
                 ->unBatched($request->get('unbatched'))
                 ->latest()
-                ->paginate($request->get('perPage', 50));
+                ->paginate($request->get('perPage', 48));
 
             $item_sum = Item::where('is_deleted', '0')
                 ->searchStore($request->get('store'))

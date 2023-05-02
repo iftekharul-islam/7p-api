@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Customer;
 use App\Models\Item;
+use App\Models\Note;
 use App\Models\Notification;
 use App\Models\Order;
 use App\Models\Product;
@@ -181,50 +182,64 @@ class OrderController extends Controller
 
     public function show(string $id)
     {
-        $product = Order::with('customer', 'items')
+        $order = Order::with('customer', 'items')
             ->where('is_deleted', '0')
             ->find($id);
-        if (!$product) {
+        if (!$order) {
             return response()->json([
                 'message' => 'Order Not Found',
                 'status' => 203,
                 'data' => []
             ], 203);
         }
-        return $product;
+        $batched = $order->items->filter(function ($item) {
+            return $item->batch_number != '0';
+        })->count();
+
+        $order['batched'] = $batched;
+        return $order;
     }
 
-    public function store(Request $request)
+    public function store(Request $request, string $id)
     {
-        $manual_order_count = Order::where('short_order', "LIKE", sprintf("%%WH%%"))
-            ->orderBy('id', 'desc')
-            ->first();
+        if ($id == 'create') {
+            $manual_order_count = Order::where('short_order', "LIKE", sprintf("%%WH%%"))
+                ->orderBy('id', 'desc')
+                ->first();
 
-        $order = new Order;
-        $order->short_order = sprintf("WH%d", (10000 + $manual_order_count->id));
-        $order->order_id = sprintf("%s-%s", $request->get('store'), $order->short_order);
-        $order->order_numeric_time = strtotime('Y-m-d h:i:s', strtotime("now"));
-        $order->store_id = $request->get('store');
-        $order->order_status = 4;
+            $order = new Order;
+            $order->short_order = sprintf("WH%d", (10000 + $manual_order_count->id));
+            $order->order_id = sprintf("%s-%s", $request->get('store'), $order->short_order);
+            $order->order_numeric_time = strtotime('Y-m-d h:i:s', strtotime("now"));
+            $order->store_id = $request->get('store');
+            $order->order_status = 4;
 
-        if ($request->has('order_date')) {
-            $order->order_date = date('Y-m-d h:i:s', strtotime($request->get('order_date') . date(" H:i:s")));
+            if ($request->has('order_date')) {
+                $order->order_date = date('Y-m-d h:i:s', strtotime($request->get('order_date') . date(" H:i:s")));
+            } else {
+                $order->order_date = date('Y-m-d h:i:s', strtotime("now"));
+            }
+
+            if ($request->has("ship_message")) {
+                $order->ship_message = $request->get("ship_message", "");
+            }
+
+            $customer = new Customer();
+            $customer->order_id = $order->order_id;
+            $customer->save();
+
+            try {
+                $order->customer_id = $customer->id;
+            } catch (Exception $exception) {
+                Log::error('Failed to insert customer id - Update new');
+            }
         } else {
-            $order->order_date = date('Y-m-d h:i:s', strtotime("now"));
-        }
+            $order = Order::with('store', 'customer')
+                ->where('id', $id)
+                ->latest()
+                ->first();
 
-        if ($request->has("ship_message")) {
-            $order->ship_message = $request->get("ship_message", "");
-        }
-
-        $customer = new Customer();
-        $customer->order_id = $order->order_id;
-        $customer->save();
-
-        try {
-            $order->customer_id = $customer->id;
-        } catch (Exception $exception) {
-            Log::error('Failed to insert customer id - Update new');
+            $customer = Customer::find($order->customer_id);
         }
 
         $customer->ship_company_name = $request->get('ship_company_name');
@@ -276,7 +291,7 @@ class OrderController extends Controller
         $order->order_comments = $request->get('order_comments');
 
 
-        $order->ship_message = $request->get("ship_message", "");
+        $order->ship_message = $request->get("ship_message") ?? '';
 
 
         if ($request->has('purchase_order')) {
@@ -371,30 +386,39 @@ class OrderController extends Controller
                 }
             }
 
-            $product = Product::where('product_model', $data['child_sku'])->first();
+            if ($data['item_id'] == '') {
+                $product = Product::where('product_model', $data['child_sku'])->first();
 
-            $item = new Item();
-            $item->order_id = $order->order_id;
-            $item->store_id = $order->store_id;
-            $item->order_5p = $order->id;
-            $item->item_code = $data['child_sku'];
-            $item->item_unit_price = $data['item_unit_price'];
-            $item->item_option = json_encode($options);
+                $item = new Item();
+                $item->order_id = $order->order_id;
+                $item->store_id = $order->store_id;
+                $item->order_5p = $order->id;
+                $item->item_code = $data['child_sku'];
+                $item->item_unit_price = $data['item_unit_price'];
+                $item->item_option = json_encode($options);
 
-            if ($product) {
-                $item->item_id = $product->id_catalog;
-                $item->item_description = $product->product_name;
-                $item->item_thumb = $product->product_thumb;
-                $item->item_url = $product->product_url;
+                if ($product) {
+                    $item->item_id = $product->id_catalog;
+                    $item->item_description = $product->product_name;
+                    $item->item_thumb = $product->product_thumb;
+                    $item->item_url = $product->product_url;
+                } else {
+                    $item->item_description = 'PRODUCT NOT FOUND';
+                }
+                $item->child_sku = Helper::getChildSku($item);;
+
+                $item->data_parse_type = 'manual';
+
+                if ($order->order_status == 6) {
+                    $order->order_status = 4;
+                }
             } else {
-                $item->item_description = 'PRODUCT NOT FOUND';
-            }
-            $item->child_sku = Helper::getChildSku($item);;
-
-            $item->data_parse_type = 'manual';
-
-            if ($order->order_status == 6) {
-                $order->order_status = 4;
+                $item = Item::find($data['id']);
+                $item->child_sku = $data['child_sku'];
+                $item->item_option = json_encode($options);
+                if (isset($data['item_description'])) {
+                    $item->item_description = $data['item_description'];
+                }
             }
 
 
@@ -402,6 +426,9 @@ class OrderController extends Controller
             $item->save();
 
             $grand_sub_total += ((int)$item->item_quantity * (float)$item->item_unit_price);
+            if (isset($data['item_id']) && $data['item_id'] == '') {
+                Order::note('CS: Item ' . $item->id . ' added to order', $order->id);
+            }
         }
         $order->item_count = count($request->get('items'));
         // $order->sub_total = $order->items->sum;
@@ -421,11 +448,16 @@ class OrderController extends Controller
 
         $responseType = $isVerified ? 201 : 201;
 
-        //TODO: Send email to customer
-        // Notification::orderConfirm($order);
-        $message = $isVerified ? sprintf("Order %s is entered.", $order->order_id) : sprintf("Order %s saved but address is unverified", $order->order_id);
-        $note_text = "Order Entered Manually";
 
+        if ($request->get('type') == 'create') {
+            //TODO: Send email to customer
+            // Notification::orderConfirm($order);
+            $message = $isVerified ? sprintf("Order %s is entered.", $order->order_id) : sprintf("Order %s saved but address is unverified", $order->order_id);
+            $note_text = "Order Entered Manually";
+        } else {
+            $message = $isVerified ? sprintf('Order %s is updated', $order->order_id) : sprintf("Order %s updated but address is unverified", $order->order_id);
+            $note_text = "Order Info Manually Updated";
+        }
 
         Order::note($note_text, $order->id);
 
@@ -434,6 +466,141 @@ class OrderController extends Controller
             'status' => $responseType,
             'data' => $order
         ], $responseType);
+    }
+
+    public function updateStore(Request $request)
+    {
+        $order = Order::with('items', 'customer')
+            ->where('id', $request->get('id'))
+            ->where('is_deleted', '0')
+            ->first();
+
+
+        if (!$order) {
+            return  response()->json([
+                'message' => 'Order not Found',
+                'status' => 203,
+                'data' => []
+            ], 203);
+        }
+
+        $old = $order->store_id;
+        $new = $request->get('store_select');
+        $order->store_id = $new;
+        $order->order_id = str_replace($old . '-', '', $order->order_id);
+        $order->save();
+
+
+        foreach ($order->items ?? [] as $item) {
+            $item->store_id = $new;
+            $item->order_id = str_replace($old . '-', '', $item->order_id);
+            $item->save();
+        }
+
+        $order->customer->order_id = str_replace($old . '-', '', $order->customer->order_id);
+        $order->customer->save();
+
+        $notes = Note::where('order_id', 'LIKE', $old . '%')->get();
+
+        foreach ($notes as $note) {
+            $old677676051 = 'test';
+            $note->order_id = str_replace($old677676051 . '-', '', $note->order_id);
+            $note->save();
+        }
+
+        $notes = Note::where('note_text', 'LIKE', '%' . $old . '%')
+            ->get();
+
+        foreach ($notes as $note) {
+            $note->note_text = str_replace($old . '-', '', $note->note_text);
+            $note->save();
+        }
+
+        return response()->json(
+            [
+                'message' => 'Order Store Updated',
+                'status' => 201,
+                'data' => $order
+            ],
+            201
+        );
+    }
+
+    public function updateMethod(Request $request)
+    {
+        $order = Order::with('store')
+            ->where('id', $request->get('id'))
+            ->latest()
+            ->first();
+
+        if (!$order) {
+            return response()->json([
+                'message' => 'Order not Found',
+                'status' => 203,
+                'data' => []
+            ], 203);
+        }
+
+        $old_method = $order->carrier != null ? $order->carrier . ' ' . $order->method : 'DEFAULT';
+
+        if ($request->get('method') == 'MN') {
+            Order::note('CS: Ship Method set from ' . $old_method . ' to MANUAL', $order->id);
+            $order->carrier = 'MN';
+            $order->method = $request->get('method_note');
+        } else if ($request->get('shipping_method') == '' && strlen($order->carrier) > 0) {
+            Order::note('CS: Ship Method set from ' . $old_method . ' to DEFAULT SHIPPING', $order->id);
+            $order->carrier = null;
+            $order->method = null;
+        } else if (
+            $request->get('shipping_method') != '' &&
+            $request->get('shipping_method') != $order->carrier . '*' . $order->method
+        ) {
+            $order->carrier = substr($request->get('shipping_method'), 0, strpos($request->get('shipping_method'), '*'));
+            $order->method = substr($request->get('shipping_method'), strpos($request->get('shipping_method'), '*') + 1);
+            Order::note('CS: Ship Method set from ' . $old_method . ' to ' . $order->carrier . ' ' . $order->method, $order->id);
+        }
+
+        $order->save();
+
+        return response()->json([
+            'message' => 'Shipping Method Updated',
+            'status' => 201,
+            'data' => $order
+        ], 201);
+    }
+
+    public function updateShipDate(Request $request)
+    {
+        $order = Order::with('store')
+            ->where('id', $request->get('id'))
+            ->latest()
+            ->first();
+
+        if (!$order) {
+            return response()->json([
+                'message' => 'Order not Found',
+                'status' => 203,
+                'data' => []
+            ], 203);
+        }
+
+        if (substr($request->get('ship_date'), 0, 1) == '0' || $request->get('ship_date') == '') {
+            if ($order->ship_date != null) {
+                Order::note('CS: Ship Date Unset', $order->id);
+                $order->ship_date = null;
+            }
+        } else if ($order->ship_date != $request->get('ship_date')) {
+            Order::note('CS: Ship Date set to ' . $request->get('ship_date'), $order->id);
+            $order->ship_date = $request->get('ship_date');
+        }
+
+        $order->save();
+
+        return response()->json([
+            'message' => 'Shipping Date Updated',
+            'status' => 201,
+            'data' => $order
+        ], 201);
     }
 
     public function operatorOption()

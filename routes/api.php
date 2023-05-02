@@ -148,7 +148,10 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
 
     Route::get('orders', [OrderController::class, 'index']);
     Route::get('orders/{id}', [OrderController::class, 'show']);
-    Route::post('orders', [OrderController::class, 'store']);
+    Route::post('orders/{id}', [OrderController::class, 'store']);
+    Route::post('orders-update-store', [OrderController::class, 'updateStore']);
+    Route::post('orders-update_method', [OrderController::class, 'updateMethod']);
+    Route::post('orders-update_shipdate', [OrderController::class, 'updateShipDate']);
     Route::get('order-operator-options', [OrderController::class, 'operatorOption']);
     Route::get('order-search-options', [OrderController::class, 'searchOption']);
     Route::get('order-status-options', [OrderController::class, 'statusOption']);
