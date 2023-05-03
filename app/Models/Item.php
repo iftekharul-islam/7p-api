@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Log;
 
 class Item extends Model
 {
@@ -311,7 +312,7 @@ class Item extends Model
 
     public function rejection()
     {
-        return $this->hasOne('App\Rejection', 'item_id', 'id')
+        return $this->hasOne(Rejection::class, 'item_id', 'id')
             ->where('rejections.complete', '0');
     }
 

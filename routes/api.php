@@ -3,12 +3,14 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BatchRouteController;
+use App\Http\Controllers\CsController;
 use App\Http\Controllers\EmailTemplateController;
 use App\Http\Controllers\InventoryAdjustmentController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\LogisticsController;
 use App\Http\Controllers\ManufactureController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ParameterController;
 use App\Http\Controllers\PermissionController;
@@ -19,6 +21,7 @@ use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\RejectionReasonController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SectionController;
+use App\Http\Controllers\ShippingController;
 use App\Http\Controllers\SpecificationSheetController;
 use App\Http\Controllers\StationController;
 use App\Http\Controllers\TemplateController;
@@ -149,15 +152,19 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('orders', [OrderController::class, 'index']);
     Route::get('orders/{id}', [OrderController::class, 'show']);
     Route::post('orders/{id}', [OrderController::class, 'store']);
+    Route::post('orders-send-email', [NotificationController::class, 'sendMail']);
     Route::post('orders-update-store', [OrderController::class, 'updateStore']);
     Route::post('orders-update_method', [OrderController::class, 'updateMethod']);
     Route::post('orders-update_shipdate', [OrderController::class, 'updateShipDate']);
+    Route::post('orders-item-tracking', [ShippingController::class, 'manualShip']);
     Route::get('order-operator-options', [OrderController::class, 'operatorOption']);
     Route::get('order-search-options', [OrderController::class, 'searchOption']);
     Route::get('order-status-options', [OrderController::class, 'statusOption']);
     Route::get('order-store-options', [OrderController::class, 'storeOption']);
     Route::get('order-ship-options', [OrderController::class, 'shipOption']);
     Route::post('order-product-options', [ProductController::class, 'productOption']);
+    Route::get('order-email-type-options', [OrderController::class, 'emailTypeOption']);
+    Route::get('order-shipping-method-options', [OrderController::class, 'shippingMethodOption']);
 
     Route::get('email-template', [EmailTemplateController::class, 'index']);
     Route::get('email-template/{id}', [EmailTemplateController::class, 'show']);
@@ -170,6 +177,8 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('specification-product', [SpecificationSheetController::class, 'store']);
     Route::post('specification-product/{id}', [SpecificationSheetController::class, 'update']);
     Route::post('destroy-specification-product/{id}', [SpecificationSheetController::class, 'destroy']);
+
+    Route::get('customer-service', [CsController::class, 'index']);
 
     Route::get('items-list', [ItemController::class, 'index']);
     Route::get('graphic-items-list', [ItemController::class, 'indexGraphic']);
