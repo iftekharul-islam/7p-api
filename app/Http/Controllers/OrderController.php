@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\EmailTemplate;
 use App\Models\Item;
 use App\Models\Note;
 use App\Models\Notification;
@@ -162,7 +163,6 @@ class OrderController extends Controller
             ->search($request->get('search_for_second'), $request->get('operator_second'), $request->get('search_in_second'))
             ->latest();
         $orders = $orders->paginate($request->get('perPage', 10));
-        info($orders);
 
         $total = Order::where('is_deleted', '0')
             ->storeId($request->get('store'))
@@ -182,7 +182,7 @@ class OrderController extends Controller
 
     public function show(string $id)
     {
-        $order = Order::with('customer', 'items')
+        $order = Order::with('customer', 'items', 'store')
             ->where('is_deleted', '0')
             ->find($id);
         if (!$order) {
@@ -197,6 +197,8 @@ class OrderController extends Controller
         })->count();
 
         $order['batched'] = $batched;
+
+        info($order);
         return $order;
     }
 
@@ -386,18 +388,17 @@ class OrderController extends Controller
                 }
             }
 
-            if ($data['item_id'] == '') {
+            if (!isset($data['id'])) {
                 $product = Product::where('product_model', $data['child_sku'])->first();
-
                 $item = new Item();
                 $item->order_id = $order->order_id;
                 $item->store_id = $order->store_id;
                 $item->order_5p = $order->id;
-                $item->item_code = $data['child_sku'];
                 $item->item_unit_price = $data['item_unit_price'];
                 $item->item_option = json_encode($options);
 
                 if ($product) {
+                    $item->item_code = $product->product_model;
                     $item->item_id = $product->id_catalog;
                     $item->item_description = $product->product_name;
                     $item->item_thumb = $product->product_thumb;
@@ -414,6 +415,7 @@ class OrderController extends Controller
                 }
             } else {
                 $item = Item::find($data['id']);
+                info('item_id: ' . $data['item_id'] . ' item: ' . $item);
                 $item->child_sku = $data['child_sku'];
                 $item->item_option = json_encode($options);
                 if (isset($data['item_description'])) {
@@ -426,7 +428,7 @@ class OrderController extends Controller
             $item->save();
 
             $grand_sub_total += ((int)$item->item_quantity * (float)$item->item_unit_price);
-            if (isset($data['item_id']) && $data['item_id'] == '') {
+            if (isset($data['id']) && $data['id'] == '') {
                 Order::note('CS: Item ' . $item->id . ' added to order', $order->id);
             }
         }
@@ -668,5 +670,33 @@ class OrderController extends Controller
             ];
         };
         return $stores;
+    }
+
+    public function emailTypeOption()
+    {
+        $emailTemplates = EmailTemplate::where('is_deleted', '0')->get();
+        $data[] = [
+            'label' => 'Email',
+            'value' => 0,
+        ];
+        foreach ($emailTemplates ?? [] as $item) {
+            $data[] = [
+                'label' => $item->message_type,
+                'value' => $item->id,
+            ];
+        };
+        return $data;
+    }
+
+    public function shippingMethodOption()
+    {
+        $data = [];
+        foreach (Shipper::listMethods() ?? [] as $key => $value) {
+            $data[] = [
+                'label' => $value,
+                'value' => $key,
+            ];
+        };
+        return $data;
     }
 }

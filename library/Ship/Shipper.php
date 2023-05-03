@@ -4,12 +4,13 @@ namespace Ship;
 
 use App\Batch;
 use App\Http\Controllers\ZakekeController;
-use App\Item;
 use App\ItemShip;
+use App\Models\Batch as ModelsBatch;
+use App\Models\Item;
 use App\Models\Order;
 use App\Ship;
 use App\ShipmentManifest;
-use App\Wap;
+use App\Models\Wap;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use library\Helper;
@@ -790,7 +791,7 @@ class Shipper
             $item->save();
 
             if ($item->batch_number != '0') {
-                if (!Batch::isFinished($item->batch_number)) {
+                if (!ModelsBatch::isFinished($item->batch_number)) {
                     $item->batch_number = '0';
                 }
             }
