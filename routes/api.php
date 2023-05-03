@@ -3,6 +3,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BatchRouteController;
+use App\Http\Controllers\CsController;
 use App\Http\Controllers\EmailTemplateController;
 use App\Http\Controllers\InventoryAdjustmentController;
 use App\Http\Controllers\InventoryController;
@@ -176,6 +177,8 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('specification-product', [SpecificationSheetController::class, 'store']);
     Route::post('specification-product/{id}', [SpecificationSheetController::class, 'update']);
     Route::post('destroy-specification-product/{id}', [SpecificationSheetController::class, 'destroy']);
+
+    Route::get('customer-service', [CsController::class, 'index']);
 
     Route::get('items-list', [ItemController::class, 'index']);
     Route::get('graphic-items-list', [ItemController::class, 'indexGraphic']);
