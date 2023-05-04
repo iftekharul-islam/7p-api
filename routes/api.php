@@ -179,6 +179,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('destroy-specification-product/{id}', [SpecificationSheetController::class, 'destroy']);
 
     Route::get('customer-service', [CsController::class, 'index']);
+    Route::get('customer-service-action', [CsController::class, 'actionButton']);
 
     Route::get('items-list', [ItemController::class, 'index']);
     Route::get('graphic-items-list', [ItemController::class, 'indexGraphic']);

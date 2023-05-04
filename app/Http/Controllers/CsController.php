@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Customer;
 use App\Models\Item;
 use App\Models\Note;
 use App\Models\Order;
@@ -21,6 +22,8 @@ class CsController extends Controller
             ->where('is_deleted', '0')
             ->get();
 
+        $backorders = [];
+        $bo_summary = [];
         if ($request->has('stock_no_unique')) {
             $backorders = Item::with('order.notes', 'order.customer')
                 ->join('inventory_unit', 'items.child_sku', '=', 'inventory_unit.child_sku')
@@ -31,7 +34,7 @@ class CsController extends Controller
                 ->orderBy('items.created_at')
                 ->get();
         } else {
-            $backorders = Item::join('inventory_unit', 'items.child_sku', '=', 'inventory_unit.child_sku')
+            $bo_summary = Item::join('inventory_unit', 'items.child_sku', '=', 'inventory_unit.child_sku')
                 ->join('inventories', 'inventory_unit.stock_no_unique', '=', 'inventories.stock_no_unique')
                 ->join('orders', 'items.order_5p', '=', 'orders.id')
                 ->where('items.item_status', 4)
@@ -60,6 +63,7 @@ class CsController extends Controller
             ->get();
         $other = Order::with('store', 'customer', 'items', 'store', 'hold_reason')
             ->where('order_status', 23)
+            // ->where('order_status', 4)
             ->where('is_deleted', '0')
             ->get();
 
@@ -115,7 +119,7 @@ class CsController extends Controller
             }
         }
         if ($tab == 'backorder') {
-            $data = $backorders;
+            $data = ['backorders' => $backorders, 'bo_summary' => $bo_summary];
         }
         if ($tab == 'reship') {
             $data = $reship;
@@ -140,9 +144,46 @@ class CsController extends Controller
                 ->get();
         }
 
+        info($data);
+
         return response()->json([
             'data' => $data,
             'count' => $count,
         ]);
+    }
+
+    public function actionButton(Request $request)
+    {
+        $order = Order::find($request->get('order_5p'));
+
+        if ($order) {
+            $order->order_status = 4;
+            $order->save();
+
+            Order::note('Customer Service ' . $request->get('tab') . ' Hold Released ' . $order->order_id, $order->id, $order->order_id);
+
+            if ($order && $request->get('action') == 'ignore') {
+
+                $customer = Customer::find($order->customer_id);
+
+                if ($customer) {
+                    $customer->ignore_validation = TRUE;
+                    $customer->save();
+
+                    Order::note("Ignore address Validation", $order->id, $order->order_id);
+                } else {
+                    return 'Customer Not Found';
+                }
+            }
+            return response()->json([
+                'message' => 'Success',
+                'status' => 201,
+            ], 201);
+        } else if (!$order) {
+            return response()->json([
+                'message' => 'Order Not Found',
+                'status' => 203,
+            ], 203);
+        }
     }
 }
