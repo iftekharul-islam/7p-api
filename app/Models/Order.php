@@ -161,7 +161,7 @@ class Order extends Model
 
     public function hold_reason()
     {
-        return $this->hasOne('App\Note', 'order_5p', 'id')
+        return $this->hasOne(Note::class, 'order_5p', 'id')
             ->where('note_text', 'LIKE', 'OH:%');
         // ->latest()
         // ->limit(1);
