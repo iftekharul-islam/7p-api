@@ -19,6 +19,7 @@ use App\Http\Controllers\ProductionCategoryController;
 use App\Http\Controllers\PurchasedInvProductController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\RejectionReasonController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SectionController;
 use App\Http\Controllers\ShippingController;
@@ -191,6 +192,12 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('update-config-child-sku', [LogisticsController::class, 'updateSKUs']);
 
     Route::post('send-bulk-email', [EmailTemplateController::class, 'sendBulkEmail']);
+
+    Route::get('section-reports', [ReportController::class, 'section']);
+    Route::get('ship-date-reports', [ReportController::class, 'shipDate']);
+    Route::get('report-manufacture-options', [ReportController::class, 'manufactureOption']);
+    Route::get('report-store-options', [ReportController::class, 'storeOption']);
+    Route::get('report-company-options', [ReportController::class, 'companyOption']);
 
     Route::get('role-options', [RoleController::class, 'roleOption']);
     Route::get('section-options', [InventoryController::class, 'sectionOption']);

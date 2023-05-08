@@ -9,7 +9,7 @@ class Store extends Model
 {
     use HasFactory;
 
-    public static $companies = ['null' => '', '0' => 'Monogramonline', '1' => 'Natico', '2' => 'PWS', '3' => 'Dropship'];
+    public static $companies = ['null' => 'Select Company', '0' => 'Monogramonline', '1' => 'Natico', '2' => 'PWS', '3' => 'Dropship'];
 
     public static function list($batch = '%', $company = '%', $prepend = ['', ''])
     {
