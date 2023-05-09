@@ -195,6 +195,8 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
 
     Route::get('section-reports', [ReportController::class, 'section']);
     Route::get('ship-date-reports', [ReportController::class, 'shipDate']);
+    Route::get("order-items-reports", [ReportController::class, 'orderItems']);
+    Route::get("sales-summary-reports", [ReportController::class, 'salesSummary']);
     Route::get('report-manufacture-options', [ReportController::class, 'manufactureOption']);
     Route::get('report-store-options', [ReportController::class, 'storeOption']);
     Route::get('report-company-options', [ReportController::class, 'companyOption']);
