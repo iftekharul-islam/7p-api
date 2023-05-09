@@ -368,6 +368,123 @@ class ReportController extends Controller
             'sections' => $sections,
         ]);
     }
+    public function orderItems(Request $request)
+    {
+        $request->has('start_date') ? $start_date = $request->get('start_date') : $start_date = date("Y-m-d");
+        $request->has('end_date') ? $end_date = $request->get('end_date') : $end_date = date("Y-m-d");
+        $request->has('group') ? $group = $request->get('group') : $group = 'stock_no_unique';
+        $request->has('limit') && $request->get('limit') != 0 ? $limit = $request->get('limit') : $limit = 25;
+
+        $store_ids = $request->get('store_ids');
+
+        if (is_array($store_ids)) {
+            $store_str = implode(',', $store_ids);
+        } else {
+            $store_str = '';
+        }
+
+        set_time_limit(0);
+        ini_set('memory_limit', '256M');
+
+        $items = Item::join('orders', 'items.order_5p', '=', 'orders.id')
+            ->leftjoin('shipping', 'items.tracking_number', '=', 'shipping.tracking_number')
+            ->leftjoin('products', 'items.item_code', '=', 'products.product_model')
+            ->where('items.is_deleted', '0')
+            ->where('items.item_status', '!=', 6)
+            ->selectRaw("items.item_code, products.product_name, products.product_thumb, products.id as product_id,
+															SUM(IF(items.item_status = 2, items.item_quantity, 0)) as shipped,
+															SUM(IF(items.item_status = 2 && shipping.id IS NOT NULL, 
+																			DATEDIFF(shipping.transaction_datetime, orders.order_date), null)) as ship_days,
+															MAX(IF(items.item_status = 2 && shipping.id IS NOT NULL, 
+																			DATEDIFF(shipping.transaction_datetime, orders.order_date), null)) as maxdays,
+															SUM(items.item_quantity) as item_qty
+															")
+            ->searchStore($store_ids)
+            ->searchDate($start_date, $end_date)
+            ->groupBy('items.item_code')
+            ->orderBy('item_qty', 'DESC')
+            ->limit($limit)
+            ->get();
+
+        $skus = $items->pluck('item_code');
+
+        $rejects = Item::leftjoin('rejections', 'items.id', '=', 'rejections.item_id')
+            ->where('items.is_deleted', '0')
+            ->where('items.item_status', '!=', 6)
+            ->whereIn('items.item_code', $skus)
+            ->selectRaw("items.item_code,COUNT(DISTINCT rejections.id) as count")
+            ->searchStore($store_ids)
+            ->searchDate($start_date, $end_date)
+            ->groupBy('items.item_code')
+            ->get();
+
+
+        return response()->json([
+            'items' => $items,
+            'rejects' => $rejects,
+            'store_str' => $store_str,
+        ]);
+    }
+
+    public function salesSummary(Request $request)
+    {
+
+        $request->has('start_date') ? $start_date = $request->get('start_date') : $start_date = date("Y-m-d");
+        $request->has('end_date') ? $end_date = $request->get('end_date') : $end_date = date("Y-m-d");
+        $request->has('store_ids') ? $store_ids = $request->get('store_ids') : $store_ids = null;
+
+        $sales = Order::where('orders.is_deleted', '0')
+            ->where('orders.order_status', '!=', 8)
+            ->selectRaw("store_id, 
+															SUM(orders.total) as order_total, 
+															SUM(shipping_charge) as shipping_total, 
+															COUNT(orders.id) as order_count")
+            ->StoreId($request->get('store_ids'))
+            ->withinDate($start_date, $end_date)
+            ->groupBy('store_id')
+            ->orderBy('order_total', 'DESC')
+            ->get();
+
+        $total_amount = $sales->sum('order_total');
+
+        $sale_items = Order::join('items', 'orders.id', '=', 'items.order_5p')
+            ->leftjoin('shipping', 'items.tracking_number', '=', 'shipping.tracking_number')
+            ->leftjoin('batches', 'items.batch_number', '=', 'batches.batch_number')
+            ->leftjoin('sections', 'batches.section_id', '=', 'sections.id')
+            ->where('orders.is_deleted', '0')
+            ->where('items.is_deleted', '0')
+            ->where('orders.order_status', '!=', 8)
+            ->where('items.item_status', '!=', 6)
+            ->selectRaw("orders.store_id, batches.section_id,
+															(CASE WHEN (items.batch_number = '0') THEN 'Unbatched'
+																		WHEN (batches.section_id IS NULL or sections.id IS NULL) THEN 'Invalid Section'
+																		ELSE sections.section_name
+																END) as header,
+															SUM(IF(items.item_status = 2, items.item_quantity, 0)) as shipped,
+															SUM(IF(items.item_status = 2 && shipping.id IS NOT NULL, 
+																			DATEDIFF(shipping.transaction_datetime, orders.order_date), null)) as ship_days,
+															SUM(items.item_quantity) as item_qty")
+            ->StoreId($request->get('store_ids'))
+            ->withinDate($start_date, $end_date)
+            ->groupBy('orders.store_id', 'batches.section_id', 'items.batch_number')
+            ->orderBy('item_qty', 'DESC')
+            ->get();
+
+
+        $sections = Section::get()->transform(function ($item) {
+            return [
+                'value' => $item['id'],
+                'label' => $item['section_name'],
+            ];
+        });
+
+        return response()->json([
+            'sales' => $sales,
+            'sale_items' => $sale_items,
+            'sections' => $sections,
+            'total_amount' => $total_amount,
+        ]);
+    }
 
     public function manufactureOption()
     {
