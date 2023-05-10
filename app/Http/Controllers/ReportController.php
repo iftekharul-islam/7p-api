@@ -443,33 +443,34 @@ class ReportController extends Controller
             ->withinDate($start_date, $end_date)
             ->groupBy('store_id')
             ->orderBy('order_total', 'DESC')
-            ->get();
+            ->get()->take(10)->map(function ($sale) use ($request, $start_date, $end_date) {
+                $sale['item'] = Order::join('items', 'orders.id', '=', 'items.order_5p')
+                    ->leftjoin('shipping', 'items.tracking_number', '=', 'shipping.tracking_number')
+                    ->leftjoin('batches', 'items.batch_number', '=', 'batches.batch_number')
+                    ->leftjoin('sections', 'batches.section_id', '=', 'sections.id')
+                    ->where('orders.store_id', $sale['store_id'])
+                    ->where('orders.is_deleted', '0')
+                    ->where('items.is_deleted', '0')
+                    ->where('orders.order_status', '!=', 8)
+                    ->where('items.item_status', '!=', 6)
+                    ->selectRaw("orders.store_id, batches.section_id,
+                                                                (CASE WHEN (items.batch_number = '0') THEN 'Unbatched'
+                                                                            WHEN (batches.section_id IS NULL or sections.id IS NULL) THEN 'Invalid Section'
+                                                                            ELSE sections.section_name
+                                                                    END) as header,
+                                                                SUM(IF(items.item_status = 2, items.item_quantity, 0)) as shipped,
+                                                                SUM(IF(items.item_status = 2 && shipping.id IS NOT NULL, 
+                                                                                DATEDIFF(shipping.transaction_datetime, orders.order_date), null)) as ship_days,
+                                                                SUM(items.item_quantity) as item_qty")
+                    ->StoreId($request->get('store_ids'))
+                    ->withinDate($start_date, $end_date)
+                    ->groupBy('orders.store_id', 'batches.section_id', 'items.batch_number')
+                    ->orderBy('item_qty', 'DESC')
+                    ->get();
+                return $sale;
+            });
 
         $total_amount = $sales->sum('order_total');
-
-        $sale_items = Order::join('items', 'orders.id', '=', 'items.order_5p')
-            ->leftjoin('shipping', 'items.tracking_number', '=', 'shipping.tracking_number')
-            ->leftjoin('batches', 'items.batch_number', '=', 'batches.batch_number')
-            ->leftjoin('sections', 'batches.section_id', '=', 'sections.id')
-            ->where('orders.is_deleted', '0')
-            ->where('items.is_deleted', '0')
-            ->where('orders.order_status', '!=', 8)
-            ->where('items.item_status', '!=', 6)
-            ->selectRaw("orders.store_id, batches.section_id,
-															(CASE WHEN (items.batch_number = '0') THEN 'Unbatched'
-																		WHEN (batches.section_id IS NULL or sections.id IS NULL) THEN 'Invalid Section'
-																		ELSE sections.section_name
-																END) as header,
-															SUM(IF(items.item_status = 2, items.item_quantity, 0)) as shipped,
-															SUM(IF(items.item_status = 2 && shipping.id IS NOT NULL, 
-																			DATEDIFF(shipping.transaction_datetime, orders.order_date), null)) as ship_days,
-															SUM(items.item_quantity) as item_qty")
-            ->StoreId($request->get('store_ids'))
-            ->withinDate($start_date, $end_date)
-            ->groupBy('orders.store_id', 'batches.section_id', 'items.batch_number')
-            ->orderBy('item_qty', 'DESC')
-            ->get();
-
 
         $sections = Section::get()->transform(function ($item) {
             return [
@@ -480,7 +481,6 @@ class ReportController extends Controller
 
         return response()->json([
             'sales' => $sales,
-            'sale_items' => $sale_items,
             'sections' => $sections,
             'total_amount' => $total_amount,
         ]);
