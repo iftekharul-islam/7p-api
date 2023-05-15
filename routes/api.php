@@ -25,6 +25,7 @@ use App\Http\Controllers\SectionController;
 use App\Http\Controllers\ShippingController;
 use App\Http\Controllers\SpecificationSheetController;
 use App\Http\Controllers\StationController;
+use App\Http\Controllers\StoreController;
 use App\Http\Controllers\TemplateController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserPermissionController;
@@ -200,6 +201,11 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('report-manufacture-options', [ReportController::class, 'manufactureOption']);
     Route::get('report-store-options', [ReportController::class, 'storeOption']);
     Route::get('report-company-options', [ReportController::class, 'companyOption']);
+
+    Route::get('stores', [StoreController::class, 'index']);
+    Route::get('stores-visibility/{id}', [StoreController::class, 'visible']);
+    Route::get('stores-change-order/{direction}/{id}', [StoreController::class, 'sortOrder']);
+
 
     Route::get('role-options', [RoleController::class, 'roleOption']);
     Route::get('section-options', [InventoryController::class, 'sectionOption']);

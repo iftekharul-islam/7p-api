@@ -28,4 +28,10 @@ class Store extends Model
 
         return $array;
     }
+
+    public function store_items()
+    {
+        return $this->hasMany(StoreItem::class, 'store_id', 'store_id')
+            ->where('is_deleted', '0');
+    }
 }
