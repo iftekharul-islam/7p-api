@@ -26,12 +26,14 @@ use App\Http\Controllers\ShippingController;
 use App\Http\Controllers\SpecificationSheetController;
 use App\Http\Controllers\StationController;
 use App\Http\Controllers\StoreController;
+use App\Http\Controllers\StoreItemController;
 use App\Http\Controllers\TemplateController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserPermissionController;
 use App\Http\Controllers\VendorController;
 use App\Models\BatchRoute;
 use App\Models\EmailTemplate;
+use App\Models\StoreItem;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -203,8 +205,21 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('report-company-options', [ReportController::class, 'companyOption']);
 
     Route::get('stores', [StoreController::class, 'index']);
+    Route::post('stores', [StoreController::class, 'store']);
+    Route::post('stores/{id}', [StoreController::class, 'show']);
+    Route::post('stores-update/{id}', [StoreController::class, 'update']);
+    Route::post('stores-delete/{id}', [StoreController::class, 'delete']);
+    Route::get('stores-items/{id}', [StoreItemController::class, 'index']);
+    Route::post('stores-items-add', [StoreItemController::class, 'store']);
+    Route::post('stores-items-update', [StoreItemController::class, 'update']);
+    Route::post('stores-items-delete/{id}', [StoreItemController::class, 'delete']);
     Route::get('stores-visibility/{id}', [StoreController::class, 'visible']);
     Route::get('stores-change-order/{direction}/{id}', [StoreController::class, 'sortOrder']);
+    Route::get('stores-company-options', [StoreController::class, 'companyOption']);
+    Route::get('stores-input-options', [StoreController::class, 'inputOption']);
+    Route::get('stores-batch-options', [StoreController::class, 'batchOption']);
+    Route::get('stores-qc-options', [StoreController::class, 'qcOption']);
+    Route::get('stores-confirm-options', [StoreController::class, 'confirmOption']);
 
 
     Route::get('role-options', [RoleController::class, 'roleOption']);
