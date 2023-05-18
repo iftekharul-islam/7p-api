@@ -6,6 +6,7 @@ use App\Models\BatchRoute;
 use App\Models\Inventory;
 use App\Models\Option;
 use App\Models\Parameter;
+use App\Models\Product;
 use App\Models\StoreItem;
 use Illuminate\Support\Str;
 
@@ -256,6 +257,49 @@ class Helper
         }
 
         return $child_sku;
+    }
+
+    public static function findProduct($input, $store_id = null)
+    {
+
+        if ($store_id != null) {
+            $store_item = StoreItem::where('store_id', $store_id)
+                ->where('vendor_sku', $input)
+                ->first();
+            if ($store_item && $store_item->parent_sku != '') {
+                $input = $store_item->parent_sku;
+            }
+        }
+
+        $SKU = str_replace('_', '-', trim($input));
+
+        $product = Product::where('product_model', 'LIKE', $SKU)->first();
+        if (!$product) {
+            $SKU = substr($SKU, 0, strrpos($SKU, '-'));
+            if ($SKU != '') {
+                $product = Product::where('product_model', 'LIKE', $SKU)->first();
+                if (!$product) {
+                    $SKU = substr($SKU, 0, strrpos($SKU, '-'));
+                    if ($SKU != '') {
+                        $product = Product::where('product_model', 'LIKE', $SKU)->first();
+                        if (!$product) {
+                            $SKU = substr($SKU, 0, strrpos($SKU, '-'));
+                            if ($SKU != '') {
+                                $product = Product::where('product_model', 'LIKE', $SKU)->first();
+                                if (!$product) {
+                                    return false;
+                                }
+                            }
+                        }
+                    } else {
+                        return false;
+                    }
+                }
+            } else {
+                return false;
+            }
+        }
+        return $product;
     }
 
     public static function generateUniqueRowId()
