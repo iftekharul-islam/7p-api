@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Order;
 use App\Models\Store;
 use Illuminate\Http\Request;
+use Market\Dropship;
+use Ship\Batching;
+use Ship\CSV;
 
 class StoreController extends Controller
 {
@@ -285,6 +289,206 @@ class StoreController extends Controller
         ], 201);
     }
 
+    public function importOrdersFile(Request $request)
+    {
+        if ($request->has('store_id')) {
+            $store = Store::where('store_id', $request->get('store_id'))->first();
+
+            if ($store->input == '3') {
+                $className = "Market" . "\\" . $store->class_name;
+
+                $controller = new $className;
+                $result = $controller->importCsv($store, $request->file('file'));
+                $errors = $result['errors'];
+                $orders = Order::with('items', 'customer', 'store')
+                    ->whereIn('id', $result['order_ids'])
+                    ->get();
+
+                if ($store->batch == '2') {
+                    $store_ids = array_unique($orders->pluck('store_id')->toArray());
+
+                    foreach ($store_ids as $store_imported) {
+                        Batching::auto(0, $store_imported);
+                    }
+                }
+            }
+            return response()->json([
+                'message' => 'Orders imported successfully',
+                'status' => 201,
+                'errors' => $errors,
+                'orders' => $orders,
+            ], 201);
+        } else {
+            return response()->json([
+                'message' => 'Store not found',
+                'status' => 203,
+            ], 203);
+        }
+    }
+
+    public function importTrackingFile(Request $request)
+    {
+        if ($request->has('store_id')) {
+            $store = Store::where("store_id", $request->get('store_id'))->first();
+            $data = Dropship::export($request, $store);
+
+            $orders = Order::with('items', 'customer', 'store')
+                ->whereIn('id', $data['orders'])
+                ->get();
+        } else {
+            return response()->json([
+                'message' => 'Store not found',
+                'status' => 203,
+            ], 203);
+        }
+    }
+
+    public function importZakekeFile(Request $request)
+    {
+        $csv = new CSV;
+        $data = $csv->intoArray($request->file("file")->getPathname(), ",");
+
+        $temp = [];
+        foreach ($data as $datum) {
+            foreach ($datum as $value) {
+                $temp[] = $value;
+            }
+        }
+        $data = $temp;
+        unset($temp);
+
+        $stats = [
+            "NOT_FOUND" => [],
+            "QUANTITY_MORE_THAN_ONE" => [],
+            "STATUS_ISSUE" => [],
+            "ORDER_MATCHED" => 0
+        ];
+
+        $orders = Order::with("items")
+            ->whereIn("short_order", $data)
+            ->get();
+
+
+        $stats['NOT_FOUND'] = $data;
+        unset($data);
+
+        /*
+         * Remove found orders from the NOT_FROUND
+         * Only leaving the ones that aren't found
+         */
+        foreach ($orders as $order) {
+            if (in_array($order->short_order, $stats['NOT_FOUND'])) {
+                unset($stats['NOT_FOUND'][array_search($order->short_order, $stats['NOT_FOUND'])]);
+            }
+        }
+
+        /**
+         * Adding the order short_order here
+         * will not add it to the
+         * @see $stats['ORDER_MATCHED']++
+         */
+        $filters = [];
+
+        foreach ($orders as $order) {
+
+
+            foreach ($order->items as $item) {
+
+
+                /*
+                 * Check if contains more than 2 stuff
+                 */
+                if ($item->item_quantity >= 2 or count($order->items) >= 2) {
+                    $stats['QUANTITY_MORE_THAN_ONE'][] = $order->short_order;
+                } else {
+                    if (!isset($filters[$order->short_order])) {
+
+                        /*
+                         * Check if item is on hold
+                         */
+                        if ($order->order_status != 23) {
+                            if (!in_array($order->short_order, $stats['QUANTITY_MORE_THAN_ONE'])) {
+                                $stats['STATUS_ISSUE'][] = $order->short_order;
+                            }
+                        } else {
+                            // Not on hold can continue
+                            $stats['ORDER_MATCHED']++;
+                            $filters[] = $order->short_order;
+                        }
+                    }
+                }
+            }
+        }
+
+        /*
+         * Now use the filters array, supply it to the zakeke bin I made in GoLang to fetch the links
+         */
+
+        $zakekeFilters = implode(",", $filters);
+        $response = shell_exec("zakeke " . $zakekeFilters);
+
+        $data = @json_decode($response, true);
+
+
+
+        if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
+            return redirect()->back()->withErrors('Zakeke API seems to be down, try again later!');
+        } else {
+            /*
+             * Now start loadingthrough order again, and set their graphic.
+             */
+
+
+            $ctx = stream_context_create(array(
+                'http' =>
+                array(
+                    'timeout' => 300,  //1200 Seconds is 20 Minutes
+                )
+            ));
+
+            foreach ($orders as $order) {
+
+
+                foreach ($order->items as $item) {
+
+                    // Make sure the batch is not empty
+                    if ($item->batch_number !== "") {
+
+                        /*
+                         * Ensure it exists, and the PNG link is not empty
+                         */
+                        if (isset($data[$order->short_order]['Links'][0]['PDF']) && $data[$order->short_order]['Links'][0]['PDF'] !== "") {
+
+
+
+                            $link = $data[$order->short_order]['Links'][0]['PDF'];
+                            $linkEncoded = base64_encode($link);
+                            $batch = $item->batch_number;
+                            $id = $item->id;
+                            file_get_contents("http://order.monogramonline.com/lazy/link?link=$linkEncoded&batch_number=$batch&item_id=$id", false, $ctx);
+                        }
+                    }
+                }
+            }
+        }
+
+        $message = "We have successfully fetched the graphic for the following orders:</br> " . $this->pretty($filters);
+
+        if (isset($stats['NOT_FOUND']) && count($stats['NOT_FOUND']) >= 1) {
+            //    $message .= "\nOrders that we couldn't be found: " . $this->pretty($stats['NOT_FOUND']);
+        }
+        if (isset($stats['STATUS_ISSUE']) && count($stats['STATUS_ISSUE']) >= 1) {
+            $message .= "\nOrders that status did not match filter: " . $this->pretty($stats['STATUS_ISSUE']);
+        }
+        if (isset($stats['QUANTITY_MORE_THAN_ONE']) && count($stats['QUANTITY_MORE_THAN_ONE']) >= 1) {
+            $message .= "\nOrders we couldn't process because it had multiple lines: " . $this->pretty($stats['QUANTITY_MORE_THAN_ONE']);
+        }
+        return response()->json([
+            'message' => $message,
+            'status' => 201,
+        ], 201);
+    }
+
     public function companyOption()
     {
         foreach (Store::$companies as $key => $value) {
@@ -338,5 +542,51 @@ class StoreController extends Controller
             ];
         }
         return $data;
+    }
+
+    public function orderStoreOption()
+    {
+        $data = [];
+        $store = Store::where('is_deleted', '0')
+            ->where('input', '3')
+            ->orderBy('sort_order')
+            ->get();
+        info($store);
+        foreach ($store as $value) {
+            $data[] = [
+                'value' => $value['store_id'],
+                'label' => $value['store_name'],
+            ];
+        }
+        return $data;
+    }
+
+    public function trackingStoreOption()
+    {
+        //TODO : get store from json file
+        $file = "/var/www/order.monogramonline.com/Store.json";
+        $data = [];
+        if (file_exists($file)) {
+            $data = json_decode(file_get_contents($file), true);
+        }
+        $import_storesTracking = [];
+        $storeNames = [];
+        foreach ($data as $name => $dt) {
+            if ($dt['DROPSHIP_IMPORT']) {
+                $storeNames[] = $name;
+            }
+        }
+        if (count($storeNames) !== 0) {
+            $import_storesTracking = Store::whereIn("store_name", $storeNames)
+                ->get();
+        }
+        $res = [];
+        foreach ($import_storesTracking as $value) {
+            $res[] = [
+                'value' => $value['store_name'],
+                'label' => $value['store_id'],
+            ];
+        }
+        return $res;
     }
 }

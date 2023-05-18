@@ -221,6 +221,12 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('stores-qc-options', [StoreController::class, 'qcOption']);
     Route::get('stores-confirm-options', [StoreController::class, 'confirmOption']);
 
+    Route::post('import-orders-file', [StoreController::class, 'importOrdersFile']);
+    Route::post('import-trcking-file', [StoreController::class, 'importTrackingFile']);
+    Route::post('import-zakeke-file', [StoreController::class, 'importZakekeFile']);
+    Route::get('import-order-store-options', [StoreController::class, 'orderStoreOption']);
+    Route::get('import-tracking-store-options', [StoreController::class, 'trackingStoreOption']);
+
 
     Route::get('role-options', [RoleController::class, 'roleOption']);
     Route::get('section-options', [InventoryController::class, 'sectionOption']);
