@@ -3,9 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\Ship;
 use App\Models\Store;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Market\Dropship;
+use Market\Quickbooks;
 use Ship\Batching;
 use Ship\CSV;
 
@@ -487,6 +491,169 @@ class StoreController extends Controller
             'message' => $message,
             'status' => 201,
         ], 201);
+    }
+
+    //exportData funtion
+    public function exportData(Request $request)
+    {
+        $result['qb_summary'] = Ship::join('stores', 'shipping.store_id', '=', 'stores.store_id')
+            ->selectRaw('stores.store_id, stores.store_name, COUNT(*) as count')
+            ->whereNull('shipping.qb_export')
+            ->where('stores.qb_export', '1')
+            ->where('shipping.is_deleted', '0')
+            ->groupBy('store_id', 'stores.store_name')
+            ->get();
+
+        $result['csv_summary'] = Ship::join('stores', 'shipping.store_id', '=', 'stores.store_id')
+            ->selectRaw('shipping.store_id, stores.store_name, COUNT(*) as count')
+            ->whereNull('shipping.csv_export')
+            ->where('stores.ship', '4')
+            ->where('shipping.is_deleted', '0')
+            ->groupBy('store_id', 'stores.store_name')
+            ->get();
+
+        $loadDrop = $request->get("drop", false);
+
+        $storesNew =  Cache::remember("stores_all", 1, function () {
+            return Store::all();
+        });
+        $file = "/var/www/order.monogramonline.com/Store.json";
+
+        $data = [];
+        if (file_exists($file)) {
+            $data = json_decode(file_get_contents($file), true);
+        }
+
+        $dropship = [];
+
+
+        if ($loadDrop) {
+            foreach ($storesNew as $storeD) {
+                if (isset($data[$storeD->store_name]) && $data[$storeD->store_name]['DROPSHIP']) {
+
+                    $id = $storeD->store_id;
+
+
+                    /*
+                         * A new implementation of no cache, avoid issue where item are old
+                         */
+                    $toAdd = Order::with("items", "customer", "items.shipInfo")
+                        ->whereHas("items", function ($query) use ($id) {
+                            return $query->where("store_id", $id)
+                                ->whereIn("child_sku", Cache::get('SKU_TO_INVENTORY_ID')['ALL'])
+                                ->withinDate(Carbon::createFromDate(2021, 11, 10)->toDateString(), Carbon::now()->addMonth(5)->toDateString());
+                        })
+                        ->where("order_status", "<=", "4")
+                        ->whereNotIn("id", Cache::get("SHIPMENT_CACHE"))
+                        ->get();
+
+                    if (count($toAdd) != 0) {
+                        Cache::forget("stores_items_$id");
+                        Cache::add("stores_items_$id", $toAdd, 60 * 24);
+                        $total[] = $toAdd;
+                    }
+                    // ---------- Ends here
+
+                    $temp = Cache::get("stores_items_$id");
+
+                    if (count($temp) >= 1) {
+                        $dropship[$storeD->id] = [
+                            "ID" => $storeD->id,
+                            "ID_REAL" => $storeD->store_id,
+                            "NAME" => $storeD->store_name,
+                            "COUNT" => count($temp)
+                        ];
+                    }
+                }
+            }
+        }
+
+        $result['dropship'] = $dropship;
+        return response()->json([
+            'message' => '',
+            'status' => 200,
+            'data' => $result,
+        ], 200);
+    }
+
+    public function qbExport(Request $request)
+    {
+
+        if (!$request->has('store_ids') || !$request->has('start_date') || !$request->has('end_date')) {
+            return redirect()->back()->withInput()->withErrors('Stores and dates required to create Quickbooks export');
+        }
+
+        $shipments = Ship::with('items', 'user')
+            ->whereIn('store_id', $request->get('store_ids'))
+            ->where('transaction_datetime', '>=', $request->get('start_date') . ' 00:00:00')
+            ->where('transaction_datetime', '<=', $request->get('end_date') . ' 23:59:59')
+            ->where('is_deleted', '0')
+            ->get();
+
+        $pathToFile = Quickbooks::export($shipments);
+
+        $ids = $shipments->pluck('id')->toArray();
+
+        Ship::whereIn('id', $ids)->update(['qb_export' => '1']);
+
+        if ($pathToFile != null) {
+            return response()->download($pathToFile)->deleteFileAfterSend(false);
+        }
+    }
+
+    public function qbCsvExport(Request $request)
+    {
+
+        if (!$request->has('store_ids') || !$request->has('start_date') || !$request->has('end_date')) {
+            return redirect()->back()->withInput()->withErrors('Stores and dates required to create CSV export');
+        }
+
+        try {
+            $shipments = Ship::join('items', 'items.tracking_number', '=', 'shipping.tracking_number')
+                ->join('orders', 'items.order_5p', '=', 'orders.id')
+                ->whereIn('shipping.store_id', $request->get('store_ids'))
+                ->where('shipping.transaction_datetime', '>=', $request->get('start_date') . ' 00:00:00')
+                ->where('shipping.transaction_datetime', '<=', $request->get('end_date') . ' 23:59:59')
+                ->where('shipping.is_deleted', '0')
+                //                ->limit(5)
+                //                ->selectRaw('sum(items.item_quantity) as sum, count(items.id) as count')
+                ->get();
+            //                ->get(['item_code', 'item_quantity', 'item_unit_price', 'purchase_order', 'order_date','transaction_datetime']);
+
+
+            //                $shipments = Ship::  join('items', 'items.tracking_number', '=', 'shipping.tracking_number')
+            //                ->join('orders', 'items.order_5p', '=', 'orders.id')
+            ////                ->whereIn('shipping.store_id', $request->get('store_ids'))
+            //                ->where('orders.order_date', '>=', $request->get('start_date') . ' 00:00:00')
+            //                ->where('orders.order_date', '<=', $request->get('end_date') . ' 23:59:59')
+            //                ->where('orders.is_deleted', '0')
+            //                ->limit(5)
+            //                ->get(['item_code', 'item_quantity', 'item_unit_price', 'purchase_order', 'order_date','transaction_datetime']);
+            //
+            ////            $shipments = Item::with('order')
+            ////            $shipments = Item::with('order')
+            //            $shipments = Item::with('order')
+            //            ->where('is_deleted', '0')
+            //                ->searchStore('524339241')
+            //                ->searchStatus('2')
+            //                ->searchSection($request->get('section'))
+            //                ->searchOrderDate($request->get('start_date'), $request->get('end_date'))
+            ////                ->selectRaw('sum(items.item_quantity) as sum, count(items.id) as count')
+            ////                ->limit(5)
+            ////                ->pluck('id')
+            ////                ->get(['items.item_code', 'items.item_quantity', 'items.item_unit_price', 'order.purchase_order', 'order.order_date','order.created_at']);
+            ////                ->select('items.item_code', 'items.item_quantity','items.item_unit_price')
+            //            ->get();
+
+            set_time_limit(0);
+            $pathToFile = Quickbooks::csvExport($shipments);
+
+            if ($pathToFile != null) {
+                return response()->download($pathToFile)->deleteFileAfterSend(false);
+            }
+        } catch (Exception $e) {
+            Log::error('Error Creating qbCsvExport - ' . $e->getMessage());
+        }
     }
 
     public function companyOption()
