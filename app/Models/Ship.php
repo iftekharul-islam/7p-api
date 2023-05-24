@@ -30,21 +30,21 @@ class Ship extends Model
 
     public function items()
     {
-        return $this->hasMany('App\Item', 'tracking_number', 'tracking_number')
+        return $this->hasMany(Item::class, 'tracking_number', 'tracking_number')
             ->where('is_deleted', 0)
             ->where('item_status', 2);
     }
 
     public function item()
     {
-        return $this->hasOne('App\Item', 'tracking_number', 'tracking_number')
+        return $this->hasOne(Item::class, 'tracking_number', 'tracking_number')
             ->where('is_deleted', 0)
             ->where('item_status', 2);
     }
 
     public function user()
     {
-        return $this->belongsTo('App\User', 'user_id', 'id');
+        return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
     public function scopeSearchCriteria($query, $search_for, $search_in)

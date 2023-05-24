@@ -2,12 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\QBExport;
 use App\Models\Order;
 use App\Models\Ship;
 use App\Models\Store;
+use App\Models\User;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Maatwebsite\Excel\Facades\Excel;
 use Market\Dropship;
 use Market\Quickbooks;
 use Ship\Batching;
@@ -580,7 +585,10 @@ class StoreController extends Controller
     {
 
         if (!$request->has('store_ids') || !$request->has('start_date') || !$request->has('end_date')) {
-            return redirect()->back()->withInput()->withErrors('Stores and dates required to create Quickbooks export');
+            return response()->json([
+                'message' => 'Stores and dates required to create Quickbooks export',
+                'status' => 203,
+            ], 203);
         }
 
         $shipments = Ship::with('items', 'user')
@@ -590,22 +598,24 @@ class StoreController extends Controller
             ->where('is_deleted', '0')
             ->get();
 
-        $pathToFile = Quickbooks::export($shipments);
-
         $ids = $shipments->pluck('id')->toArray();
-
         Ship::whereIn('id', $ids)->update(['qb_export' => '1']);
 
-        if ($pathToFile != null) {
-            return response()->download($pathToFile)->deleteFileAfterSend(false);
-        }
+        $lines = Quickbooks::export($shipments);
+
+        ob_end_clean();
+        ob_start();
+        return Excel::download(new QBExport($lines), 'QB_' . date('ymd_His') . '.xlsx');
     }
 
     public function qbCsvExport(Request $request)
     {
 
         if (!$request->has('store_ids') || !$request->has('start_date') || !$request->has('end_date')) {
-            return redirect()->back()->withInput()->withErrors('Stores and dates required to create CSV export');
+            return response()->json([
+                'message' => 'Stores and dates required to create Quickbooks export',
+                'status' => 203,
+            ], 203);
         }
 
         try {
@@ -646,11 +656,12 @@ class StoreController extends Controller
             //            ->get();
 
             set_time_limit(0);
-            $pathToFile = Quickbooks::csvExport($shipments);
+            $lines = Quickbooks::csvExport($shipments);
+            return Excel::download(new QBExport($lines), 'QB_' . date('ymd_His') . '.xlsx');
 
-            if ($pathToFile != null) {
-                return response()->download($pathToFile)->deleteFileAfterSend(false);
-            }
+            // if ($pathToFile != null) {
+            //     return $pathToFile;
+            // }
         } catch (Exception $e) {
             Log::error('Error Creating qbCsvExport - ' . $e->getMessage());
         }
@@ -718,7 +729,6 @@ class StoreController extends Controller
             ->where('input', '3')
             ->orderBy('sort_order')
             ->get();
-        info($store);
         foreach ($store as $value) {
             $data[] = [
                 'value' => $value['store_id'],

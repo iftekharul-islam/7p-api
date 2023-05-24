@@ -228,9 +228,8 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('import-tracking-store-options', [StoreController::class, 'trackingStoreOption']);
 
     Route::get('export-data', [StoreController::class, 'exportData']);
-    Route::post('export-qb', [StoreController::class, 'qbExport']);
+    Route::get('export-qb', [StoreController::class, 'qbExport']);
     Route::post('export-qb-csv', [StoreController::class, 'qbCsvExport']);
-
 
     Route::get('role-options', [RoleController::class, 'roleOption']);
     Route::get('section-options', [InventoryController::class, 'sectionOption']);
