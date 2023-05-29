@@ -293,7 +293,7 @@ class Item extends Model
 
     public function spec_sheet()
     {
-        return $this->belongsTo('App\SpecificationSheet', 'item_code', 'product_sku');
+        return $this->belongsTo(SpecificationSheet::class, 'item_code', 'product_sku');
     }
 
     private function tableColumns()
@@ -307,7 +307,7 @@ class Item extends Model
 
     public function parameter_option()
     {
-        return $this->belongsTo('App\Option', 'child_sku', 'child_sku');
+        return $this->belongsTo(Option::class, 'child_sku', 'child_sku');
     }
 
     public function rejection()

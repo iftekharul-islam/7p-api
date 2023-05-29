@@ -13,7 +13,7 @@ class InventoryUnit extends Model
     //TODO need to change name from database
     // protected $table = "inventory_unit";
 
-    protected $table = "inventory_units";
+    protected $table = "inventory_unit";
 
     public function inventory()
     {

@@ -282,15 +282,15 @@ class InventoryController extends Controller
         $start = Carbon::parse($request->get('start_date'))->format('Y-m-d');
         $end = Carbon::parse($request->get('end_date'))->format('Y-m-d');
 
-        $items = Item::leftJoin('inventory_units', 'inventory_units.child_sku', '=', 'items.child_sku')
+        $items = Item::leftJoin('inventory_unit', 'inventory_unit.child_sku', '=', 'items.child_sku')
             ->where('items.is_deleted', '=', '0')
             ->selectRaw(
-                'inventory_units.stock_no_unique,
+                'inventory_unit.stock_no_unique,
                          SUM(CASE WHEN items.item_status  NOT IN (5,6) AND ' .
                     ' items.created_at > "' . $start . ' 00:00:00" AND items.created_at < "' . $end .
-                    ' 23:59:59" THEN inventory_units.unit_qty * items.item_quantity ELSE 0 END ) as total'
+                    ' 23:59:59" THEN inventory_unit.unit_qty * items.item_quantity ELSE 0 END ) as total'
             )
-            ->groupBy('inventory_units.stock_no_unique')
+            ->groupBy('inventory_unit.stock_no_unique')
             ->get();
 
         if (!$items) {
