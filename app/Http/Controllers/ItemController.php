@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\Store;
 use Illuminate\Http\Request;
 use library\Helper;
+use Ship\Batching;
 
 class ItemController extends Controller
 {
@@ -128,6 +129,25 @@ class ItemController extends Controller
             'items' => $items,
             'total' => $item_sum,
         ];
+    }
+
+    public function unbatchableItems(Request $request)
+    {
+        $items = Batching::failures();
+
+        $order_statuses = [];
+
+        foreach (Order::statuses() as $key => $value) {
+            $order_statuses[] = [
+                'label' => $value,
+                'value' => $key,
+            ];
+        }
+
+        return response()->json([
+            'items' => $items,
+            'order_statuses' => $order_statuses,
+        ]);
     }
 
     /**

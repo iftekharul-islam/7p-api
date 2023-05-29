@@ -12,7 +12,7 @@ class LogisticsController extends Controller
     {
         if ($request->get('skus') == null) {
             $options = Option::with('product', 'route.template', 'inventoryunit_relation.inventory', 'design')
-                ->leftjoin('inventory_units', 'inventory_units.child_sku', '=', 'parameter_options.child_sku')
+                ->leftjoin('inventory_unit', 'inventory_unit.child_sku', '=', 'parameter_options.child_sku')
                 ->searchIn($request->get('search_for_first'), $request->get('contains_first'), $request->get('search_in_first'), $request->get('stockno'))
                 ->searchIn($request->get('search_for_second'), $request->get('contains_second'), $request->get('search_in_second'), $request->get('stockno'))
                 ->searchIn($request->get('search_for_third'), $request->get('contains_third'), $request->get('search_in_third'), $request->get('stockno'))
@@ -21,10 +21,10 @@ class LogisticsController extends Controller
                 ->searchActive($request->get('active'))
                 ->searchStatus($request->get('sku_status'))
                 ->searchSure3d($request->get('sure3d'))
-                ->selectRaw('parameter_options.*, inventory_units.stock_no_unique');
+                ->selectRaw('parameter_options.*, inventory_unit.stock_no_unique');
         } else {
             $options = Option::with('product', 'route.template', 'inventoryunit_relation.inventory', 'design')
-                ->leftjoin('inventory_units', 'inventory_units.child_sku', '=', 'parameter_options.child_sku')
+                ->leftjoin('inventory_unit', 'inventory_unit.child_sku', '=', 'parameter_options.child_sku')
                 ->whereIn('parameter_options.child_sku', $request->get('skus'));
         }
         $options = $options->groupBy('parameter_options.child_sku')

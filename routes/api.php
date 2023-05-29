@@ -194,6 +194,8 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('config-child-sku', [LogisticsController::class, 'index']);
     Route::get('update-config-child-sku', [LogisticsController::class, 'updateSKUs']);
 
+    Route::get('unbatchable-items', [ItemController::class, 'unbatchableItems']);
+
     Route::post('send-bulk-email', [EmailTemplateController::class, 'sendBulkEmail']);
 
     Route::get('section-reports', [ReportController::class, 'section']);
