@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BatchRouteController;
 use App\Http\Controllers\CsController;
 use App\Http\Controllers\EmailTemplateController;
+use App\Http\Controllers\GraphicsController;
 use App\Http\Controllers\InventoryAdjustmentController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ItemController;
@@ -233,6 +234,11 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('export-qb', [StoreController::class, 'qbExport']);
     Route::post('export-qb-csv', [StoreController::class, 'qbCsvExport']);
 
+    Route::get('create-graphics', [GraphicsController::class, 'index']);
+
+    Route::get('sent-to-printer', [GraphicsController::class, 'sentToPrinter']);
+
+    Route::get('printer-options', [GraphicsController::class, 'printerOption']);
     Route::get('role-options', [RoleController::class, 'roleOption']);
     Route::get('section-options', [InventoryController::class, 'sectionOption']);
     Route::get('stock-options', [PurchasedInvProductController::class, 'stockOption']);
