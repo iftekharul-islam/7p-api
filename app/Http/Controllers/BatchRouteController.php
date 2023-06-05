@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Batch;
 use App\Models\BatchRoute;
 use App\Models\Option;
 use App\Models\Station;
@@ -116,5 +117,18 @@ class BatchRouteController extends Controller
             ];
         });
         return $batch_route;
+    }
+
+    public function statusesOptions()
+    {
+        $status = [];
+
+        foreach (Batch::getStatusList() as $key => $value) {
+            $status[] = [
+                'value' => $key,
+                'label' => $value
+            ];
+        }
+        return $status;
     }
 }

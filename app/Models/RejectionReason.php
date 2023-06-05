@@ -16,9 +16,9 @@ class RejectionReason extends Model
 
     public static function getReasons()
     {
-        return RejectionReason::orderBy('sort_order')
+        return RejectionReason::where('is_deleted', '0')
+            ->orderBy('sort_order')
             ->get()
-            ->pluck('rejection_message', 'id')
-            ->prepend('Select a reason', 0);
+            ->pluck('rejection_message', 'id');
     }
 }

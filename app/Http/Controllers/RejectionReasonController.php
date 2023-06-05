@@ -151,4 +151,16 @@ class RejectionReasonController extends Controller
             'data' => []
         ], 203);
     }
+
+    public function reasonOption()
+    {
+        $data = [];
+        foreach (RejectionReason::getReasons() as $key => $value) {
+            $data[] = [
+                'value' => $key,
+                'label' => $value
+            ];
+        }
+        return $data;
+    }
 }

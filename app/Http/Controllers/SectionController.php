@@ -111,7 +111,7 @@ class SectionController extends Controller
 
     public function sectionOption()
     {
-        $section = Section::get();
+        $section = Section::where('is_deleted', '0')->get();
         $section->transform(function ($item) {
             return [
                 'value' => $item['id'],
