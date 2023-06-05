@@ -2,8 +2,12 @@
 
 namespace App\Models;
 
+use App\StationLog;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class Batch extends Model
 {
@@ -99,7 +103,7 @@ class Batch extends Model
 
     public function pending_items()
     {
-        return $this->hasMany('App\Item', 'batch_number', 'batch_number')
+        return $this->hasMany(Item::class, 'batch_number', 'batch_number')
             ->where('is_deleted', '0')
             ->searchStatus('pending');
     }
@@ -111,7 +115,7 @@ class Batch extends Model
 
     public function skus()
     {
-        $this->hasMany('App\Item', 'batch_number', 'batch_number')
+        $this->hasMany(Item::class, 'batch_number', 'batch_number')
             ->selectRaw('child_sku, item_description, item_thumb, count(item_quantity) as count')
             ->groupBy('child_sku')
             ->groupBy('item_description')
@@ -121,7 +125,7 @@ class Batch extends Model
 
     public function first_item()
     {
-        return $this->hasOne('App\Item', 'batch_number', 'batch_number')
+        return $this->hasOne(Item::class, 'batch_number', 'batch_number')
             ->where('is_deleted', '0')
             ->orderBy('id', 'ASC');
     }
@@ -129,54 +133,54 @@ class Batch extends Model
 
     public function route()
     {
-        return $this->belongsTo('App\BatchRoute', 'batch_route_id', 'id');
+        return $this->belongsTo(BatchRoute::class, 'batch_route_id', 'id');
     }
 
     public function route_list()
     {
-        return $this->belongsTo('App\BatchRoute', 'batch_route_id', 'id')
+        return $this->belongsTo(BatchRoute::class, 'batch_route_id', 'id')
             ->select(DB::raw('CONCAT(batch_routes.batch_route_name, " => ", batch_routes.batch_code) AS route', 'id'));
     }
 
 
     public function station()
     {
-        return $this->belongsTo('App\Station', 'station_id', 'id');
+        return $this->belongsTo(Station::class, 'station_id', 'id');
     }
 
 
     public function prev_station()
     {
-        return $this->belongsTo('App\Station', 'prev_station_id', 'id');
+        return $this->belongsTo(Station::class, 'prev_station_id', 'id');
     }
 
 
     public function production_station()
     {
-        return $this->belongsTo('App\Station', 'production_station_id', 'id');
+        return $this->belongsTo(Station::class, 'production_station_id', 'id');
     }
 
 
     public function section()
     {
-        return $this->belongsTo('App\Section', 'section_id', 'id');
+        return $this->belongsTo(Section::class, 'section_id', 'id');
     }
 
 
     public function summary_user()
     {
-        return $this->belongsTo('App\User', 'summary_user_id', 'id');
+        return $this->belongsTo(User::class, 'summary_user_id', 'id');
     }
 
 
     public function picking_report()
     {
-        return $this->belongsTo('App\PickingReport', 'picking_report_id');
+        return $this->belongsTo(PickingReport::class, 'picking_report_id');
     }
 
     public function scanned_in()
     {
-        return $this->hasOne('App\BatchScan', 'batch_number', 'batch_number')
+        return $this->hasOne(BatchScan::class, 'batch_number', 'batch_number')
             ->whereNull('out_date')
             ->orderBy('batch_scans.created_at', 'DESC');
     }
@@ -225,7 +229,7 @@ class Batch extends Model
 
     public function scans()
     {
-        return $this->hasMany('App\BatchScan', 'batch_number', 'batch_number');
+        return $this->hasMany(BatchScan::class, 'batch_number', 'batch_number');
     }
 
     public static function isFinished($batch_number)
@@ -429,7 +433,7 @@ class Batch extends Model
 
     public function scopeSearchGraphic($query, $flag)
     {
-        if (!$flag) {
+        if (!isset($flag)) {
             return;
         }
 
@@ -438,7 +442,7 @@ class Batch extends Model
 
     public function scopeSearchStationType($query, $type)
     {
-        if (!$type) {
+        if (!isset($type)) {
             return;
         }
 
@@ -470,9 +474,9 @@ class Batch extends Model
 
         $next_stations = DB::select(sprintf(
             "SELECT * FROM batch_route_station 
-            WHERE batch_route_id = %d and id > ( 
-                SELECT id FROM batch_route_station 
-                  WHERE batch_route_id = %d AND station_id = %d)",
+              WHERE batch_route_id = %d and id > ( 
+                  SELECT id FROM batch_route_station 
+                    WHERE batch_route_id = %d AND station_id = %d)",
             $batch_route_id,
             $batch_route_id,
             $current_station_id
@@ -508,10 +512,10 @@ class Batch extends Model
     {
         $prev_stations = DB::select(sprintf(
             "SELECT * FROM batch_route_station 
-            WHERE batch_route_id = %d and id < ( 
-                SELECT id FROM batch_route_station 
-                  WHERE batch_route_id = %d AND station_id = %d)
-                  order by id DESC",
+              WHERE batch_route_id = %d and id < ( 
+                  SELECT id FROM batch_route_station 
+                    WHERE batch_route_id = %d AND station_id = %d)
+                    order by id DESC",
             $batch_route_id,
             $batch_route_id,
             $current_station_id
@@ -526,7 +530,7 @@ class Batch extends Model
 
     public function scopeSearchBatch($query, $batch_num)
     {
-        if (!$batch_num) {
+        if (!isset($batch_num)) {
             return;
         }
 
@@ -538,7 +542,7 @@ class Batch extends Model
 
     public function scopeSearchRoute($query, $route_id)
     {
-        if (!$route_id || $route_id == 'all') {
+        if (!isset($route_id) || $route_id == 'all') {
             return;
         }
 
@@ -548,7 +552,7 @@ class Batch extends Model
 
     public function scopeSearchStation($query, $station_id)
     {
-        if (!$station_id || $station_id == 'all') {
+        if (!isset($station_id) || $station_id == 'all') {
             return;
         }
 
@@ -558,7 +562,7 @@ class Batch extends Model
     public function scopeSearchStore($query, $store_id)
     {
         $stores = Store::query();
-        if (count($store_id)) {
+        if (isset($store_id) && count($store_id)) {
             $stores->whereIn('store_id', $store_id);
         }
         $store_ids = $stores->where('permit_users', 'like', "%" . auth()->user()->id . "%")
@@ -578,7 +582,7 @@ class Batch extends Model
 
     public function scopeSearchMinChangeDate($query, $start_date)
     {
-        if (!$start_date) {
+        if (!isset($start_date)) {
             return;
         }
         $starting = sprintf("%s 00:00:00", $start_date);
@@ -589,7 +593,7 @@ class Batch extends Model
 
     public function scopeSearchMaxChangeDate($query, $end_date)
     {
-        if (!$end_date) {
+        if (!isset($end_date)) {
             return;
         }
         $ending = sprintf("%s 23:59:59", $end_date);
@@ -600,7 +604,7 @@ class Batch extends Model
 
     public function scopeSearchOrderDate($query, $start_date, $end_date)
     {
-        if (!$start_date) {
+        if (!isset($start_date)) {
             return;
         }
         $starting = sprintf("%s 00:00:00", $start_date);
@@ -614,7 +618,7 @@ class Batch extends Model
 
     public function scopeSearchProductionStation($query, $station)
     {
-        if (!$station) {
+        if (!isset($station)) {
             return;
         }
 
@@ -627,7 +631,7 @@ class Batch extends Model
 
     public function scopeSearchGraphicDir($query, $dir)
     {
-        if (!$dir) {
+        if (!isset($dir)) {
             return;
         }
 
@@ -638,7 +642,7 @@ class Batch extends Model
 
     public function scopeSearchSection($query, $id)
     {
-        if (!$id) {
+        if (!isset($id)) {
             return;
         }
 
@@ -705,9 +709,9 @@ class Batch extends Model
 
     public function itemsCount()
     {
-        return $this->items()
-            ->selectRaw('batch_number, item_thumb, child_sku, count(*) as count')
-            ->groupBy('batch_number');
+        return $this->items();
+        // ->selectRaw('batch_number, item_thumb, child_sku, count(*) as count')
+        // ->groupBy('batch_number', 'items.id', 'items.order_5p', 'items.order_id');
     }
 
 
@@ -760,54 +764,7 @@ class Batch extends Model
     public static function export($id, $force = 0, $format = 'CSV')
     {
 
-        //      $success = null;
-        //
-        ////        #########################################
-        //        set_time_limit(0);
-        //        $batche = Batch::with('items','route.stations_list')
-        //            ->where('batch_number', $id)
-        //            ->get();
-        //
-        //        $graphicsController = new GraphicsController;
-        //
-        //            foreach($batche as  $batch){
-        //                $file = $graphicsController->getArchiveGraphic($batch->batch_number);
-        //                if($file != "ERROR not found in Archive"){
-        //                    foreach($batch->items as  $items){
-        //                        if(empty($items->tracking_number)){
-        //                            ###### Save in Item Table ######
-        //                            $items->tracking_number = NULL;
-        //                            $items->item_status = 1;
-        //                            $items->reached_shipping_station = 0;
-        //                            $items->save();
-        //
-        //                            ###### Save in Batch Table ######
-        //                            //  dd($batch->route->stations_list->first()->station_id);
-        //                            $batch->status = 2;
-        //                            $batch->section_id = 6;
-        //                            $batch->station_id = 92;
-        //                            $batch->prev_station_id = $batch->route->stations_list->first()->station_id;
-        //                            $batch->export_count = 1;
-        //                            $batch->csv_found = 0;
-        //                            $batch->graphic_found = 1;
-        //                            $batch->to_printer = 0;
-        //                            $batch->to_printer_date = null;
-        //                            $batch->archived = 1;
-        //                            $batch->save();
-        //                            Log::info('batch->batch_number8888: ' . $batch->batch_number);
-        //                        }
-        //                    }
-        //                }else{
-        //                    Log::info('batch Graphic->Not foundddddddddddd: ' . $batch->batch_number);
-        //                }
-        //
-        //
-        //            }
-        //
-        //        $msg ="Jewel Manul update";
-        //
-        //        return ['success' => 'Batch ' . $id . ' exported' . $msg];
-        ////        #######################################
+
 
         if ($format == 'CSV') {
             $savepath = '/media/RDrive/5p_batch_csv_export';
@@ -1113,7 +1070,7 @@ class Batch extends Model
     public function outputArray()
     {
         return [
-            'App\Batch',
+            Batch::class,
             $this->id,
             url(sprintf('batches/details/%s', $this->batch_number)),
             'Batch: ' . $this->batch_number,

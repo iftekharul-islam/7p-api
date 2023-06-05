@@ -2,6 +2,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BatchController;
 use App\Http\Controllers\BatchRouteController;
 use App\Http\Controllers\CsController;
 use App\Http\Controllers\EmailTemplateController;
@@ -19,6 +20,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductionCategoryController;
 use App\Http\Controllers\PurchasedInvProductController;
 use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\RejectionController;
 use App\Http\Controllers\RejectionReasonController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
@@ -199,6 +201,11 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
 
     Route::post('send-bulk-email', [EmailTemplateController::class, 'sendBulkEmail']);
 
+    Route::get('batch-list', [BatchController::class, 'index']);
+
+    Route::get('move-batches', [ProductController::class, 'moveNextStation']);
+    Route::get('rejects', [RejectionController::class, 'index']);
+
     Route::get('section-reports', [ReportController::class, 'section']);
     Route::get('ship-date-reports', [ReportController::class, 'shipDate']);
     Route::get("order-items-reports", [ReportController::class, 'orderItems']);
@@ -239,6 +246,8 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('sent-to-printer', [GraphicsController::class, 'sentToPrinter']);
 
     Route::get('printer-options', [GraphicsController::class, 'printerOption']);
+    Route::get('destination-options', [RejectionController::class, 'destinationOption']);
+    Route::get('graphics-status-options', [GraphicsController::class, 'statusOption']);
     Route::get('role-options', [RoleController::class, 'roleOption']);
     Route::get('section-options', [InventoryController::class, 'sectionOption']);
     Route::get('stock-options', [PurchasedInvProductController::class, 'stockOption']);
@@ -246,6 +255,8 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('product-options/{id}', [PurchasedInvProductController::class, 'productOptionbyVendor']);
     Route::get('section-options', [SectionController::class, 'sectionOption']);
     Route::get('station-options', [StationController::class, 'stationOption']);
+    Route::get('custom-station-options', [StationController::class, 'customStationOption']);
+    Route::get('advance-station-options', [StationController::class, 'advanceStationOption']);
     Route::get('template-options', [TemplateController::class, 'templateOption']);
     Route::get('searchable-fields-options', [SpecificationSheetController::class, 'searchableFieldsOption']);
     Route::get('production-categories-options', [SpecificationSheetController::class, 'productionCategoriesOption']);
@@ -255,8 +266,10 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('production-category-options', [ProductionCategoryController::class, 'productionCategoryOption']);
     Route::get('product-searchable-fields-options', [ProductController::class, 'searchableFieldsOption']);
     Route::get('batch-route-options', [BatchRouteController::class, 'batchRouteOptions']);
+    Route::get('batch-status-options', [BatchRouteController::class, 'statusesOptions']);
     Route::get('stock-image-options', [InventoryController::class, 'stockImageOption']);
     Route::get('email-template-options', [EmailTemplateController::class, 'emailTemplateOptions']);
+    Route::get('reason-options', [RejectionReasonController::class, 'reasonOption']);
     Route::get('email-template-keywords', [EmailTemplateController::class, 'emailTemplateKeywords']);
 
     Route::get('skus', [SpecificationSheetController::class, 'skus']);

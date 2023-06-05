@@ -43,7 +43,7 @@ class Rejection extends Model
     public static function graphicStatus($reject = 0)
     {
         $statuses = array();
-        $statuses['0'] = 'Select Status';
+        // $statuses['0'] = 'Select Status';
         $statuses['1'] = 'Re-Print Graphic - No Change';
         $statuses['2'] = 'Re-Work Graphic - Changes Required';
         //$statuses['3'] = 'Graphic Still Good - No New Graphic Required';

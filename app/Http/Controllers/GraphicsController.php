@@ -545,4 +545,16 @@ class GraphicsController extends Controller
         }
         return response()->json($data, 200);
     }
+
+    public function statusOption()
+    {
+        $data = [];
+        foreach (Rejection::graphicStatus(1) as $key => $value) {
+            $data[] = [
+                'value' => $key,
+                'label' => $value,
+            ];
+        }
+        return response()->json($data, 200);
+    }
 }

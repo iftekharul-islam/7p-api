@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Station;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class StationController extends Controller
 {
@@ -92,6 +93,30 @@ class StationController extends Controller
             return [
                 'value' => $item['id'],
                 'label' => $item['station_name']
+            ];
+        });
+        return $station;
+    }
+
+    public function customStationOption()
+    {
+        $station = Station::where('is_deleted', '0')->orderBy('station_name', 'ASC')->latest()->get();
+        $station->transform(function ($item) {
+            return [
+                'value' => $item['id'],
+                'label' => $item['custom_station_name']
+            ];
+        });
+        return $station;
+    }
+
+    public function advanceStationOption()
+    {
+        $station = Station::select(DB::raw('CONCAT(stations.station_name, " - ", stations.station_description) AS full_station'), 'stations.id')->where('is_deleted', '0')->orderBy('stations.station_name')->get();
+        $station->transform(function ($item) {
+            return [
+                'value' => $item['id'],
+                'label' => $item['full_station']
             ];
         });
         return $station;
