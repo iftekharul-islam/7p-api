@@ -2,6 +2,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BackorderController;
 use App\Http\Controllers\BatchController;
 use App\Http\Controllers\BatchRouteController;
 use App\Http\Controllers\CsController;
@@ -205,6 +206,8 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
 
     Route::get('move-batches', [ProductController::class, 'moveNextStation']);
     Route::get('rejects', [RejectionController::class, 'index']);
+    Route::get('back-orders', [BackorderController::class, 'index']);
+    Route::get('back-orders-show', [BackorderController::class, 'show']);
 
     Route::get('section-reports', [ReportController::class, 'section']);
     Route::get('ship-date-reports', [ReportController::class, 'shipDate']);
