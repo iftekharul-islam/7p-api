@@ -766,4 +766,16 @@ class StoreController extends Controller
         }
         return $res;
     }
+
+    public function mustShipStatusOption()
+    {
+        $data = [];
+        foreach (Order::statuses() as $key => $value) {
+            $data[] = [
+                'value' => $key,
+                'label' => $value,
+            ];
+        }
+        return $data;
+    }
 }

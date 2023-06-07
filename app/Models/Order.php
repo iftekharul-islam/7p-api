@@ -221,16 +221,23 @@ class Order extends Model
         return $this->hasMany(Note::class, 'order_5p', 'id');
     }
 
-    public function scopeStoreId($query, $store_id)
+    public function scopeStoreId($query, $store_id = null)
     {
-        if ($store_id == 'all' || null === $store_id || $store_id == '' || $store_id == []) {
-            $store_id = Store::where('permit_users', 'like', "%" . auth()->user()->id . "%")
-                ->get()->pluck('store_id')->toArray();
-        }
-        if (is_array($store_id)) {
-            return $query->whereIn('orders.store_id', $store_id);
+        //TODO - need to uncomment to apply permission
+
+        // if ($store_id == 'all' || null === $store_id || $store_id == '' || $store_id == []) {
+        //     $store_id = Store::where('permit_users', 'like', "%" . auth()->user()->id . "%")
+        //         ->get()->pluck('store_id')->toArray();
+        // }
+
+        if ($store_id) {
+            if (is_array($store_id)) {
+                return $query->whereIn('orders.store_id', $store_id);
+            } else {
+                return $query->where('orders.store_id', $store_id);
+            }
         } else {
-            return $query->where('orders.store_id', $store_id);
+            return $query;
         }
     }
 

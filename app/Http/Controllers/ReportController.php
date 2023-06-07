@@ -486,6 +486,23 @@ class ReportController extends Controller
         ]);
     }
 
+    public function mustShipReport(Request $request)
+    {
+        $store_id = $request->get('store_id');
+
+        $orders = Order::with('items.batch', 'items.batch.station', 'store', 'customer')
+            ->where('is_deleted', '0')
+            ->whereNotIn('order_status', [6, 8, 10])
+            ->whereNotNull('ship_date')
+            ->orderBy('ship_date', 'ASC')
+            ->storeId($store_id)
+            ->get();
+
+        $statuses = Order::statuses(0);
+
+        return response()->json($orders, 200);
+    }
+
     public function manufactureOption()
     {
         $data = Manufacture::get()->transform(function ($item) {
