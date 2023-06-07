@@ -21,6 +21,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductionCategoryController;
 use App\Http\Controllers\PurchasedInvProductController;
 use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\QcControlController;
 use App\Http\Controllers\RejectionController;
 use App\Http\Controllers\RejectionReasonController;
 use App\Http\Controllers\ReportController;
@@ -209,6 +210,9 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('back-orders', [BackorderController::class, 'index']);
     Route::get('back-orders-show', [BackorderController::class, 'show']);
 
+    Route::get('must-ship-report', [ReportController::class, 'mustShipReport']);
+    Route::get('quality-control', [QcControlController::class, 'index']);
+
     Route::get('section-reports', [ReportController::class, 'section']);
     Route::get('ship-date-reports', [ReportController::class, 'shipDate']);
     Route::get("order-items-reports", [ReportController::class, 'orderItems']);
@@ -233,6 +237,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('stores-batch-options', [StoreController::class, 'batchOption']);
     Route::get('stores-qc-options', [StoreController::class, 'qcOption']);
     Route::get('stores-confirm-options', [StoreController::class, 'confirmOption']);
+    Route::get('stores-must-ship-options', [StoreController::class, 'mustShipStatusOption']);
 
     Route::post('import-orders-file', [StoreController::class, 'importOrdersFile']);
     Route::post('import-trcking-file', [StoreController::class, 'importTrackingFile']);

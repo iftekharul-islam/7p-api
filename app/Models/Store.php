@@ -56,7 +56,7 @@ class Store extends Model
             ->where('company', 'LIKE', $company)
             ->where('invisible', '0')
             ->orderBy('sort_order')
-            ->where('permit_users', 'like', "%" . auth()->user()->id . "%")
+            // ->where('permit_users', 'like', "%" . auth()->user()->id . "%")
             ->get()
             ->pluck('store_name', 'store_id');
 
