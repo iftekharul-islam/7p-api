@@ -212,6 +212,8 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
 
     Route::get('must-ship-report', [ReportController::class, 'mustShipReport']);
     Route::get('quality-control', [QcControlController::class, 'index']);
+    Route::get('quality-control-list', [QcControlController::class, 'list']);
+    Route::get('quality-control-order', [QcControlController::class, 'order']);
 
     Route::get('section-reports', [ReportController::class, 'section']);
     Route::get('ship-date-reports', [ReportController::class, 'shipDate']);

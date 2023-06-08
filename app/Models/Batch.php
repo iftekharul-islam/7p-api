@@ -37,6 +37,12 @@ class Batch extends Model
         });
     }
 
+    // scopePermitUser
+    public function scopePermitUser($query)
+    {
+        return $query->where('user_id', auth()->user()->id);
+    }
+
     public function setStationIDAttribute($value)
     {
 
@@ -709,9 +715,9 @@ class Batch extends Model
 
     public function itemsCount()
     {
-        return $this->items();
-        // ->selectRaw('batch_number, item_thumb, child_sku, count(*) as count')
-        // ->groupBy('batch_number', 'items.id', 'items.order_5p', 'items.order_id');
+        return $this->items()->count();
+        // ->selectRaw('count(*) as count')
+        // ->groupBy('batch_number', 'items.id', 'items.order_5p', 'items.order_id', 'items.store_id');
     }
 
 
@@ -1084,5 +1090,15 @@ class Batch extends Model
             ->where('is_deleted', 0)
             ->where('batch_number', $batch_number)
             ->first();
+    }
+
+    /**
+     * Get all of the comments for the Batch
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function activeItems()
+    {
+        return $this->hasMany(Item::class, 'batch_number', 'batch_number')->where('item_status', '1');
     }
 }

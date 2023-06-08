@@ -318,7 +318,7 @@ class Item extends Model
 
     public function rejections()
     {
-        return $this->hasMany('App\Rejection', 'item_id', 'id')
+        return $this->hasMany(Rejection::class, 'item_id', 'id')
             //->where('rejections.complete', '0')
             ->latest();
     }
