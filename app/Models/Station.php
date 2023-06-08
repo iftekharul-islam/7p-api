@@ -19,7 +19,7 @@ class Station extends Model
 
     public function reject_reasons()
     {
-        return $this->hasMany('App\RejectionReason', 'station_id', 'id');
+        return $this->hasMany(RejectionReason::class, 'station_id', 'id');
     }
 
     public function getCustomStationNameAttribute()

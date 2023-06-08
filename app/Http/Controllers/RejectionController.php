@@ -23,7 +23,7 @@ class RejectionController extends Controller
             ->toArray();
 
         $total_items = null;
-        $batch_array = null;
+        $batch_array = [];
         $summary = null;
         $label = null;
 
@@ -42,8 +42,6 @@ class RejectionController extends Controller
                 ->orderBy('rejections.rejection_reason')
                 ->get();
         } else {
-
-            info("A");
             if ($request->has('label')) {
                 $label = $request->get('label');
             } else {
