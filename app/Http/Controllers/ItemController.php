@@ -134,9 +134,11 @@ class ItemController extends Controller
     public function unbatchableItems(Request $request)
     {
         $items = Batching::failures();
+        foreach ($items as $key => $value) {
+            $items[$key]['item_option'] = Helper::jsonTransformer($value->item_option);
+        }
 
         $order_statuses = [];
-
         foreach (Order::statuses() as $key => $value) {
             $order_statuses[] = [
                 'label' => $value,

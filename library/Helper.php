@@ -390,4 +390,29 @@ class Helper
 
         return $formatted_string;
     }
+    public static function jsonTransformer($json, $separator = "\n", $bold = 0)
+    {
+        if ($bold == 1) {
+            $pre = '<strong style="font-size: 110%;">';
+            $post = '</strong>';
+        } else {
+            $pre = '';
+            $post = '';
+        }
+
+        $formatted_string = '';
+        $json_array = json_decode($json, true);
+        if ($json_array) {
+            foreach ($json_array as $key => $value) {
+                if ($key != 'Confirmation_of_Order_Details' && $key != 'couponcode') {
+                    if (strpos($value, '$') && $bold == 1) {
+                        $value = '<span style="font-size: 120%;">' . $value . '</span>';
+                    }
+                    $formatted_string .= sprintf("%s = %s%s%s%s", str_replace("_", " ", $key), $pre, $value, $post, $separator);
+                }
+            }
+        }
+
+        return $formatted_string ?: "";
+    }
 }
