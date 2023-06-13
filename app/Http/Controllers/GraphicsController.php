@@ -60,8 +60,7 @@ class GraphicsController extends Controller
 
         $tab = $request->has('tab') ? $request->tab : 'summary';
 
-        if ($tab == 'summary') {
-            $dates = array();
+        if ($tab == 'summary' || true) {
             $date[] = date("Y-m-d");
             $date[] = date("Y-m-d", strtotime('-3 days'));
             $date[] = date("Y-m-d", strtotime('-4 days'));
@@ -72,7 +71,7 @@ class GraphicsController extends Controller
                 ->join('orders', 'items.order_5p', '=', 'orders.id')
                 ->join('stations', 'batches.station_id', '=', 'stations.id')
                 ->join('sections', 'stations.section', '=', 'sections.id')
-                ->where('batches.status', 2)
+                // ->where('batches.status', 2) //TODO - uncomment this
                 ->where('items.item_status', 1)
                 ->where('stations.type', 'G')
                 //->where('orders.order_status', 4)
@@ -144,7 +143,10 @@ class GraphicsController extends Controller
                               ")
                 ->first();
 
-            $total = $items->sum('items_count') + $rejects->sum('items_count') + $unbatched ? $unbatched->items_count : 0;
+            $items_count = $items->sum('items_count');
+            $rejects_count = $rejects->sum('items_count');
+            $unbatched_count = $unbatched ? $unbatched->items_count : 0;
+            $total = $items_count + $rejects_count + $unbatched_count;
         } else {
             $items = $unbatched = $rejects = [];
             $total = 0;
@@ -165,15 +167,15 @@ class GraphicsController extends Controller
             $count['to_export'] = $this->toExport('count');
         }
 
-        $manual = $this->getManual();
-        $count['manual'] = count($manual);
+        // $manual = $this->getManual();
+        // $count['manual'] = count($manual);
 
-        if ($tab == 'exported') {
-            $exported = $this->exported($manual->pluck('batch_number')->all());
-            $count['exported'] = count($exported);
-        } else {
-            $count['exported'] = $this->exported($manual->pluck('batch_number')->all(), 'count');
-        }
+        // if ($tab == 'exported') {
+        //     $exported = $this->exported($manual->pluck('batch_number')->all());
+        //     $count['exported'] = count($exported);
+        // } else {
+        //     $count['exported'] = $this->exported($manual->pluck('batch_number')->all(), 'count');
+        // }
 
         if ($tab == 'error') {
             $error_list = $this->graphicErrors();
@@ -181,19 +183,13 @@ class GraphicsController extends Controller
         } else {
             $count['error'] = $this->graphicErrors('count');
         }
-
-        // $found = $this->graphicFound();
-
         $sections = Section::get()->pluck('section_name', 'id');
 
         return response()->json([
-            'status' => 200,
-            'message' => 'Success',
-            'to_export' => $to_export,
-            'exported' => $exported,
-            'error_list' => $error_list,
-            'manual' => $manual,
-            // 'found' => $found,
+            'to_export' => $to_export ?? [],
+            // 'exported' => $exported,
+            'error_list' => $error_list ?? [],
+            // 'manual' => $manual,
             'sections' => $sections,
             'count' => $count,
             'total' => $total,

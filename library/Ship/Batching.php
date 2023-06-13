@@ -101,22 +101,16 @@ class Batching
 			if ($item->order && $item->order->order_status > 12) {
 				$result['hold'] = $order_statuses[$item->order->order_status];
 			}
-			//test for child sku
 			if (!$item->parameter_option) {
 				$result['parameter_option'] = 'Child SKU does not exist in 5p';
 			} else {
-				//test for route
 				if ($item->parameter_option->batch_route_id == '115' || $item->parameter_option->batch_route_id == null) {
 					$result['route'] =  url(sprintf("/logistics/sku_list?search_for_first=%s&contains_first=equals&search_in_first=child_sku", $item->child_sku));
 				}
 				if (
-					$item->parameter_option && $item->parameter_option->route &&
-					$item->parameter_option->route->stations_list &&
-					$item->parameter_option->route->stations_list[0] &&
-					$item->parameter_option->route->stations_list[0]->section_info &&
+					isset($item->parameter_option->route->stations_list[0]->section_info->inv_control) &&
 					$item->parameter_option->route->stations_list[0]->section_info->inv_control == '1'
 				) {
-					//test for stock number 
 					if (
 						!$item->inventoryunit ||
 						$item->inventoryunit->first()->stock_no_unique == 'ToBeAssigned' ||
@@ -139,7 +133,6 @@ class Batching
 				$items[] = $result;
 			}
 		}
-
 		return $items;
 	}
 
@@ -155,7 +148,6 @@ class Batching
 		$sure3d = null,
 		$max_units = 0
 	) {
-
 		$max_units = intval($max_units);
 
 		if ($backorder == 1) {
@@ -210,6 +202,7 @@ class Batching
 
 				$routes = BatchRoute::with([
 					'stations_list.section_info',
+
 					'itemGroups' => function ($q) use ($op, $val, $status, $paginate, $start_date, $end_date) {
 						$joining = $q->join('items', 'items.child_sku', '=', 'parameter_options.child_sku')
 							->join('orders', 'orders.id', '=', 'items.order_5p')
@@ -230,7 +223,7 @@ class Batching
 								return $query->where('parameter_options.batch_route_id', '!=', 115)
 									->whereNotNull('parameter_options.batch_route_id');
 							})
-							->take(1500)
+							->take(50)
 							->addSelect([
 								DB::raw('items.id AS item_table_id'),
 								'items.item_id',
@@ -253,10 +246,10 @@ class Batching
 								'inventories.qty_av'
 							]);
 
-						return $paginate ? $joining->get() : $joining->paginate(10000);
+						return !$paginate ? $joining->get() : $joining->paginate(10000);
 					},
 				])
-					->where('batch_routes.is_deleted', 0)
+					->where('batch_routes.is_deleted', '0')
 					->where('batch_routes.batch_max_units', '>', 0)
 					->get();
 
@@ -296,7 +289,7 @@ class Batching
 								return $query->where('parameter_options.batch_route_id', '!=', 115)
 									->whereNotNull('parameter_options.batch_route_id');
 							})
-							->take(1500)
+							->take(50)
 							->addSelect([
 								DB::raw('items.id AS item_table_id'),
 								'items.item_id',
