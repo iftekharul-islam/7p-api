@@ -7,6 +7,7 @@ use App\Models\Option;
 use App\Models\Order;
 use App\Models\Store;
 use Illuminate\Http\Request;
+use Illuminate\Support\MessageBag;
 use library\Helper;
 use Ship\Batching;
 
@@ -131,11 +132,60 @@ class ItemController extends Controller
         ];
     }
 
+    public function getBatch(Request $request)
+    {
+        $locked = Batching::islocked();
+        $store = $request->get('store');
+        $section = $request->get('section');
+
+        $count = 1;
+        $serial = 1;
+
+        $emptyStationsCount = count(Helper::getEmptyStation());
+        if ($emptyStationsCount > 0) {
+            return response()->json([
+                'message' => 'In Routes some Route Station empty<br>Please assign correct Station in route.',
+                'status' => 203
+            ], 203);
+        }
+
+        if (!$request->start_date) {
+            $start_date = "2016-06-01";
+        } else {
+            $start_date = $request->start_date;
+        }
+
+        if (!$request->end_date) {
+            $end_date = date("Y-m-d");
+        } else {
+            $end_date = $request->end_date;
+        }
+
+        $search_for_first = $request->search_for_first;
+        $search_in_first = $request->search_in_first;
+
+        $batch_routes = Batching::createAbleBatches($request->get('backorder'), true, $start_date, $end_date, $search_for_first, $search_in_first, $store, $section);
+
+        return response()->json([
+            'batch_routes' => $batch_routes,
+            'count' => $count,
+            'serial' => $serial,
+            'locked' => $locked,
+        ], 200);
+
+        return view('items.create_batch', compact(
+            'batch_routes',
+            'count',
+            'serial',
+            'locked'
+        ));
+    }
+
     public function unbatchableItems(Request $request)
     {
         $items = Batching::failures();
         foreach ($items as $key => $value) {
-            $items[$key]['item_option'] = Helper::jsonTransformer($value->item_option);
+            $items[$key]['item_option'] = Helper::jsonTransformer($value['item']['item_option']);
         }
 
         $order_statuses = [];
@@ -150,54 +200,6 @@ class ItemController extends Controller
             'items' => $items,
             'order_statuses' => $order_statuses,
         ]);
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(Item $item)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Item $item)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Item $item)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Item $item)
-    {
-        //
     }
 
     public function searchOption()
@@ -234,5 +236,38 @@ class ItemController extends Controller
             ];
         };
         return $stores;
+    }
+
+    //searchOption
+    public function searchInOption()
+    {
+        $search = [];
+        $search_in = [
+            ''          => 'All',
+            'order_id'  => 'Order',
+            'id'        => 'Item#',
+            'item_code' => 'SKU',
+            'child_sku' => 'Child SKU',
+            'customer'  => 'Customer',
+        ];
+        foreach ($search_in ?? [] as $key => $value) {
+            $search[] = [
+                'label' => $value,
+                'value' => $key,
+            ];
+        };
+        return $search;
+    }
+
+    public function batchStoreOption()
+    {
+        $search = [];
+        foreach (Store::list('1', '%') ?? [] as $key => $value) {
+            $search[] = [
+                'label' => $value,
+                'value' => $key,
+            ];
+        };
+        return $search;
     }
 }

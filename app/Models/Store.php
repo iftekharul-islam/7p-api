@@ -60,10 +60,6 @@ class Store extends Model
             ->get()
             ->pluck('store_name', 'store_id');
 
-        if (isset($prepend) && $prepend != 'none') {
-            $array->prepend($prepend[0], $prepend[1]);
-        }
-
         return $array;
     }
 

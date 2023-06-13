@@ -259,7 +259,7 @@ class Order extends Model
         'orders.id'       => '5P#',
         'company'         => 'Company',
         'total'           => 'Order Total',
-        'coupon'            => 'Coupon',
+        'coupon'          => 'Coupon',
         'coupon_amount'   => 'Coupon Amount',
         'customer'        => 'Customer',
         'email'           => 'Email',

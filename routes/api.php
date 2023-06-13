@@ -199,7 +199,13 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('config-child-sku', [LogisticsController::class, 'index']);
     Route::get('update-config-child-sku', [LogisticsController::class, 'updateSKUs']);
 
+    // Graphics API
+    Route::get('preview-batches', [ItemController::class, 'getBatch']);
     Route::get('unbatchable-items', [ItemController::class, 'unbatchableItems']);
+    Route::get('batch-search-in-options', [ItemController::class, 'searchInOption']);
+    Route::get('batch-store-options', [ItemController::class, 'batchStoreOption']);
+
+
 
     Route::post('send-bulk-email', [EmailTemplateController::class, 'sendBulkEmail']);
 
@@ -263,7 +269,6 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('stock-options', [PurchasedInvProductController::class, 'stockOption']);
     Route::get('vendor-options', [PurchasedInvProductController::class, 'vendorOption']);
     Route::get('product-options/{id}', [PurchasedInvProductController::class, 'productOptionbyVendor']);
-    Route::get('section-options', [SectionController::class, 'sectionOption']);
     Route::get('station-options', [StationController::class, 'stationOption']);
     Route::get('custom-station-options', [StationController::class, 'customStationOption']);
     Route::get('advance-station-options', [StationController::class, 'advanceStationOption']);

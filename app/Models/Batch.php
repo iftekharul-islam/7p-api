@@ -720,6 +720,13 @@ class Batch extends Model
         // ->groupBy('batch_number', 'items.id', 'items.order_5p', 'items.order_id', 'items.store_id');
     }
 
+    public function itemsCounts()
+    {
+        return $this->items()
+            ->selectRaw('count(*) as count')
+            ->groupBy('batch_number', 'items.id', 'items.order_5p', 'items.order_id', 'items.store_id');
+    }
+
 
     public static function getOriginalNumber($batch_number)
     {

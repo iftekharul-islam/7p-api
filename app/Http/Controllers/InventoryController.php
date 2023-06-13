@@ -264,7 +264,7 @@ class InventoryController extends Controller
     }
     public function sectionOption()
     {
-        $stocks = Section::get();
+        $stocks = Section::where('is_deleted', '0')->get();
         $stocks->transform(function ($item) {
             return [
                 'value' => $item['id'],
