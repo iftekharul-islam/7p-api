@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Batch;
 use App\Models\Design;
 use App\Models\Item;
+use App\Models\Printer;
 use App\Models\Rejection;
 use App\Models\Section;
+use App\Models\Station;
+use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Ship\Wasatch;
@@ -552,5 +555,128 @@ class GraphicsController extends Controller
             ];
         }
         return response()->json($data, 200);
+    }
+
+    public function showSublimation(Request $request)
+    {
+        set_time_limit(0);
+
+        //TODO: need to uncomment when file arrived
+        // if (!file_exists($this->sort_root)) {
+        //     return response()->json([
+        //         'message' => 'Cannot find Sort Directory',
+        //         'status' => 203,
+        //     ], 203);
+        // }
+
+        $request->has('from_date') ? $from_date = $request->get('from_date') . ' 00:00:00' : $from_date = '2016-06-01 00:00:00';
+        $request->has('to_date') ? $to_date = $request->get('to_date') . ' 23:59:59' : $to_date = date("Y-m-d H:i:s");
+        $request->has('store_id') ? $store_id = $request->get('store_id') : $store_id = null;
+        $request->has('production_station_id') ? $production_station_id = $request->get('production_station_id') : $production_station_id = null;
+        $request->has('type') ? $type = $request->get('type') : $type = null;
+        $request->has('select_batch') ? $select_batch = $request->get('select_batch') : $select_batch = null;
+
+
+        if ($request->all() != []) {
+            $batches = Batch::with('items', 'production_station', 'route')
+                ->join('stations', 'batches.station_id', '=', 'stations.id')
+                ->where('batches.section_id', 6)
+                ->searchStatus('active')
+                ->where('stations.type', 'G')
+                ->where('stations.id', 92)
+                ->where('graphic_found', '1')
+                ->where('to_printer', '0')
+                ->searchBatch($select_batch)
+                ->where('min_order_date', '>', $from_date)
+                ->where('min_order_date', '<', $to_date)
+                ->searchStore($store_id)
+                ->searchProductionStation($production_station_id)
+                // ->where('to_printer', '0')
+                ->select(
+                    'batch_number',
+                    'status',
+                    'station_id',
+                    'batch_route_id',
+                    'store_id',
+                    'to_printer',
+                    'to_printer_date',
+                    'min_order_date',
+                    'production_station_id'
+                )
+                ->orderBy('min_order_date')
+                ->get();
+            $summary = [];
+        } else {
+
+            $batches = [];
+
+            $summary = Batch::with('production_station', 'items.rejections.user', 'items.rejections.rejection_reason_info')
+                ->join('stations', 'batches.station_id', '=', 'stations.id')
+                ->where('batches.section_id', 6)
+                ->searchStatus('active')
+                ->searchStore($store_id)
+                ->where('stations.type', 'G')
+                ->where('stations.id', 92)
+                ->where('graphic_found', '1')
+                ->where('to_printer', '0')
+                ->selectRaw('production_station_id, MIN(min_order_date) as date, count(*) as count')
+                ->groupBy('production_station_id')
+                ->orderBy('date', 'ASC')
+                ->get();
+        }
+        $w = new Wasatch;
+        $queues = $w->getQueues();
+
+        if (count($batches) > 0) {
+            $store_ids = array_unique($batches->pluck('store_id')->toArray());
+
+            $storesList = Store::where('permit_users', 'like', "%" . auth()->user()->id . "%")
+                ->where('is_deleted', '0')
+                ->where('invisible', '0')
+                ->whereIn('store_id', $store_ids)
+                ->orderBy('sort_order')
+                ->get()
+                ->pluck('store_name', 'store_id');
+        } else {
+            $storesList = Store::list('%', '%', 'none');
+        }
+
+        $stores = [];
+        foreach ($storesList as $key => $value) {
+            $stores[] = [
+                'value' => $key,
+                'label' => $value
+            ];
+        }
+
+        $config = Printer::configurations();
+
+        if (isset($from_date) && $from_date == '2016-06-01 00:00:00') {
+            $from_date = null;
+        }
+
+        return response()->json([
+            'summary' => $summary,
+            'batches' => $batches,
+            'queues' => $queues,
+            'stores' => $stores,
+            'config' => $config
+        ], 200);
+    }
+
+    public function stationOption()
+    {
+        $station = Station::where('is_deleted', '0')
+            ->whereIn('type', ['P', 'Q'])
+            ->where('section', 6)
+            ->get();
+
+        $station->transform(function ($item) {
+            return [
+                'value' => $item['id'],
+                'label' => $item['station_description']
+            ];
+        });
+        return $station;
     }
 }
