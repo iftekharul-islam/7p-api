@@ -202,10 +202,12 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     // Graphics API
     Route::get('preview-batches', [ItemController::class, 'getBatch']);
     Route::get('unbatchable-items', [ItemController::class, 'unbatchableItems']);
+    Route::get('print-sublimation', [GraphicsController::class, 'showSublimation']);
+
+    // Graphics API options
     Route::get('batch-search-in-options', [ItemController::class, 'searchInOption']);
     Route::get('batch-store-options', [ItemController::class, 'batchStoreOption']);
-
-
+    Route::get('print-station-options', [GraphicsController::class, 'stationOption']);
 
     Route::post('send-bulk-email', [EmailTemplateController::class, 'sendBulkEmail']);
 
