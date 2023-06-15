@@ -533,6 +533,66 @@ class GraphicsController extends Controller
         }
     }
 
+    public function showBatchSummaries()
+    {
+
+        // if (auth()->user()->id != 83) {
+        //   return 'Please try again later';
+        // }
+
+
+        $production = Batch::with('production_station', 'store')
+            // ->join('sections', function($join)
+            //         {
+            //             $join->on('batches.section_id', '=', 'sections.id')
+            //                   ->where('sections.inventory', '!=', '1')
+            //                   ->orWhere(DB::raw('batches.inventory'), '=', '2');
+            //         })
+            ->where('batches.is_deleted', '0')
+            ->selectRaw('production_station_id, section_id, store_id, if(substr(batch_number,1,1) = "R", "Reject", "") as type, count(batches.id) as count')
+            ->searchStatus('active')
+            ->searchPrinted('0')
+            ->groupBy('section_id')
+            ->groupBy('production_station_id')
+            ->groupBy('store_id')
+            ->groupBy('type') //->toSql();
+            ->get();
+        // dd($production);
+
+        info("A");
+
+        $graphics = Batch::with('store')
+            ->join('batch_routes', 'batches.batch_route_id', '=', 'batch_routes.id')
+            ->where('batches.is_deleted', '0')
+            ->selectRaw('batch_route_id, batch_routes.graphic_dir, store_id, if(substr(batch_number,1,1) = "R", "Reject", "") as type, count(batches.id) as count')
+            ->searchStatus('active')
+            ->searchPrinted('2')
+            ->groupBy('batch_routes.graphic_dir')
+            ->groupBy('store_id')
+            ->groupBy('type')
+            ->get();
+
+        info("B");
+        $date = date("Y-m-d") . ' 00:00:00';
+
+        $today = Batch::with('production_station', 'section', 'summary_user')
+            ->selectRaw('summary_date, summary_user_id, production_station_id, section_id, count(batch_number) as count')
+            ->searchStatus('active')
+            ->where('summary_date', '>', $date)
+            ->groupBy('section_id')
+            ->groupBy('production_station_id')
+            ->groupBy('summary_date')
+            ->groupBy('summary_user_id')
+            ->orderBy('summary_date', 'DESC')
+            ->get();
+
+        return response()->json([
+            'production' => $production,
+            'graphics' => $graphics,
+            'today' => $today,
+        ], 200);
+    }
+
     public function printerOption()
     {
         $data = [];
