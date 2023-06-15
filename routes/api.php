@@ -17,6 +17,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ParameterController;
 use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\PrintController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductionCategoryController;
 use App\Http\Controllers\PurchasedInvProductController;
@@ -204,6 +205,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('unbatchable-items', [ItemController::class, 'unbatchableItems']);
     Route::get('print-sublimation', [GraphicsController::class, 'showSublimation']);
     Route::get('print-batch-summaries', [GraphicsController::class, 'showBatchSummaries']);
+    Route::post('batch-print', [PrintController::class, 'showBatchPrint']);
 
     // Graphics API options
     Route::get('batch-search-in-options', [ItemController::class, 'searchInOption']);
