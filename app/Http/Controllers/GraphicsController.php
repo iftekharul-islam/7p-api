@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Batch;
+use App\Models\BatchRoute;
 use App\Models\Design;
 use App\Models\Item;
 use App\Models\Printer;
@@ -717,6 +718,320 @@ class GraphicsController extends Controller
             'stores' => $stores,
             'config' => $config
         ], 200);
+    }
+
+    public function moveToProduction(Request $request)
+    {
+        $request->has('store_id') ? $store_id = $request->get('store_id') : $store_id = null;
+
+        $to_move = Batch::with('section', 'production_station')
+            ->join('stations', 'batches.station_id', '=', 'stations.id')
+            ->where('batches.is_deleted', '0')
+            ->searchStatus('movable')
+            ->where('graphic_found', '1')
+            ////->whereNotNull('summary_date')
+            ->where('stations.type', 'G')
+            ->searchStore($store_id)
+            ->selectRaw('section_id, production_station_id, count(*) as total')
+            ->groupBy('section_id')
+            ->groupBy('production_station_id')
+            ->orderBy('section_id')
+            ->get();
+        return response()->json($to_move, 200);
+    }
+
+    public function moveToQC(Request $request)
+    {
+        $request->has('store_id') ? $store_id = $request->get('store_id') : $store_id = null;
+
+        $to_move = Batch::with('section', 'production_station')
+            ->join('stations', 'batches.station_id', '=', 'stations.id')
+            ->where('batches.is_deleted', '0')
+            ->searchStatus('movable')
+            ->where('graphic_found', '1')
+            ////->whereNotNull('summary_date')
+            ->where('stations.type', 'P')
+            ->searchStore($store_id)
+            ->selectRaw('section_id, production_station_id, count(*) as total')
+            ->groupBy('section_id')
+            ->groupBy('production_station_id')
+            ->orderBy('section_id')
+            ->get();
+
+        // $last_scan = Batch::with('section', 'production_station', 'items')
+        //     ->join('stations', 'batches.station_id', '=', 'stations.id')
+        //     ->where('batches.is_deleted', '0')
+        //     ->where('stations.type', 'Q')
+        //     ->latest('batches.change_date')
+        //     ->take(5)
+        //     ->get();
+
+        // for ($i = 0; $i < 5; $i++) {
+        //     $username[$i] = Batch::lastScan($last_scan[$i]->batch_number);
+        //     $name[$i] = $username[$i]['username'];
+        // }
+
+        return response()->json($to_move, 200);
+    }
+
+    public function ShowBatch(Request $request)
+    {
+        if (!$request->has('scan_batches')) {
+            return response()->json([
+                "message" => 'No Batch Selected',
+                'status' => 203
+            ], 203);
+        }
+
+        $scan_batches = trim($request->get('scan_batches'));
+
+        if (substr($scan_batches, 0, 4) == 'BATC') {
+            $batch_number = $this->getBatchNumber(substr($scan_batches, 4));
+        } else {
+            $batch_number = $this->getBatchNumber($scan_batches);
+        }
+
+        if ($batch_number == null) {
+            return response()->json([
+                "message" => 'No Batch Selected',
+                'status' => 203
+            ], 203);
+        }
+
+        $result = $this->moveNext($batch_number, 'production');
+
+        if ($result['error'] != null) {
+            if ($request->has('isProduction')) {
+                Batch::note($batch_number, 4, '6', 'Production - ' . $result['error']);
+            } else {
+                Batch::note($batch_number, 4, '6', 'QC - ' . $result['error']);
+            }
+            return response()->json([
+                "message" => $result['error'],
+                'status' => 203
+            ], 203);
+        }
+
+        $items = Item::where('items.batch_number', $batch_number)
+            ->where('items.is_deleted', '0')
+            ->first();
+
+        //        $customer = Customer::where('order_id', $items->order_id)
+        //            ->where('is_deleted', '0')
+        //            ->first();
+
+        $parts = parse_url($items->item_thumb);
+
+        // /assets/images/Sure3d/thumbs/1217029-13-Image.jpg
+
+
+        //
+        //        $filename = "^XA";
+        //        $filename .= "^CF0,60";
+        //        $filename .= "^FO100,50^FD Batch Number^FS";
+        //        $filename .= "^FX for barcode.";
+        //        $filename .= "^BY5,2,270";
+        //        $filename .= "^FO50,100";
+        //        $filename .= "^BCN,100,Y,N,N";
+        //        $filename .= "^FD$batch_number^FS";
+        //        $filename .= "^CF0,40";
+        //        $filename .= "^FO40,245^FDCustomer name: $customer->ship_full_name^FS";
+        //        $filename .= "^FO40,280^FDStyle Number: $items->item_code ^FS";
+        //        $filename .= "^FO40,320^FDQTY: $items->item_quantity^FS";
+        //        $filename .= $zplImage;
+        //        $filename .= "^XZ";
+
+
+        $to_move = Batch::with('items', 'route', 'station', 'summary_user')
+            ->where('batch_number', $result['batch_number'])
+            ->first();
+
+
+        $format = 'Qty: ' . $items->item_quantity . ' - #[COUNT]';
+        $filename = "^XA~TA000~JSN^LT0^MNW^MTT^PON^PMN^LH0,0^JMA^PR2,2~SD30^JUS^LRN^CI0^XZ";
+        $filename .= "^XA";
+        $filename .= "^MMT";
+        $filename .= "^PW305";
+        $filename .= "^LL0203";
+        $filename .= "^LS0";
+        $filename .= "^FO55,35^A0,40^FB220,1,0,CH^FD{$format}^FS";
+        $filename .= "^FO55,70^A0,30^FB220,1,0,CH^FD[UNIQUE_ID]^FS";
+
+        if (stripos($batch_number, "-") !== false) {
+            $filename .= "^FO25,100^BY2.3^BCN,60,,,,A^FD{$batch_number}^FS";
+        } else {
+            $filename .= "^FO100,100^BY2.3^BCN,60,,,,A^FD{$batch_number}^FS";
+        }
+
+        $filename .= "^PQ1,0,1,Y^XZ";
+
+        $created = $to_move->items[0]->created_at ?? \Carbon\Carbon::now();
+        $date = $created->toDateString();
+
+        $filename = str_replace("[UNIQUE_ID]", $date, $filename);
+        $label = trim(preg_replace('/\n+/', ' ', $filename));
+
+        return response()->json([
+            "to_move" => $to_move,
+            "label" => $label,
+            "status" => 200
+        ], 200);
+        // return view('graphics.show_batch_qc', compact('to_move', 'label'));
+    }
+
+    private function getBatchNumber($filename)
+    {
+        // if (substr($filename, -4, 1) == '.') {
+        //   $filename = substr($filename, 0, -4);
+        // }
+
+        $ex = explode('-', $filename);
+
+        if (is_numeric($ex[0])) {
+            return $ex[0];
+        } elseif (isset($ex[1])) {
+            return $ex[0] . '-' . $ex[1];
+        } else {
+            return null;
+        }
+    }
+
+    public function moveNext($batch, $type, $canLook = false, $normal = true)
+    {
+
+
+        if ($batch instanceof Batch && $normal) {
+            //            $ns = Batch::getNextStation('object', $batch->batch_route_id, $batch->station_id);
+
+            //            if (is_object($ns)) {
+            //                if (stripos($ns->station_name, "S-GGR-INDIA") !== false) return ['error' => null, 'success' => sprintf('Warning: Batch %s cannot be moved', $batch->batch_number), 'batch_number' => $batch->batch_number];
+            //            }
+
+
+            if ($batch->station) {
+                $station_name = $batch->station->station_name;
+            } else {
+                $station_name = 'Station not Found';
+            }
+
+            $batch = Batch::with("route")->where("batch_number", $batch->batch_number)->first();
+            $stations = BatchRoute::routeThroughStations($batch->batch_route_id, $station_name);
+
+            if (stripos($stations, "S-GGR-INDIA") !== false) {
+                if (!$canLook) {
+                    $batch->prev_station_id = null;
+                    $batch->station_id = 264;
+                } else {
+                    $batch->prev_station_id = null;
+                    $batch->station_id = 92;
+                }
+            } else {
+                $batch->prev_station_id = null;
+                $batch->station_id = 92;
+            }
+
+            $batch->save();
+
+            return [
+                'success' => sprintf('Batch %s Successfully Moved to %s<br>', $batch->batch_number, "station"),
+                'batch_number' => $batch->batch_number,
+                'error' => null
+            ];
+        }
+
+        $success = null;
+        $error = null;
+
+        if (!($batch instanceof Batch)) {
+
+            $num = $batch;
+
+            $batch = Batch::with('route.stations_list', 'station')
+                ->where('batch_number', $num)
+                ->searchstatus('active')
+                ->first();
+
+
+            if (!$batch || count($batch) == 0) {
+
+                $related = Batch::related($num);
+
+                if ($related == false) {
+                    return [
+                        'error' => sprintf('Batch not found'),
+                        'success' => $success,
+                        'batch_number' => $num
+                    ];
+                } else {
+                    $batch = $related;
+                }
+            }
+        }
+
+        $next_station = Batch::getNextStation('object', $batch->batch_route_id, $batch->station_id);
+
+        if (is_object($next_station)) {
+            if (stripos($next_station->station_name, "S-GGR-INDIA") !== false) return ['error' => $error, 'success' => sprintf('Warning: Batch %s cannot be moved', $batch->batch_number), 'batch_number' => $batch->batch_number];
+        }
+
+        //        if(is_object($next_station) && $next_station->station_name === "S-GRPH" && Auth::user() === null) {
+        //            return ['error' => $error,
+        //                'success' => sprintf('Warning: Batch %s cannot be moved', $batch->batch_number),
+        //                'batch_number' => $batch->batch_number
+        //            ];
+        //        }
+
+        if ($type == 'graphics') {
+            // test if it is the first graphics station in route
+            if (!($batch->route->stations_list->first()->station_id == $batch->station_id && $batch->station->type == 'G')) {
+                return [
+                    'error' => $error,
+                    'success' => sprintf('Warning: Batch %s not in first graphics station', $batch->batch_number),
+                    'batch_number' => $batch->batch_number
+                ];
+            }
+        } else if ($type == 'production') {
+
+            if (!($batch->station->type == 'G' && $next_station->type == 'P')) {
+                return [
+                    'error' => sprintf(
+                        'Batch %s not moving from graphics to production - ' .
+                            $batch->station->station_name . ' ' . $batch->change_date . '<br>',
+                        $batch->batch_number
+                    ),
+                    'success' => $success,
+                    'batch_number' => $batch->batch_number
+                ];
+            }
+
+            if ($batch->status != 'active' && $batch->status != 'back order') {
+                return [
+                    'error' => sprintf('Batch %s status is %s', $batch->batch_number, $batch->status),
+                    'success' => $success,
+                    'batch_number' => $batch->batch_number
+                ];
+            }
+        } else if ($type == 'print') {
+
+            if ($next_station == null || $next_station->station_name != 'S-GRP') {
+                return [
+                    'error' => 'Batch not moved, next station not printer station',
+                    'success' => $success,
+                    'batch_number' => $batch->batch_number
+                ];
+            }
+        }
+
+        if ($next_station && $next_station->id != '0') {
+            $batch->prev_station_id = $batch->station_id;
+            $batch->station_id = $next_station->id;
+            $batch->save();
+            $success = sprintf('Batch %s Successfully Moved to %s<br>', $batch->batch_number, $next_station->station_name);
+        } else {
+            $error = sprintf('Batch %s has no further stations on route <br>', $batch->batch_number);
+        }
+
+        return ['error' => $error, 'success' => $success, 'batch_number' => $batch->batch_number];
     }
 
     public function stationOption()

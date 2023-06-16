@@ -206,6 +206,10 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('print-sublimation', [GraphicsController::class, 'showSublimation']);
     Route::get('print-batch-summaries', [GraphicsController::class, 'showBatchSummaries']);
     Route::post('batch-print', [PrintController::class, 'showBatchPrint']);
+    Route::get('move-to-production', [GraphicsController::class, 'moveToProduction']);
+    Route::get('move-to-qc', [GraphicsController::class, 'moveToQC']);
+    Route::get('move-show', [GraphicsController::class, 'ShowBatch']);
+
 
     // Graphics API options
     Route::get('batch-search-in-options', [ItemController::class, 'searchInOption']);
