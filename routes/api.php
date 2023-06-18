@@ -37,6 +37,7 @@ use App\Http\Controllers\TemplateController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserPermissionController;
 use App\Http\Controllers\VendorController;
+use App\Http\Controllers\WapController;
 use App\Models\BatchRoute;
 use App\Models\EmailTemplate;
 use App\Models\StoreItem;
@@ -209,7 +210,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('move-to-production', [GraphicsController::class, 'moveToProduction']);
     Route::get('move-to-qc', [GraphicsController::class, 'moveToQC']);
     Route::get('move-show', [GraphicsController::class, 'ShowBatch']);
-
+    Route::get('wap', [WapController::class, 'index']);
 
     // Graphics API options
     Route::get('batch-search-in-options', [ItemController::class, 'searchInOption']);
