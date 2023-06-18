@@ -202,7 +202,7 @@ class Order extends Model
 
     public function order_sub_total()
     {
-        return $this->hasMany('App\Item', 'order_5p', 'id')
+        return $this->hasMany(Item::class, 'order_5p', 'id')
             ->where('is_deleted', '0')
             ->groupBy('order_5p')
             ->select([

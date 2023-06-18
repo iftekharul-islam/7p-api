@@ -210,7 +210,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('move-to-production', [GraphicsController::class, 'moveToProduction']);
     Route::get('move-to-qc', [GraphicsController::class, 'moveToQC']);
     Route::get('move-show', [GraphicsController::class, 'ShowBatch']);
-    Route::get('wap', [WapController::class, 'index']);
+
 
     // Graphics API options
     Route::get('batch-search-in-options', [ItemController::class, 'searchInOption']);
@@ -226,10 +226,14 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('back-orders', [BackorderController::class, 'index']);
     Route::get('back-orders-show', [BackorderController::class, 'show']);
 
+    // Shipping and WAP
     Route::get('must-ship-report', [ReportController::class, 'mustShipReport']);
     Route::get('quality-control', [QcControlController::class, 'index']);
     Route::get('quality-control-list', [QcControlController::class, 'list']);
     Route::get('quality-control-order', [QcControlController::class, 'order']);
+    Route::get('wap', [WapController::class, 'index']);
+    Route::get('wap-details/{id}', [WapController::class, 'ShowBin']);
+
 
     Route::get('section-reports', [ReportController::class, 'section']);
     Route::get('ship-date-reports', [ReportController::class, 'shipDate']);
