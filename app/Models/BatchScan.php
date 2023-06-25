@@ -36,7 +36,7 @@ class BatchScan extends Model
 
     public function station()
     {
-        return $this->belongsTo('App\Station', 'station_id', 'id');
+        return $this->belongsTo(Station::class, 'station_id', 'id');
     }
 
     public function in_user()
@@ -46,7 +46,7 @@ class BatchScan extends Model
 
     public function out_user()
     {
-        return $this->belongsTo('App\User', 'out_user_id', 'id');
+        return $this->belongsTo(User::class, 'out_user_id', 'id');
     }
 
     public function scopeSearchStation($query, $station_id)

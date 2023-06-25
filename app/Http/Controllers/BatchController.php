@@ -3,7 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Batch;
+use App\Models\BatchNote;
+use App\Models\BatchRoute;
+use App\Models\BatchScan;
 use App\Models\Item;
+use App\Models\Order;
 use Illuminate\Http\Request;
 
 class BatchController extends Controller
@@ -53,6 +57,121 @@ class BatchController extends Controller
             'batches' => $batches,
             'total' => $total
         ], 200);
+    }
+
+    public function show(Request $request, string $batch_number)
+    {
+        if ($request->has('label')) {
+            $label = $request->get('label');
+        } else {
+            $label = null;
+        }
+
+        Batch::isFinished($batch_number);
+
+        $batch = Batch::with(
+            'items.order.store',
+            'items.rejections.user',
+            'items.rejections.rejection_reason_info',
+            'items.spec_sheet',
+            'items.product',
+            'station',
+            'route',
+            'section',
+            'store',
+            'summary_user'
+        )
+            ->where('is_deleted', '0')
+            ->where('batch_number', $batch_number)
+            ->get();
+
+        if (count($batch) == '0') {
+            return response()->json([
+                'message' => 'Batch not found',
+                'status' => 203
+            ], 203);
+        }
+
+        $batch = $batch[0];
+
+        if ($batch->station) {
+            $station_name = $batch->station->station_name;
+        } else {
+            $station_name = 'Station not Found';
+        }
+
+        $original = Batch::getOriginalNumber($batch_number);
+
+        $related = Batch::where('batch_number', 'LIKE', '%' . $original)
+            ->where('batch_number', '!=', $batch_number)
+            ->get()
+            ->pluck('batch_number');
+
+        if ($request->has('batch_note')) {
+            Batch::note($batch_number, $batch->station_id, '2', $request->get('batch_note'));
+        }
+
+
+        $notes = BatchNote::with('station', 'user')
+            ->where('batch_number', $batch_number)
+            ->get();
+
+        $scans = BatchScan::with('in_user', 'out_user', 'station')
+            ->where('batch_number', $batch_number)
+            ->get();
+
+        $stations = BatchRoute::routeThroughStations($batch->batch_route_id, $station_name);
+
+        $count = 1;
+
+        $last_scan = Batch::lastScan($batch_number);
+
+        $index = 0;
+        if (count($batch->items) === 1) {
+            $itemId = $batch->items[0]->id;
+            $orderId = $batch->items[0]->order_5p;
+
+            $order = Order::with("items")
+                ->where("id", $orderId)
+                ->get();
+
+            if (count($order) === 1) {
+                $order = $order[0];
+                foreach ($order->items as $itIndex => $item) {
+                    if ($item->id === $itemId) {
+                        $index = $itIndex;
+                    }
+                }
+            }
+        }
+
+        return response()->json([
+            'batch' => $batch,
+            'batch_number' => $batch_number,
+            'last_scan' => $last_scan,
+            'stations' => $stations,
+            'count' => $count,
+            'related' => $related,
+            'notes' => $notes,
+            'label' => $label,
+            'scans' => $scans,
+            'index' => $index,
+            'request' => $request
+        ], 200);
+
+        // return view('batches.show', compact(
+        //     'batch',
+        //     'batch_number',
+        //     'last_scan',
+        //     'stations',
+        //     'count',
+        //     'related',
+        //     'notes',
+        //     'label',
+        //     'scans',
+        //     'index',
+        //     'request'
+        // ));
     }
 
     public function removeShipedImagePdf($dir)

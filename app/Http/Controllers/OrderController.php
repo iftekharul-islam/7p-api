@@ -153,15 +153,15 @@ class OrderController extends Controller
             $status = 'not_cancelled';
         }
 
-        $orders = Order::with('store', 'customer', 'items')
+        $orders = Order::with('store', 'items', 'customer')
             ->where('is_deleted', '0')
             ->storeId($request->get('store'))
             ->status($status)
             ->searchShipping($request->get('shipping_method'))
             ->withinDate($start, $request->get('end_date'))
             ->search($request->get('search_for_first'), $request->get('operator_first'), $request->get('search_in_first'))
-            ->search($request->get('search_for_second'), $request->get('operator_second'), $request->get('search_in_second'))
-            ->latest();
+            ->search($request->get('search_for_second'), $request->get('operator_second'), $request->get('search_in_second'));
+        // ->get();
         $orders = $orders->paginate($request->get('perPage', 10));
 
         $total = Order::where('is_deleted', '0')
