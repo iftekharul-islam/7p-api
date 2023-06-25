@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\StationLog;
+// use App\StationLog;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;

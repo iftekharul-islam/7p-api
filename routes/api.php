@@ -220,6 +220,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('send-bulk-email', [EmailTemplateController::class, 'sendBulkEmail']);
 
     Route::get('batch-list', [BatchController::class, 'index']);
+    Route::get('batch-list/{batch_number}', [BatchController::class, 'show']);
 
     Route::get('move-batches', [ProductController::class, 'moveNextStation']);
     Route::get('rejects', [RejectionController::class, 'index']);
