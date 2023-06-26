@@ -221,6 +221,8 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
 
     Route::get('batch-list', [BatchController::class, 'index']);
     Route::get('batch-list/{batch_number}', [BatchController::class, 'show']);
+    Route::get('reject_item', [BatchController::class, 'rejectItem']);
+
 
     Route::get('move-batches', [ProductController::class, 'moveNextStation']);
     Route::get('rejects', [RejectionController::class, 'index']);
