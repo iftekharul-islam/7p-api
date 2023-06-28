@@ -14,6 +14,7 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use library\Helper;
+use Ship\Batching;
 use Ship\Shipper;
 
 class OrderController extends Controller
@@ -198,7 +199,6 @@ class OrderController extends Controller
 
         $order['batched'] = $batched;
 
-        info($order);
         return $order;
     }
 
@@ -600,6 +600,29 @@ class OrderController extends Controller
 
         return response()->json([
             'message' => 'Shipping Date Updated',
+            'status' => 201,
+            'data' => $order
+        ], 201);
+    }
+
+    public function batchedOrder(string $id)
+    {
+        $order = Order::with('items', 'customer', 'store')
+            ->where("id", $id)
+            ->first();
+
+        if (!$order) {
+            return response()->json([
+                'message' => 'The order cannot be found or an error happened',
+                'status' => 203,
+                'data' => []
+            ], 203);
+        }
+
+        Batching::auto(0, [$order->store->store_id], 1, $order->id);
+
+        return response()->json([
+            'message' => 'Order has been successfully batched!',
             'status' => 201,
             'data' => $order
         ], 201);
