@@ -163,6 +163,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('orders', [OrderController::class, 'index']);
     Route::get('orders/{id}', [OrderController::class, 'show']);
     Route::post('orders/{id}', [OrderController::class, 'store']);
+    Route::get('batched-orders/{id}', [OrderController::class, 'batchedOrder']);
     Route::post('orders-send-email', [NotificationController::class, 'sendMail']);
     Route::post('orders-update-store', [OrderController::class, 'updateStore']);
     Route::post('orders-update_method', [OrderController::class, 'updateMethod']);
