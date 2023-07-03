@@ -183,7 +183,17 @@ class OrderController extends Controller
 
     public function show(string $id)
     {
-        $order = Order::with('customer', 'items', 'store')
+        $order = Order::with(
+            'customer',
+            'items',
+            'items.shipInfo',
+            'items.batch.station',
+            'items.product',
+            'items.allChildSkus',
+            'items.parameter_option',
+            'notes.user',
+            'store'
+        )
             ->where('is_deleted', '0')
             ->find($id);
         if (!$order) {

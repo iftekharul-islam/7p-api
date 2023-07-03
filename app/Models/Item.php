@@ -376,7 +376,7 @@ class Item extends Model
 
     public function allChildSkus()
     {
-        return $this->hasMany('App\Option', 'parent_sku', 'item_code')
+        return $this->hasMany(Option::class, 'parent_sku', 'item_code')
             ->where('batch_route_id', '!=', 115)
             ->select(['parent_sku', 'parameter_options.child_sku']);
     }

@@ -44,9 +44,14 @@ class Batching
 	public static function auto($max_units = 0, $store_id = null, $export = 1, $specificOrder = "")
 	{
 		$end = date("Y-m-d", strtotime("+1 day"));
+		info("from auto");
+		info($store_id);
+		info($end);
 
 		$batch_routes = Batching::createAbleBatches(0, false, "2022-08-01", $end, null, null, $store_id, null, null, $max_units);
 
+		info("batch Route");
+		info($batch_routes);
 		$batches = array();
 
 		$count = 0;
@@ -58,6 +63,8 @@ class Batching
 			}
 		}
 
+		info("batch");
+		info($batches);
 		Batching::createBatch($batches, '', 'active', $export);
 
 		return;
@@ -148,6 +155,9 @@ class Batching
 		$sure3d = null,
 		$max_units = 0
 	) {
+		info("from createAbleBatches");
+		info($store_id, $section, $sure3d, $max_units);
+
 		$max_units = intval($max_units);
 
 		if ($backorder == 1) {
@@ -548,6 +558,9 @@ class Batching
 
 	public static function createBatch($batches, $prefix = '', $status = 'active', $export_batch = null)
 	{
+		info("createBatch");
+		info($batches);
+		info($export_batch);
 
 		if (Batching::islocked()) {
 			Log::info('Existing AutoBatch ' . count($batches) . ' executing');
