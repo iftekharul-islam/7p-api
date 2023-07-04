@@ -791,6 +791,7 @@ class GraphicsController extends Controller
             $batch_number = $this->getBatchNumber($scan_batches);
         }
 
+
         if ($batch_number == null) {
             return response()->json([
                 "message" => 'No Batch Selected',
@@ -951,8 +952,10 @@ class GraphicsController extends Controller
                 ->searchstatus('active')
                 ->first();
 
+            info($batch);
 
-            if (!$batch || count($batch) == 0) {
+            if (!$batch) {
+                // if (!$batch || count($batch) == 0) {
 
                 $related = Batch::related($num);
 
