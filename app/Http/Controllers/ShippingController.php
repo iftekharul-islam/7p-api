@@ -22,6 +22,7 @@ class ShippingController extends Controller
 
         if (strlen($request->get('track_number')) > 0) {
 
+
             $shipper = new Shipper;
 
             $info = $shipper->enterTracking(

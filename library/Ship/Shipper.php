@@ -2,14 +2,14 @@
 
 namespace Ship;
 
-use App\Batch;
+use App\Models\Batch;
 use App\Http\Controllers\ZakekeController;
-use App\ItemShip;
+use App\Models\ItemShip;
 use App\Models\Batch as ModelsBatch;
 use App\Models\Item;
 use App\Models\Order;
-use App\Ship;
-use App\ShipmentManifest;
+use App\Models\Ship;
+use App\Models\ShipmentManifest;
 use App\Models\Wap;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -762,6 +762,7 @@ class Shipper
     public function enterTracking($item_id, $order_5p, $track_number, $method)
     {
 
+        info($item_id);
 
         if ($item_id != 'all') {
             $items = Item::with('order')
@@ -777,6 +778,8 @@ class Shipper
         } else {
             return 'Item Not Set';
         }
+
+        info($items);
 
         $item_ids = array();
 
@@ -798,6 +801,7 @@ class Shipper
 
             $item->save();
 
+
             $item_ids[] = $item->id;
 
             try {
@@ -806,7 +810,6 @@ class Shipper
             }
             Order::note('Tracking number ' . $track_number . ' added to item ' . $item->id, $order->id, $order->order_id);
         }
-
         $remaining = Item::where('order_5p', $order->id)
             ->searchStatus('shippable')
             ->where('is_deleted', '0')
