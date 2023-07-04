@@ -22,7 +22,6 @@ class ShippingController extends Controller
 
         if (strlen($request->get('track_number')) > 0) {
 
-
             $shipper = new Shipper;
 
             $info = $shipper->enterTracking(
@@ -31,7 +30,6 @@ class ShippingController extends Controller
                 $request->get('track_number'),
                 $request->get('method')
             );
-
 
             if (is_array($info)) {
                 $shipper->setOrderFulfillment($request->get('track_shopify_order_id'), $request->get('track_shopify_item_line_id'), $request->get('track_shopify_item_quantity'), $request->get('track_number'), $request->get('method')); // method = $trackingCompany

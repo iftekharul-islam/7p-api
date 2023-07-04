@@ -779,7 +779,9 @@ class Shipper
             return 'Item Not Set';
         }
 
+        info("Tracking");
         info($items);
+        info($order);
 
         $item_ids = array();
 
