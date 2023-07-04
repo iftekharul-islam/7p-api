@@ -155,8 +155,13 @@ class Batching
 		$sure3d = null,
 		$max_units = 0
 	) {
-		info("from createAbleBatches");
-		info($store_id, $section, $sure3d, $max_units);
+		// info("from createAbleBatches");
+		// info($backorder);
+		// info($store_id);
+		// info($section);
+		// info($sure3d);
+		// info($max_units);
+
 
 		$max_units = intval($max_units);
 
@@ -174,6 +179,8 @@ class Batching
 			->where('store_id', 'LIKE', $store_id)
 			->orderBy('sort_order')
 			->get();
+
+		info($stores_result);
 
 		$query_array = array();
 
