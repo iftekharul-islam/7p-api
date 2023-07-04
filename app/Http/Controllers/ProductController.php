@@ -173,47 +173,45 @@ class ProductController extends Controller
     {
         $success = NULL;
         $error = NULL;
-        // $scan_batches = NULL;
-        // $scan_batches_image = NULL;
+        $scan_batches = NULL;
+        $scan_batches_image = NULL;
 
-        // if ($request->get('task') == 'next') {
+        if ($request->get('task') == 'next') {
 
-        //     $batch_update = Batch::with('route', 'station')
-        //         ->whereIn('batch_number', $request->get('batch_number'))
-        //         ->get();
+            $batch_update = Batch::with('route', 'station')
+                ->whereIn('batch_number', $request->get('batch_number'))
+                ->get();
 
-        //     foreach ($batch_update as $batch) {
-        //         $next_station = Batch::getNextStation('object', $batch->batch_route_id, $batch->station_id);
-        //         if ($next_station && $next_station->id != '0') {
-        //             $batch->prev_station_id = $batch->station_id;
-        //             $batch->station_id = $next_station->id;
-        //             $batch->save();
-        //             $success[] = sprintf('Batch %s Successfully Moved to %s<br>', $batch->batch_number, $next_station->station_name);
-        //         } else {
-        //             $error .= sprintf('Batch %s has no further stations on route <br>', $batch->batch_number);
-        //         }
-        //     }
+            foreach ($batch_update as $batch) {
+                $next_station = Batch::getNextStation('object', $batch->batch_route_id, $batch->station_id);
+                if ($next_station && $next_station->id != '0') {
+                    $batch->prev_station_id = $batch->station_id;
+                    $batch->station_id = $next_station->id;
+                    $batch->save();
+                    $success[] = sprintf('Batch %s Successfully Moved to %s<br>', $batch->batch_number, $next_station->station_name);
+                } else {
+                    $error .= sprintf('Batch %s has no further stations on route <br>', $batch->batch_number);
+                }
+            }
+        } elseif ($request->get('task') == 'move') {
 
-        // } elseif ($request->get('task') == 'move') {
+            if ($request->has('station_change') && $request->get('station_change') != '' && $request->get('station_change') != '0') {
 
-        //     if ($request->has('station_change') && $request->get('station_change') != '' && $request->get('station_change') != '0') {
+                // return $request->get('batch_number');
+                $batch_update = Batch::with('route', 'station')
+                    ->whereIn('batch_number', $request->get('batch_number'))
+                    ->get();
 
-        //         $batch_update = Batch::with('route', 'station')
-        //             ->whereIn('batch_number', $request->get('batch_number'))
-        //             ->get();
-
-        //         foreach ($batch_update as $batch) {
-        //             $batch->prev_station_id = $batch->station_id;
-        //             $batch->station_id = $request->get('station_change');;
-        //             $batch->save();
-        //             $success[] = sprintf('Batch %s Successfully Moved <br>', $batch->batch_number);
-        //         }
-
-
-        //     } else {
-        //         $error .= 'No Station Selected';
-        //     }
-        // }
+                foreach ($batch_update as $batch) {
+                    $batch->prev_station_id = $batch->station_id;
+                    $batch->station_id = $request->get('station_change');;
+                    $batch->save();
+                    $success[] = sprintf('Batch %s Successfully Moved <br>', $batch->batch_number);
+                }
+            } else {
+                $error .= 'No Station Selected';
+            }
+        }
 
         if ($request->has('scan_batches') && $request->get('scan_batches') != ',') {
 
@@ -231,7 +229,7 @@ class ProductController extends Controller
                 }
             }
 
-            $found = Batch::with('first_item.order', 'route', 'station', 'itemsCount')
+            $found = Batch::with('first_item.order', 'route', 'station', 'itemsCounts')
                 ->where('is_deleted', '0')
                 ->whereIn('batch_number', $batch_array)
                 ->searchRoute($request->get('route'))
@@ -277,7 +275,7 @@ class ProductController extends Controller
             }
         } elseif ($request->has('station')) {
 
-            $batches = Batch::with('first_item.order', 'route', 'itemsCount')
+            $batches = Batch::with('first_item.order', 'route', 'itemsCounts')
                 ->join('stations', 'batches.station_id', '=', 'stations.id')
                 ->where('batches.is_deleted', '0')
                 ->searchRoute($request->get('route'))
@@ -323,31 +321,28 @@ class ProductController extends Controller
         }
 
 
-        // if ($request->has('route') || (isset($batches) && count($batches) == 1)) {
+        if ($request->has('route') || (isset($batches) && count($batches) == 1)) {
+            if ($request->has('route')) {
+                $route = $request->get('route');
+            } else {
+                $route = $batches[0]->batch_route_id;
+            }
 
-        //     if ($request->has('route')) {
-        //         $route = $request->get('route');
-        //     } else {
-        //         $route = $batches[0]->batch_route_id;
-        //     }
+            $stations_in_route = array();
+            $stations_in_route[0] = 'Move to any station in route';
 
-        //     $stations_in_route = array();
-        //     $stations_in_route[0] = 'Move to any station in route';
+            $all_route_stations = BatchRoute::with('stations_list')
+                ->where('id', $route)
+                ->get();
 
-        //     $all_route_stations = BatchRoute::with('stations_list')
-        //         ->where('id', $route)
-        //         ->get();
-
-        //     foreach ($all_route_stations as $route_stations) {
-
-        //         foreach ($route_stations->stations_list as $route_station) {
-
-        //             $stations_in_route[$route_station->station_id] = $route_station->station_name . ' => ' . $route_station->station_description;
-        //         }
-        //     }
-        // } else {
-        //     $route = NULL;
-        // }
+            foreach ($all_route_stations as $route_stations) {
+                foreach ($route_stations->stations_list as $route_station) {
+                    $stations_in_route[$route_station->station_id] = $route_station->station_name . ' => ' . $route_station->station_description;
+                }
+            }
+        } else {
+            $route = NULL;
+        }
 
         if ($error) return response()->json([
             'message' => $error,
@@ -355,17 +350,33 @@ class ProductController extends Controller
         ], 203);
         if ($success) return response()->json([
             'message' => $success,
-            'status' => 203
-        ], 203);
+            'status' => 201
+        ], 201);
+
+        $route_station = [];
+        foreach ($routes_in_station as $key => $value) {
+            $route_station[] = [
+                'label' => $value,
+                'value' => $key,
+            ];
+        }
+
+        $stations_route = [];
+        foreach ($stations_in_route ?? [] as $key => $value) {
+            $stations_route[] = [
+                'label' => $value,
+                'value' => $key,
+            ];
+        }
 
         return response()->json([
             'batches' => $batches ?? NULL,
-            'routes_in_station' => $routes_in_station ?? NULL,
+            'routes_in_station' => $route_station ?? NULL,
             'next_in_route' => $next_in_route ?? NULL,
             'next_type' => $next_type ?? NULL,
             'station' => $station ?? NULL,
             'route' => $route ?? NULL,
-            'stations_in_route' => $stations_in_route ?? NULL,
+            'stations_in_route' => $stations_route ?? NULL,
         ]);
     }
 
