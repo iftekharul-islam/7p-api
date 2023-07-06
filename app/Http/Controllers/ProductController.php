@@ -177,6 +177,12 @@ class ProductController extends Controller
         $scan_batches_image = NULL;
 
         if ($request->get('task') == 'next') {
+            if (!$request->has('batch_number')) {
+                return response()->json([
+                    'message' => 'Please select batch number!',
+                    'status' => 203,
+                ], 203);
+            }
 
             $batch_update = Batch::with('route', 'station')
                 ->whereIn('batch_number', $request->get('batch_number'))

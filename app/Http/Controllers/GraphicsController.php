@@ -776,6 +776,7 @@ class GraphicsController extends Controller
 
     public function ShowBatch(Request $request)
     {
+
         if (!$request->has('scan_batches')) {
             return response()->json([
                 "message" => 'No Batch Selected',
@@ -791,15 +792,17 @@ class GraphicsController extends Controller
             $batch_number = $this->getBatchNumber($scan_batches);
         }
 
-
         if ($batch_number == null) {
             return response()->json([
                 "message" => 'No Batch Selected',
                 'status' => 203
             ], 203);
         }
-
-        $result = $this->moveNext($batch_number, 'production');
+        if ($request->has('isProduction')) {
+            $result = $this->moveNext($batch_number, 'production');
+        } else {
+            $result = $this->moveNext($batch_number, 'qc');
+        }
 
         if ($result['error'] != null) {
             if ($request->has('isProduction')) {
@@ -875,8 +878,9 @@ class GraphicsController extends Controller
         return response()->json([
             "to_move" => $to_move,
             "label" => $label,
-            "status" => 200
-        ], 200);
+            "message" => $request->has('isProduction') ? 'Moved to Production' : 'Moved to QC',
+            "status" => 201
+        ], 201);
         // return view('graphics.show_batch_qc', compact('to_move', 'label'));
     }
 
@@ -951,8 +955,6 @@ class GraphicsController extends Controller
                 ->where('batch_number', $num)
                 ->searchstatus('active')
                 ->first();
-
-            info($batch);
 
             if (!$batch) {
                 // if (!$batch || count($batch) == 0) {
