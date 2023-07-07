@@ -51,7 +51,7 @@ class Item extends Model
                 $date_batch = Batch::where('batch_number', $mindate->batch_number)
                     ->first();
 
-                if (count($date_batch) > 0) {
+                if (!empty($date_batch)) {
                     $date_batch->min_order_date = $mindate->min;
                     $date_batch->save();
 

@@ -1016,6 +1016,27 @@ class GraphicsController extends Controller
                     'batch_number' => $batch->batch_number
                 ];
             }
+        } else if ($type == 'qc') {
+
+            if (!($batch->station->type == 'P' && $next_station->type == 'Q')) {
+                return [
+                    'error' => sprintf(
+                        'Batch %s not moving from production to QC - ' .
+                            $batch->station->station_name . ' ' . $batch->change_date . '<br>',
+                        $batch->batch_number
+                    ),
+                    'success' => $success,
+                    'batch_number' => $batch->batch_number
+                ];
+            }
+
+            if ($batch->status != 'active' && $batch->status != 'back order') {
+                return [
+                    'error' => sprintf('Batch %s status is %s', $batch->batch_number, $batch->status),
+                    'success' => $success,
+                    'batch_number' => $batch->batch_number
+                ];
+            }
         } else if ($type == 'print') {
 
             if ($next_station == null || $next_station->station_name != 'S-GRP') {
