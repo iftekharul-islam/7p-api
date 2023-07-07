@@ -272,7 +272,14 @@ class ReportController extends Controller
             ->get();
         $rejected_today = Rejection::where('created_at', '>', date("Y-m-d 00:00:00"))->count();
 
-        $graphic_statuses = Rejection::graphicStatus();
+        $graphic_statuses = [];
+
+        foreach (Rejection::graphicStatus() ?? [] as $key => $value) {
+            $graphic_statuses[] = [
+                'value' => $key,
+                'label' => $value,
+            ];
+        }
 
         $order_statuses = [];
 
