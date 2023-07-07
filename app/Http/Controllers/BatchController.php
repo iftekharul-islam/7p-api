@@ -360,8 +360,7 @@ class BatchController extends Controller
             $reject_batch->save();
         }
 
-        if (abs($item->item_quantity - $qty) < 1) {
-
+        if ($item->item_quantity <= $qty) {
             $item->item_status = 'rejected';
             $item->batch_number = $new_batch_number;
             $item->tracking_number = null;
@@ -369,8 +368,6 @@ class BatchController extends Controller
 
             $reject_id = $item->id;
         } else {
-            Log::info('Different reject quantity: ' . $item->id . ' - reject qty: ' . $qty);
-
             $update_qty = $item->item_quantity - $qty;
 
             $reject_item = new Item;
