@@ -46,10 +46,9 @@ class BatchController extends Controller
                 });
             }
 
-            // $batches = $batchQuery->with('route', 'station', 'itemsCount', 'first_item.product', 'store')
             $batches = $batchQuery->with('route', 'station', 'itemsCounts', 'first_item.product', 'store')
                 ->latest('created_at')
-                ->paginate($request->get('per_page', 10));
+                ->paginate(10);
 
             $total = Item::whereIn('batch_number', $batches->pluck('batch_number')->all())
                 ->where('is_deleted', '0')

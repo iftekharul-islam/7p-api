@@ -69,14 +69,15 @@ class RejectionController extends Controller
             $total_items = count($items);
 
             foreach ($items as $item) {
-                if (!array_key_exists($item->batch_number, $batch_array)) {
-                    $batch_array[$item->batch_number]['items'] = $items->where('batch_number', $item->batch_number)->all();
-                    $batch_array[$item->batch_number]['summaries'] = $item->batch->summary_count;
-                    $batch_array[$item->batch_number]['id'] = $item->batch->id;
-                }
+                // if (!array_key_exists($item->batch_number, $batch_array)) {
+                // $batch_array[$item->batch_number]['items'] = $items->where('batch_number', $item->batch_number)->all();
+                $batch_array[$item->batch_number]['items'][] = $item;
+                $batch_array[$item->batch_number]['summaries'] = $item->batch->summary_count;
+                $batch_array[$item->batch_number]['id'] = $item->batch->id;
+                // }
             }
-            $batch_arr = [];
 
+            $batch_arr = [];
             foreach ($batch_array as $key => $value) {
                 $batch_arr[] = [
                     ...$value,
@@ -148,7 +149,7 @@ class RejectionController extends Controller
         foreach ($destinations as $key => $value) {
             $data[] = [
                 'value' => $key,
-                'lavel' => $value
+                'label' => $value
             ];
         }
         return $data;
