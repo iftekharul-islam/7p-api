@@ -206,6 +206,8 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('preview-batches', [ItemController::class, 'getBatch']);
     Route::get('unbatchable-items', [ItemController::class, 'unbatchableItems']);
     Route::get('print-sublimation', [GraphicsController::class, 'showSublimation']);
+    Route::get('print-all', [GraphicsController::class, 'printAllSublimation']);
+
     Route::get('print-batch-summaries', [GraphicsController::class, 'showBatchSummaries']);
     Route::post('batch-print', [PrintController::class, 'showBatchPrint']);
     Route::get('move-to-production', [GraphicsController::class, 'moveToProduction']);
