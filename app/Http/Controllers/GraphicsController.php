@@ -617,14 +617,6 @@ class GraphicsController extends Controller
     {
         set_time_limit(0);
 
-        //TODO: need to uncomment when file arrived
-        // if (!file_exists($this->sort_root)) {
-        //     return response()->json([
-        //         'message' => 'Cannot find Sort Directory',
-        //         'status' => 203,
-        //     ], 203);
-        // }
-
         $request->has('from_date') ? $from_date = $request->get('from_date') . ' 00:00:00' : $from_date = '2016-06-01 00:00:00';
         $request->has('to_date') ? $to_date = $request->get('to_date') . ' 23:59:59' : $to_date = date("Y-m-d H:i:s");
         $request->has('store_id') ? $store_id = $request->get('store_id') : $store_id = null;
@@ -654,6 +646,7 @@ class GraphicsController extends Controller
                     'station_id',
                     'batch_route_id',
                     'store_id',
+                    'graphic_found',
                     'to_printer',
                     'to_printer_date',
                     'min_order_date',
@@ -680,8 +673,6 @@ class GraphicsController extends Controller
                 ->orderBy('date', 'ASC')
                 ->get();
         }
-        $w = new Wasatch;
-        $queues = $w->getQueues();
 
         if (count($batches) > 0) {
             $store_ids = array_unique($batches->pluck('store_id')->toArray());
@@ -714,10 +705,16 @@ class GraphicsController extends Controller
         return response()->json([
             'summary' => $summary,
             'batches' => $batches,
-            'queues' => $queues,
             'stores' => $stores,
             'config' => $config
         ], 200);
+    }
+
+    public function showSublimationQueues()
+    {
+        $w = new Wasatch;
+        $queues = $w->getQueues();
+        return response()->json($queues, 200);
     }
 
     public function moveToProduction(Request $request)
@@ -1074,5 +1071,132 @@ class GraphicsController extends Controller
             ];
         });
         return $station;
+    }
+
+    public function printAllSublimation(Request $request)
+    {
+        if (!file_exists($this->sort_root)) {
+            return response()->json([
+                'message' => 'Cannot find Graphics Directory',
+                'status' => 203
+            ], 203);
+        }
+
+        // if (!file_exists($this->sub_dir . 'lock')) {
+        //   touch($this->sub_dir . 'lock');
+        // }
+        //
+        // $f = fopen($this->sub_dir . 'lock', 'r');
+        //
+        // if (!flock($f, LOCK_EX)) {
+        //   Log::info('Print sublimation - Sublimation is locked');
+        //   return 'Sublimation Directory Busy... Retry';
+        // }
+
+        if (!$request->has('print_batches') || !$request->has('printer')) {
+            Log::error('printAllSublimation: Batches or Printer not provided');
+            return response()->json([
+                'message' => 'Batches or Printer not provided',
+                'status' => 203
+            ], 203);
+        }
+
+        $print_batches = $request->get('print_batches');
+        $printer = $request->get('printer');
+
+        $error = array();
+        $success = array();
+
+        foreach ($print_batches as $batch_number) {
+            $file = $this->getArchiveGraphic($batch_number);
+
+            // if (substr($file, 0, 5) != 'ERROR') {
+            //     // $x = $this->printSubFile($file, $printer, $batch_number);   //TODO uncomment and write printSubFile function from 5p
+            //     if ($x == 'success') {
+            //         $success[] = $file . ' sent to ' . $printer;
+            //     } else {
+            //         $error[] = $file . ' - ' . $x;
+            //     }
+            // } else {
+            //     $error[] = $batch_number . ' - ' . $file;
+            // }
+        }
+
+        return response()->json([
+            'message' => 'Printed',
+            'status' => 201
+        ], 201);
+    }
+
+    public function getArchiveGraphic($name)
+    {
+        $list = glob(self::$archive . $name . "*");
+        $files = array();
+
+        if (count($list) < 1) {
+            /*
+             * Note, can be solved by uploading the graphic again
+             */
+
+
+            $batch = Batch::with(
+                'items.order.store',
+                'items.rejections.user',
+                'items.rejections.rejection_reason_info',
+                'items.spec_sheet',
+                'items.product',
+                'station',
+                'route',
+                'section',
+                'store',
+                'summary_user'
+            )
+                ->where('is_deleted', 0)
+                ->where('batch_number', $name)
+                ->get()[0];
+            foreach ($batch->items as $item) {
+                $item_name = $item->order_id . "-" . $item->id . '.jpg';
+                //    $path = "/var/www/order.monogramonline.com" . '/public_html/assets/images/template_thumbs/' . $item->order_id . "-" . $item->id . '.jpg';
+                $path = "/var/www/order.monogramonline.com" . '/public_html/assets/images/product_thumb/' . $item->item_sku . '.jpg';
+
+                if (file_exists($path)) {
+                    if (copy($path, self::$archive . $name)) {
+                        // Smoothly);
+                        $list2 = glob(self::$archive . $name . "*");
+                        if (count($list2) >= 1) {
+                            foreach ($list2 as $file) {
+                                $files[filemtime($file)] = $file;
+                            }
+
+                            ksort($files);
+
+                            return array_pop($files);
+                        } else {
+                            $msg = "reprintGraphic: Error file was not found.... after checking twice";
+                            Log::error($msg);
+                            return "Not found after trying to fix archive lost.";
+                        }
+                    }
+                } else {
+                    $msg = "reprintGraphic: No thumb exist for " . $item->order_id . "-" . $item->id;
+                    Log::error($msg);
+                    return $msg;
+                }
+            }
+
+            //          Log::error('reprintGraphic: File not found in Archive ' . $name);
+            //          return 'ERROR not found in Archive!';
+
+            Log::error('reprintGraphic: File not found in Archive/could not save ' . $name);
+            return 'ERROR not found in Archive/could not get at all!';
+        }
+
+        foreach ($list as $file) {
+            $files[filemtime($file)] = $file;
+        }
+
+        ksort($files);
+
+        return array_pop($files);
     }
 }
