@@ -617,14 +617,6 @@ class GraphicsController extends Controller
     {
         set_time_limit(0);
 
-        //TODO: need to uncomment when file arrived
-        // if (!file_exists($this->sort_root)) {
-        //     return response()->json([
-        //         'message' => 'Cannot find Sort Directory',
-        //         'status' => 203,
-        //     ], 203);
-        // }
-
         $request->has('from_date') ? $from_date = $request->get('from_date') . ' 00:00:00' : $from_date = '2016-06-01 00:00:00';
         $request->has('to_date') ? $to_date = $request->get('to_date') . ' 23:59:59' : $to_date = date("Y-m-d H:i:s");
         $request->has('store_id') ? $store_id = $request->get('store_id') : $store_id = null;
@@ -654,6 +646,7 @@ class GraphicsController extends Controller
                     'station_id',
                     'batch_route_id',
                     'store_id',
+                    'graphic_found',
                     'to_printer',
                     'to_printer_date',
                     'min_order_date',
@@ -680,8 +673,6 @@ class GraphicsController extends Controller
                 ->orderBy('date', 'ASC')
                 ->get();
         }
-        $w = new Wasatch;
-        $queues = $w->getQueues();
 
         if (count($batches) > 0) {
             $store_ids = array_unique($batches->pluck('store_id')->toArray());
@@ -714,10 +705,16 @@ class GraphicsController extends Controller
         return response()->json([
             'summary' => $summary,
             'batches' => $batches,
-            'queues' => $queues,
             'stores' => $stores,
             'config' => $config
         ], 200);
+    }
+
+    public function showSublimationQueues()
+    {
+        $w = new Wasatch;
+        $queues = $w->getQueues();
+        return response()->json($queues, 200);
     }
 
     public function moveToProduction(Request $request)
