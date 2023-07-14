@@ -1173,8 +1173,7 @@ class GraphicsController extends Controller
                         }
                     }
                 } else {
-                    $msg = "ERROR reprintGraphic: No thumb exist for " . $item->order_id . "-" . $item->id;
-                    return $msg;
+                    return "ERROR reprintGraphic: No thumb exist for " . $item->order_id . "-" . $item->id;
                 }
             }
             return 'ERROR not found in Archive/could not get at all!';
