@@ -14,6 +14,9 @@ use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Ship\ApiClient;
+use Ship\FileHelper;
+use Ship\ImageHelper;
 use Ship\Wasatch;
 
 class GraphicsController extends Controller
@@ -1110,16 +1113,16 @@ class GraphicsController extends Controller
         foreach ($print_batches as $batch_number) {
             $file = $this->getArchiveGraphic($batch_number);
 
-            // if (substr($file, 0, 5) != 'ERROR') {
-            //     // $x = $this->printSubFile($file, $printer, $batch_number);   //TODO uncomment and write printSubFile function from 5p
-            //     if ($x == 'success') {
-            //         $success[] = $file . ' sent to ' . $printer;
-            //     } else {
-            //         $error[] = $file . ' - ' . $x;
-            //     }
-            // } else {
-            //     $error[] = $batch_number . ' - ' . $file;
-            // }
+            if (substr($file, 0, 5) != 'ERROR') {
+                $x = $this->printSubFile($file, $printer, $batch_number);   //TODO uncomment and write printSubFile function from 5p
+                if ($x == 'success') {
+                    $success[] = $file . ' sent to ' . $printer;
+                } else {
+                    $error[] = $file . ' - ' . $x;
+                }
+            } else {
+                $error[] = $batch_number . ' - ' . $file;
+            }
         }
 
         return response()->json([
@@ -1131,14 +1134,7 @@ class GraphicsController extends Controller
     public function getArchiveGraphic($name)
     {
         $list = glob(self::$archive . $name . "*");
-        $files = array();
-
         if (count($list) < 1) {
-            /*
-             * Note, can be solved by uploading the graphic again
-             */
-
-
             $batch = Batch::with(
                 'items.order.store',
                 'items.rejections.user',
@@ -1153,50 +1149,496 @@ class GraphicsController extends Controller
             )
                 ->where('is_deleted', 0)
                 ->where('batch_number', $name)
-                ->get()[0];
-            foreach ($batch->items as $item) {
-                $item_name = $item->order_id . "-" . $item->id . '.jpg';
+                ->first() ?? null;
+            if (!$batch) {
+                return "ERROR reprintGraphic: Batch not found";
+            }
+            foreach ($batch->items ?? [] as $item) {
                 //    $path = "/var/www/order.monogramonline.com" . '/public_html/assets/images/template_thumbs/' . $item->order_id . "-" . $item->id . '.jpg';
                 $path = "/var/www/order.monogramonline.com" . '/public_html/assets/images/product_thumb/' . $item->item_sku . '.jpg';
 
+                //TODO need to update path URL
                 if (file_exists($path)) {
                     if (copy($path, self::$archive . $name)) {
-                        // Smoothly);
                         $list2 = glob(self::$archive . $name . "*");
                         if (count($list2) >= 1) {
                             foreach ($list2 as $file) {
                                 $files[filemtime($file)] = $file;
                             }
-
                             ksort($files);
-
                             return array_pop($files);
                         } else {
-                            $msg = "reprintGraphic: Error file was not found.... after checking twice";
-                            Log::error($msg);
-                            return "Not found after trying to fix archive lost.";
+                            $msg = "ERROR reprintGraphic: Error file was not found.... after checking twice";
+                            return "ERROR Not found after trying to fix archive lost.";
                         }
                     }
                 } else {
-                    $msg = "reprintGraphic: No thumb exist for " . $item->order_id . "-" . $item->id;
-                    Log::error($msg);
+                    $msg = "ERROR reprintGraphic: No thumb exist for " . $item->order_id . "-" . $item->id;
                     return $msg;
                 }
             }
-
-            //          Log::error('reprintGraphic: File not found in Archive ' . $name);
-            //          return 'ERROR not found in Archive!';
-
-            Log::error('reprintGraphic: File not found in Archive/could not save ' . $name);
             return 'ERROR not found in Archive/could not get at all!';
         }
-
         foreach ($list as $file) {
             $files[filemtime($file)] = $file;
         }
-
         ksort($files);
-
         return array_pop($files);
+    }
+
+    public function printSublimation(Request $request)
+    {
+        if ($request->get('pdf') == true) {
+            return $this->printSubFile(
+                null,
+                $request->get('printer'),
+                $request->get('batch_number'),
+                100,
+                null,
+                0,
+                $request->get('pdf'),
+                false
+            );
+        }
+
+        if (!file_exists($this->sort_root)) {
+            return response()->json([
+                'message' => 'Cannot find Graphics Directory',
+                'status' => 203
+            ], 203);
+        }
+
+
+        if (!$request->has('printer')) {
+            return response()->json([
+                'message' => 'You did not select a printer',
+                'status' => 203
+            ], 203);
+        }
+
+        if ($request->has('batch_number') && $request->get('batch_number') != '') {
+            $batch_number = $request->get('batch_number');
+        }
+        $file = $this->getArchiveGraphic($batch_number);
+        if (substr($file, 0, 5) == 'ERROR') {
+            return response()->json([
+                'data' => $file,
+                'message' => substr($file, 6, strlen($file)),
+                'status' => 203
+            ], 203);
+        }
+        $printer = $request->get('printer');
+
+        $x = $this->printSubFile(
+            $file,
+            $printer,
+            $batch_number,
+            $request->get('scale'),
+            $request->get('minsize'),
+            $request->get('mirror'),
+            false,
+            false
+        );
+        return $x;
+    }
+
+    private function printSubFile($file, $printer, $batch_number = null, $scale = 100, $minsize = null, $mirror = 0, $pdf = false, $normal = true)
+    {
+        if ($pdf) {
+            $jsonPayLoad = $this->createJsonPayload($batch_number);
+
+            $api = new ApiClient(null, null, null, "none");
+            $token = $api->getAuthenticationToken();
+            $createResponse = $api->postPayload('/api/printing_batches', $token, $jsonPayLoad);
+            if ($createResponse->getStatusCode() == 201) {
+                $createResponseData = json_decode($createResponse->getBody()->getContents(), true);
+                $fileResponse = $api->getPayload(
+                    $createResponseData['pdfFile'],
+                    $token
+                );
+
+                if ($fileResponse->getStatusCode() == 200) {
+                    $fileResponseData = json_decode($fileResponse->getBody()->getContents(), true);
+                    $printerNumber = explode("-", $printer)[1];
+
+                    $stagingBaseDir = '/var/www/order.monogramonline.com/storage';
+
+                    $ch = curl_init();
+                    curl_setopt($ch, CURLOPT_URL, ApiClient::API_SERVER . '/' . $fileResponseData['contentUrl']);
+                    curl_setopt($ch, CURLOPT_VERBOSE, 0);
+
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_HEADER, false);
+                    curl_setopt($ch, CURLOPT_BINARYTRANSFER, true); // Videos are needed to transfered in binary
+                    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+
+                    $response = curl_exec($ch);
+                    $filename = explode('/', curl_getinfo($ch, CURLINFO_EFFECTIVE_URL));
+                    $filename = array_pop($filename);
+
+                    curl_close($ch);
+                    $result = ["file" => $response, "filename" => $filename];
+
+
+                    $pdfFilePath = $stagingBaseDir . DIRECTORY_SEPARATOR . 'wasatch/staging-' . $printerNumber;
+
+                    $fp = fopen($pdfFilePath . DIRECTORY_SEPARATOR . $batch_number . ".pdf", 'w');
+                    fwrite($fp, $result['file']);
+                    fclose($fp);
+
+                    $folderPath = "/media/RDrive/" . 'SOFT-' . $printerNumber . "/";
+
+                    shell_exec("mv " . $pdfFilePath . $batch_number . ".pdf" . " " . $folderPath . $batch_number . ".pdf");
+                    $batch = Batch::where('batch_number', $batch_number)->first();
+
+                    if (!$batch) {
+                        return 'Batch not found ' . $batch_number;
+                    }
+
+                    if ($batch->to_printer != '0') {
+                        Batch::note($batch->batch_number, $batch->station_id, '6', 'Batch already printed - printSublimation');
+                        return 'Batch marked as printed';
+                    }
+
+                    if ($batch) {
+                        try {
+
+                            $msg = $this->moveNext($batch, 'print', false, $normal);
+
+                            if ($msg['error'] != '') {
+                                Batch::note($batch->batch_number, $batch->station_id, '6', 'printSublimation - ' . $msg['error']);
+                                return 'Error: ' . $msg['error'] . ' - ' . $batch_number;
+                            }
+
+                            $batch->to_printer = $printer;
+                            $batch->to_printer_date = date("Y-m-d H:i:s");
+                            $batch->change_date = date("Y-m-d H:i:s");
+                            $batch->save();
+                        } catch (\Exception $e) {
+                            Log::error('printSubFile: Error moving batch ' . $file . ' - ' . $e->getMessage());
+                            Batch::note($batch->batch_number, $batch->station_id, '6', 'Exception moving Batch - printSublimation');
+                            return 'Error: Error moving batch ' . $batch_number;
+                        }
+
+                        Batch::note($batch->batch_number, $batch->station_id, '6', 'Graphics Sent to Printer');
+                    } else {
+                        Log::error('printSubFile: Batch not found ' . $batch_number);
+                        return 'Error: Batch not found ' . $batch_number;
+                    }
+
+
+                    return "success";
+                } else {
+                    return "API Error " . $fileResponse->getBody()->getContents();
+                }
+            } else {
+                return "API Error " . $createResponse->getBody()->getContents();
+            }
+        } else {
+
+            if (!file_exists($file)) {
+                Log::error('printSubFile: File not found ' . $file);
+                return 'File not found ' . $file;
+            }
+
+            if ($batch_number == null) {
+                $batch_number = $this->getBatchNumber($file);
+            }
+
+            $batch = Batch::where('batch_number', $batch_number)->first();
+
+            if (!$batch) {
+                Log::error('printSubFile: Batch not found ' . $batch_number);
+                return 'Batch not found ' . $batch_number;
+            }
+
+            if ($batch->to_printer != '0') {
+                Log::error('printSubFile: Batch already printed ' . $batch_number);
+                Batch::note($batch->batch_number, $batch->station_id, '6', 'Batch already printed - printSublimation');
+                return 'Batch marked as printed';
+            }
+
+            $w = new Wasatch;
+            $notInQueue = $w->notInQueue($batch_number);
+
+            if ($notInQueue != '1') {
+                return $notInQueue;
+            }
+
+            $summary_file = $this->createSummary($batch_number);
+            if (!file_exists($summary_file)) {
+                sleep(20);
+            }
+            $file_list = FileHelper::getContents($file);
+
+            if (!is_array($file_list) || count($file_list) < 1) {
+                Log::error('printSubFile: No Files Found - ' . $file);
+                return 'Error: No Files Found';
+            }
+
+            #####################################
+            $frameSize = null;
+            $parameterOptions = Item::join('parameter_options', 'items.child_sku', '=', 'parameter_options.child_sku')
+                ->where('items.is_deleted', '0')
+                ->where('items.batch_number', '=', $batch_number)
+                ->first();
+            //        if($parameterOptions->frame_size) {
+            $frameSize = $parameterOptions->frame_size;
+
+            //            if (isEmpty($frameSize)) {
+            //                $frameSize = 0;
+            //                Log::error('printSubFile: Batch Summary Creation Error - ' . $batch_number);
+            //                return 'Parameter Options ';
+            //            }
+
+            $mirror = $parameterOptions->mirror;
+            $orientation = $parameterOptions->orientation;
+            //        }
+            //        dd($file, $printer, $batch_number, $parameterOptions, $frameSize, $mirror );
+            ###################################
+
+
+            $list = array();
+            foreach ($file_list as $path) {
+                //          $this->helper->jdbg("path", $path);
+                $info = ImageHelper::getImageSize($path, $scale);
+                //          $this->helper->jdbg("info", $info);
+                //dd($info);
+                $info['frameSize'] = $frameSize;
+                $info['mirror'] = $mirror;
+                $info['orientation'] = $orientation;
+
+                if (is_array($info)) {
+                    if (strpos($path, "RDrive")) {
+                        $info['source'] = 'R';
+                        $list[str_replace($this->sort_root, '/', $path)] = $info;
+                    } else if (strpos($path, 'graphics')) {
+                        $info['source'] = 'P';
+                        $list[str_replace($this->old_sort_root, '/', $path)] = $info;
+                    }
+                } else {
+                    Log::error('printSubFile: Imagesize Error - ' . $path);
+                    $batch->graphic_found = '7';
+                    $batch->save();
+                    self::removeFile($path);
+                    return 'Imagesize Error: ' . $path;
+                }
+            }
+
+            if ($summary_file != false && file_exists($summary_file)) {
+                $info = ImageHelper::getImageSize($summary_file);
+            } else {
+                Log::error('printSubFile: Batch Summary Creation Error - ' . $batch_number);
+                return 'Batch Summary Creation Error';
+            }
+
+            if (is_array($info)) {
+                $info['source'] = 'R';
+                $info['frameSize'] = $frameSize;
+                //         $info['mirror'] = $mirror;
+                $list[str_replace($this->sort_root, '/', $summary_file)] = $info;
+            } else {
+                Log::error('printSubFile: Batch Summary Imagesize Error - ' . $batch_number);
+                return 'Batch Summary Imagesize Error';
+            }
+            $w = new Wasatch;
+            //            $w->printJob($list, 667755, 1, 'SOFT', null, 1);
+            $list = array_reverse($list);
+            $w->printJob($list, $batch_number, substr($printer, -1), substr($printer, 0, 4), null, $batch->items[0]->item_quantity);
+            //            dd($list, $batch_number, substr($printer, -1), substr($printer, 0, 4));
+            Batch::note($batch->batch_number, '', '6', 'Sent to ' . $printer);
+
+            if ($batch) {
+                try {
+
+                    $msg = $this->moveNext($batch, 'print', false, $normal);
+
+                    if ($msg['error'] != '') {
+                        Log::info('printSubFile: ' . $msg['error'] . ' - ' . $file);
+                        Batch::note($batch->batch_number, $batch->station_id, '6', 'printSublimation - ' . $msg['error']);
+                        return 'Error: ' . $msg['error'] . ' - ' . $batch_number;
+                    }
+
+                    $batch->to_printer = $printer;
+                    $batch->to_printer_date = date("Y-m-d H:i:s");
+                    $batch->change_date = date("Y-m-d H:i:s");
+                    $batch->save();
+                } catch (\Exception $e) {
+                    Log::error('printSubFile: Error moving batch ' . $file . ' - ' . $e->getMessage());
+                    Batch::note($batch->batch_number, $batch->station_id, '6', 'Exception moving Batch - printSublimation');
+                    return 'Error: Error moving batch ' . $batch_number;
+                }
+
+                Batch::note($batch->batch_number, $batch->station_id, '6', 'Graphics Sent to Printer');
+            } else {
+                Log::error('printSubFile: Batch not found ' . $batch_number);
+                return 'Error: Batch not found ' . $batch_number;
+            }
+
+            return 'success';
+        }
+    }
+
+    public static function removeFile($path)
+    {
+
+        if (!file_exists($path)) {
+            return true;
+        }
+
+        if (!is_dir($path)) {
+            try {
+                return unlink($path);
+            } catch (\Exception $e) {
+                Log::error('Graphics removeFile: cannot remove directory ' . $path);
+                return false;
+            }
+        } else {
+
+            if (substr($path, strlen($path) - 1, 1) != '/') {
+                $path .= '/';
+            }
+
+            $files = glob($path . '*', GLOB_MARK);
+            foreach ($files as $file) {
+                if (is_dir($file)) {
+                    self::removeFile($file);
+                } else {
+                    try {
+                        unlink($file);
+                    } catch (\Exception $e) {
+                        Log::error('Graphics removeFile: cannot remove file ' . $file);
+                        return false;
+                    }
+                }
+            }
+
+            return rmdir($path);
+        }
+    }
+
+    protected function createJsonPayload($batchNumber)
+    {
+        $batchToProcess = Batch::with('items.parameter_option.design')
+            ->where('batch_number', $batchNumber)
+            ->first();
+        $batch = Batch::where('batch_number', $batchNumber)->first();
+
+
+        $childSku = $batchToProcess->items[0]->child_sku;
+        $batchHeader = strtoupper($batchToProcess->items[0]->item_description);
+        $seedPageSize = substr($childSku, -4);
+        $doubleSided = substr($childSku, 0, 1) == 'D';
+
+        $pdfParams = [
+            'doubleSided' => false,
+            'pageWidth' => 1570,
+            'marginTop' => 0,
+            'imgDpi' => 100,
+            'columnLayout' => 1
+        ];
+
+        if (stripos($batchToProcess->items[0]->child_sku, "5060") !== false) {
+            $pdfParams['pageHeight'] = 1740;
+            $pdfParams['columnLayout'] = 1;
+        } elseif (stripos($batchToProcess->items[0]->child_sku, "30") !== false) {
+            $pdfParams['pageHeight'] = 1215;
+            $pdfParams['columnLayout'] = 2;
+        } else {
+            if ($batchToProcess->items[0]->parameter_option->frame_size === 0) {
+                $pdfParams['pageHeight'] = 1300;
+            } else {
+                $pdfParams['pageHeight'] = ($batchToProcess->items[0]->parameter_option->frame_size + 4) * 25.4 + 500;
+                $pdfParams['columnLayout'] = 2;
+            }
+
+            //            Log::error('Unsupported layout ' . $batchToProcess->items[0]->child_sku);
+            //            return 'Unsupported Layout, unselect Pdf option';
+        }
+
+        $ordersToProcess = [];
+        $dpi = $pdfParams['imgDpi'];
+        foreach ($batchToProcess->items as $item) {
+            if ($item->item_status !== 'shipped') {
+                $options = json_decode($item->item_option, true);
+                $itemImages = [];
+
+                if (file_exists("/var/www/order.monogramonline.com/assets/images/template_thumbs/" . $item->order_id . "-" . $item->id . '.jpg')) {
+                    $itemImages[] = 'http://order.monogramonline.com/assets/images/template_thumbs/' . $item->order_id . "-" . $item->id . '.jpg';
+                    $dpi = $this->getDPIImageMagick("/var/www/order.monogramonline.com/assets/images/template_thumbs/" . $item->order_id . "-" . $item->id . '.jpg');
+                } else {
+                    if ($batch->section_id == 6 || $batch->section_id == 15 || $batch->section_id == 18) {
+                        $flop = 1;
+                    } else if ($batch->section_id == 3 || $batch->section_id == 10) {
+                        $flop = 0;
+                    } else {
+                        $flop = 0;
+                    }
+
+                    $file = $this->getArchiveGraphic($batchNumber);
+
+                    if (is_dir($file)) {
+                        $graphic_path = $file . '/';
+                        $file_names = array_diff(scandir($file), array('..', '.'));
+                    } else {
+                        $graphic_path = '';
+                        $file_names[] = $file;
+                    }
+
+                    $thumb_path = base_path() . '/public_html/assets/images/graphics/';
+
+                    foreach ($file_names as $file_name) {
+
+                        $name = substr($file_name, 0, strpos($file_name, '.'));
+
+                        try {
+                            ImageHelper::createThumb($graphic_path . $file_name, $flop, $thumb_path . $name . '.jpg', 750);
+                        } catch (\Exception $e) {
+                            return "Cannot find image at all";
+                        }
+                    }
+
+                    if (isset($file_names)) {
+                        foreach ($file_names as $thumb) {
+                            $itemImages[] = "http://order.monogramonline.com/assets/images/graphics/" . substr($thumb, 0, strpos($thumb, '.')) . '.jpg';
+                            $dpi = $this->getDPIImageMagick($thumb_path . substr($thumb, 0, strpos($thumb, '.')) . '.jpg');
+                            break;
+                        }
+                    }
+                }
+                $pdfParams['imgDpi'] = $dpi;
+                $itemsToProcess = [
+                    "id" => $item->id,
+                    "sku" => $item->child_sku,
+                    "quantity" => $item->item_quantity,
+                    "metadata" => [
+                        "image" => $itemImages
+                    ]
+                ];
+
+                $ordersToProcess[] = [
+                    'id' => $item->order_id,
+                    'po' => $item->order_5p,
+                    'creationDate' => (string)$item->created_at,
+                    'items' => [$itemsToProcess]
+                ];
+            }
+        }
+
+
+        return [
+            'reference' => $batchToProcess->batch_number,
+            'jsonData' => [
+                'pdfParams' => $pdfParams,
+                'batchInfo' => [
+                    'batchNumber' => $batchToProcess->batch_number,
+                    'productSKU' => $childSku,
+                    'batchHeader' => $batchHeader
+                ],
+                'orders' => $ordersToProcess,
+            ],
+        ];
     }
 }
