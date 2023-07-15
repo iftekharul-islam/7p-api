@@ -288,48 +288,13 @@ class Wasatch
 
     public function printJob($files, $barcode, $hotfolder, $imgconf, $width = null, $quantity = 1)
     {
-        //        dd($files, $barcode, $hotfolder, $imgconf, $width);
-        //        ##################
-        //        // Load route info by Batch ($barcode);
-        //        $batchRoutes = Batch::getBatchWitRoute($barcode);
-        //        $nesting = $batchRoutes->route->nesting;
-        //        $groupA=[];
-        //        $groupB=[];
-        //        if ($nesting == 1) {
-        //            $i = 0;
-        //            $ii = 1;
-        //            foreach ($files as $name => $info) {
-        //                if ($info['type'] == ".pdf") {
-        //                    $groupPdf[$name] = $info;
-        //                    continue;
-        //                }
-        //
-        //                if ($i % 2 == 0) {
-        //                    $info['itmem_info']['group'] = (($ii + 1) / 2) . "-A";
-        //                    $groupA[$name] = $info;
-        //                } else {
-        //                    $info['itmem_info']['group'] = ($ii / 2) . "-B";
-        //                    $groupB[$name] = $info;
-        //                }
-        //                $i++;
-        //                $ii++;
-        //            }
-        //
-        //            $groupA = array_reverse($groupA);
-        //            $groupB = array_reverse($groupB);
-        //            $files = array_merge($groupB, $groupA, $groupPdf);
-        //        }
-        //        dd($files);
-        //        ##################
         $xml = null;
 
         $xml = '<?xml version="1.0" encoding="utf-8"?>';
         $xml .= '<WASATCH ACTION="JOB">';
         $xml .= '<LAYOUT NOTES="' . $barcode . ' Layout">';
         $xml .= '<Copies>' . $quantity . '</Copies>';
-
         $y = 0;
-
 
         foreach ($files as $name => $info) {
 
@@ -403,13 +368,6 @@ class Wasatch
         $xml .= '<DELETEAFTERPRINT/>';
         $xml .= '</LAYOUT></WASATCH>';
 
-        //        $this->jdbg("xml", $xml);
-        //dd($files, $xml);
-
-        // $tmpfile = fopen('/media/RDrive/temp/' .  $barcode  . '.xml', "w");
-        // fwrite($tmpfile, $xml);
-        // fclose($tmpfile);
-        //dd($this->staging[$hotfolder] . $barcode . '.xml', $hotfolder, $this->staging);
         $newfile = fopen(storage_path() . $this->staging[$hotfolder] . $barcode . '.xml', "w");
         fwrite($newfile, $xml);
         fclose($newfile);
@@ -420,7 +378,9 @@ class Wasatch
             //   Log::info('printJob = AutoPrint-' . $barcode . '-' . $hotfolder);
         }
 
-        return;
+        info(url($this->staging[$hotfolder] . $barcode . '.xml'));
+
+        return url($this->staging[$hotfolder] . $barcode . '.xml');
     }
 
     public function stagedXml()

@@ -13,6 +13,7 @@ use App\Models\Station;
 use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Ship\ApiClient;
 use Ship\FileHelper;
@@ -1078,7 +1079,7 @@ class GraphicsController extends Controller
 
     public function printAllSublimation(Request $request)
     {
-        if (!file_exists($this->sort_root)) {
+        if (!file_exists(public_path($this->sort_root))) {
             return response()->json([
                 'message' => 'Cannot find Graphics Directory',
                 'status' => 203
@@ -1133,7 +1134,7 @@ class GraphicsController extends Controller
 
     public function getArchiveGraphic($name)
     {
-        $list = glob(self::$archive . $name . "*");
+        $list = glob(public_path(self::$archive) . $name . "*");
         if (count($list) < 1) {
             $batch = Batch::with(
                 'items.order.store',
@@ -1147,7 +1148,7 @@ class GraphicsController extends Controller
                 'store',
                 'summary_user'
             )
-                ->where('is_deleted', 0)
+                ->where('is_deleted', '0')
                 ->where('batch_number', $name)
                 ->first() ?? null;
             if (!$batch) {
@@ -1155,12 +1156,13 @@ class GraphicsController extends Controller
             }
             foreach ($batch->items ?? [] as $item) {
                 //    $path = "/var/www/order.monogramonline.com" . '/public_html/assets/images/template_thumbs/' . $item->order_id . "-" . $item->id . '.jpg';
-                $path = "/var/www/order.monogramonline.com" . '/public_html/assets/images/product_thumb/' . $item->item_sku . '.jpg';
 
-                //TODO need to update path URL
+                //TODO need to verify path URL (check if it is item_code or item_sku) - prev one is 
+                // $path = public_path("/assets/images/product_thumb/") . $item->item_sku . ".jpg"; 
+                $path = public_path("/assets/images/product_thumb/") . $item->item_code . ".jpg";
                 if (file_exists($path)) {
-                    if (copy($path, self::$archive . $name)) {
-                        $list2 = glob(self::$archive . $name . "*");
+                    if (copy($path, public_path(self::$archive) . $name)) {
+                        $list2 = glob(public_path(self::$archive) . $name . "*");
                         if (count($list2) >= 1) {
                             foreach ($list2 as $file) {
                                 $files[filemtime($file)] = $file;
@@ -1173,7 +1175,7 @@ class GraphicsController extends Controller
                         }
                     }
                 } else {
-                    return "ERROR reprintGraphic: No thumb exist for " . $item->order_id . "-" . $item->id;
+                    return "ERROR reprintGraphic: No thumb exist for " . $item->order_id . "-" . $item->id . "(" . $item->item_code . ")";
                 }
             }
             return 'ERROR not found in Archive/could not get at all!';
@@ -1200,7 +1202,7 @@ class GraphicsController extends Controller
             );
         }
 
-        if (!file_exists($this->sort_root)) {
+        if (!File::exists(public_path($this->sort_root))) {
             return response()->json([
                 'message' => 'Cannot find Graphics Directory',
                 'status' => 203
@@ -1339,7 +1341,10 @@ class GraphicsController extends Controller
 
             if (!file_exists($file)) {
                 Log::error('printSubFile: File not found ' . $file);
-                return 'File not found ' . $file;
+                return response()->json([
+                    'message' => 'File not found',
+                    'status' => 203
+                ], 203);
             }
 
             if ($batch_number == null) {
@@ -1350,31 +1355,43 @@ class GraphicsController extends Controller
 
             if (!$batch) {
                 Log::error('printSubFile: Batch not found ' . $batch_number);
-                return 'Batch not found ' . $batch_number;
+                return response()->json([
+                    'message' => 'Batch not found ' . $batch_number,
+                    'status' => 203
+                ], 203);
             }
-
             if ($batch->to_printer != '0') {
                 Log::error('printSubFile: Batch already printed ' . $batch_number);
                 Batch::note($batch->batch_number, $batch->station_id, '6', 'Batch already printed - printSublimation');
-                return 'Batch marked as printed';
+                return response()->json([
+                    'message' => 'Batch already printed',
+                    'reload' => true,
+                    'status' => 203
+                ], 203);
             }
 
             $w = new Wasatch;
-            $notInQueue = $w->notInQueue($batch_number);
+            $notInQueue = 1;
+            // $notInQueue = $w->notInQueue($batch_number);  //TODO uncomment this line
 
             if ($notInQueue != '1') {
                 return $notInQueue;
             }
 
             $summary_file = $this->createSummary($batch_number);
-            if (!file_exists($summary_file)) {
-                sleep(20);
-            }
+
+            // if (!file_exists($summary_file)) {
+            //     sleep(20);
+            // }
+
             $file_list = FileHelper::getContents($file);
 
             if (!is_array($file_list) || count($file_list) < 1) {
                 Log::error('printSubFile: No Files Found - ' . $file);
-                return 'Error: No Files Found';
+                return response()->json([
+                    'message' => 'No Files Found',
+                    'status' => 203
+                ], 203);
             }
 
             #####################################
@@ -1412,7 +1429,7 @@ class GraphicsController extends Controller
                 if (is_array($info)) {
                     if (strpos($path, "RDrive")) {
                         $info['source'] = 'R';
-                        $list[str_replace($this->sort_root, '/', $path)] = $info;
+                        $list[str_replace(public_path($this->sort_root), '/', $path)] = $info;
                     } else if (strpos($path, 'graphics')) {
                         $info['source'] = 'P';
                         $list[str_replace($this->old_sort_root, '/', $path)] = $info;
@@ -1422,7 +1439,10 @@ class GraphicsController extends Controller
                     $batch->graphic_found = '7';
                     $batch->save();
                     self::removeFile($path);
-                    return 'Imagesize Error: ' . $path;
+                    return response()->json([
+                        'message' => 'Imagesize Error ' . $path,
+                        'status' => 203
+                    ], 203);
                 }
             }
 
@@ -1430,34 +1450,43 @@ class GraphicsController extends Controller
                 $info = ImageHelper::getImageSize($summary_file);
             } else {
                 Log::error('printSubFile: Batch Summary Creation Error - ' . $batch_number);
-                return 'Batch Summary Creation Error';
+                return response()->json([
+                    'message' => 'Batch Summary Creation Error',
+                    'status' => 203
+                ], 203);
             }
+
 
             if (is_array($info)) {
                 $info['source'] = 'R';
                 $info['frameSize'] = $frameSize;
                 //         $info['mirror'] = $mirror;
-                $list[str_replace($this->sort_root, '/', $summary_file)] = $info;
+                $list[str_replace(public_path($this->sort_root), '/', $summary_file)] = $info;
             } else {
                 Log::error('printSubFile: Batch Summary Imagesize Error - ' . $batch_number);
-                return 'Batch Summary Imagesize Error';
+                return response()->json([
+                    'message' => 'Batch Summary Imagesize Error',
+                    'status' => 203
+                ], 203);
             }
             $w = new Wasatch;
             //            $w->printJob($list, 667755, 1, 'SOFT', null, 1);
             $list = array_reverse($list);
-            $w->printJob($list, $batch_number, substr($printer, -1), substr($printer, 0, 4), null, $batch->items[0]->item_quantity);
+            $downloadfile = $w->printJob($list, $batch_number, substr($printer, -1), substr($printer, 0, 4), null, $batch->items[0]->item_quantity);
             //            dd($list, $batch_number, substr($printer, -1), substr($printer, 0, 4));
             Batch::note($batch->batch_number, '', '6', 'Sent to ' . $printer);
 
             if ($batch) {
                 try {
-
                     $msg = $this->moveNext($batch, 'print', false, $normal);
 
                     if ($msg['error'] != '') {
                         Log::info('printSubFile: ' . $msg['error'] . ' - ' . $file);
                         Batch::note($batch->batch_number, $batch->station_id, '6', 'printSublimation - ' . $msg['error']);
-                        return 'Error: ' . $msg['error'] . ' - ' . $batch_number;
+                        return response()->json([
+                            'message' => 'Error: ' . $msg['error'] . ' - ' . $batch_number,
+                            'status' => 203
+                        ], 203);
                     }
 
                     $batch->to_printer = $printer;
@@ -1467,14 +1496,26 @@ class GraphicsController extends Controller
                 } catch (\Exception $e) {
                     Log::error('printSubFile: Error moving batch ' . $file . ' - ' . $e->getMessage());
                     Batch::note($batch->batch_number, $batch->station_id, '6', 'Exception moving Batch - printSublimation');
-                    return 'Error: Error moving batch ' . $batch_number;
+                    return response()->json([
+                        'message' => 'Error: Error moving batch ' . $batch_number,
+                        'status' => 203
+                    ], 203);
                 }
 
                 Batch::note($batch->batch_number, $batch->station_id, '6', 'Graphics Sent to Printer');
             } else {
                 Log::error('printSubFile: Batch not found ' . $batch_number);
-                return 'Error: Batch not found ' . $batch_number;
+                return response()->json([
+                    'message' => 'Error: Batch not found ' . $batch_number,
+                    'status' => 203
+                ], 203);
             }
+
+            return response()->json([
+                'data' => $downloadfile,
+                'message' => 'Printed',
+                'status' => 201
+            ], 201);
 
             return 'success';
         }
@@ -1639,5 +1680,44 @@ class GraphicsController extends Controller
                 'orders' => $ordersToProcess,
             ],
         ];
+    }
+
+    private function createSummary($batch_number)
+    {
+        if (auth()->user()) {
+            $url = url("/graphics/sub_summary/" . $batch_number);
+        } else {
+            $url = url("/graphics/sub_screenshot/" . $batch_number);
+        }
+
+        if (!file_exists(public_path($this->sort_root) . 'summaries/')) {
+            mkdir(public_path($this->sort_root) . 'summaries/');
+        }
+
+        $file = public_path($this->sort_root) . 'summaries/' . $batch_number . '.pdf';
+
+        set_time_limit(0);
+        try {
+            $x = shell_exec('xvfb-run --server-args="-screen 0, 1024x768x24" wkhtmltopdf ' . $url . ' ' . $file . " > /dev/null 2>&1");
+        } catch (\Exception $e) {
+            Log::error('Error creating sublimation summary for batch ' . $batch_number);
+            Log::error($e->getMessage());
+        }
+
+
+        try {
+            $y = shell_exec("pdfcrop $file $file > /dev/null 2>&1");
+        } catch (\Exception $e) {
+            Log::error('Error cropping sublimation summary for batch ' . $batch_number);
+            Log::error($e->getMessage());
+            Log::error($y);
+        }
+
+        if (!file_exists($file)) {
+            Log::error('Error sublimation summary does not exist for batch ' . $batch_number);
+            return false;
+        }
+
+        return $file;
     }
 }

@@ -41,7 +41,9 @@ use App\Http\Controllers\WapController;
 use App\Models\BatchRoute;
 use App\Models\EmailTemplate;
 use App\Models\StoreItem;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Route;
+use Symfony\Component\HttpFoundation\File\File;
 
 /*
 |--------------------------------------------------------------------------
