@@ -41,7 +41,9 @@ use App\Http\Controllers\WapController;
 use App\Models\BatchRoute;
 use App\Models\EmailTemplate;
 use App\Models\StoreItem;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Route;
+use Symfony\Component\HttpFoundation\File\File;
 
 /*
 |--------------------------------------------------------------------------
@@ -310,4 +312,14 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('email-template-keywords', [EmailTemplateController::class, 'emailTemplateKeywords']);
 
     Route::get('skus', [SpecificationSheetController::class, 'skus']);
+});
+
+
+Route::post('test', function () {
+    return response()->json([
+        'data' => 'http://7p.test/wasatch/staging-2/673216.xml',
+        // 'data' => $downloadfile,
+        'message' => 'Printed',
+        'status' => 201
+    ], 201);
 });

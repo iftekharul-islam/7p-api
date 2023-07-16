@@ -9,7 +9,6 @@ class ImageHelper
 {
   public static function getImageSize($file, $scale = 100)
   {
-
     $type = substr($file, strrpos($file,  '.'));
 
     $width = null;
@@ -53,6 +52,8 @@ class ImageHelper
 
       // find page sizes
       preg_match('/Page size:\s+([0-9]{0,5}\.?[0-9]{0,3}) x ([0-9]{0,5}\.?[0-9]{0,3})/', $output, $pagesizematches);
+
+      $pagesizematches = [100, 100, 100]; //TODO for height uncomment when output is working
 
       if ($pagesizematches != []) {
         $width = number_format(($pagesizematches[1] * $s) / 72, 3);
