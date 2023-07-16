@@ -3,6 +3,7 @@
 namespace Ship;
 
 use Exception;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 
 class Wasatch
@@ -368,9 +369,12 @@ class Wasatch
         $xml .= '<DELETEAFTERPRINT/>';
         $xml .= '</LAYOUT></WASATCH>';
 
-        $newfile = fopen(storage_path() . $this->staging[$hotfolder] . $barcode . '.xml', "w");
-        fwrite($newfile, $xml);
-        fclose($newfile);
+        $file = public_path($this->staging[$hotfolder] . $barcode . '.xml');
+        File::put($file, $xml);
+
+        // $newfile = fopen(storage_path() . $this->staging[$hotfolder] . $barcode . '.xml', "w");
+        // fwrite($newfile, $xml);
+        // fclose($newfile);
 
         if (auth()->user()) {
             //   Log::info("printJob = ".auth()->user()->username . '-' . $barcode . '-' . $hotfolder);

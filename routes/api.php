@@ -313,3 +313,13 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
 
     Route::get('skus', [SpecificationSheetController::class, 'skus']);
 });
+
+
+Route::post('test', function () {
+    return response()->json([
+        'data' => 'http://7p.test/wasatch/staging-2/673216.xml',
+        // 'data' => $downloadfile,
+        'message' => 'Printed',
+        'status' => 201
+    ], 201);
+});

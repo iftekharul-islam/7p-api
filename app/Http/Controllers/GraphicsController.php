@@ -1470,10 +1470,8 @@ class GraphicsController extends Controller
                 ], 203);
             }
             $w = new Wasatch;
-            //            $w->printJob($list, 667755, 1, 'SOFT', null, 1);
             $list = array_reverse($list);
             $downloadfile = $w->printJob($list, $batch_number, substr($printer, -1), substr($printer, 0, 4), null, $batch->items[0]->item_quantity);
-            //            dd($list, $batch_number, substr($printer, -1), substr($printer, 0, 4));
             Batch::note($batch->batch_number, '', '6', 'Sent to ' . $printer);
 
             if ($batch) {
@@ -1516,8 +1514,6 @@ class GraphicsController extends Controller
                 'message' => 'Printed',
                 'status' => 201
             ], 201);
-
-            return 'success';
         }
     }
 
