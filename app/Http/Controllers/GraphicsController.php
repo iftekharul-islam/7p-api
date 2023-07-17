@@ -492,7 +492,7 @@ class GraphicsController extends Controller
                 }
             }
 
-            $to_printer = Batch::with('itemsCounts', 'first_item')
+            $to_printer = Batch::with('itemsCounts', 'first_item', 'store')
                 ->join('stations', 'batches.station_id', '=', 'stations.id')
                 // ->whereHas('store', function ($q) {
                 //     $q->where('permit_users', 'like', "%" . auth()->user()->id . "%");
