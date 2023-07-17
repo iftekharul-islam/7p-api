@@ -492,11 +492,11 @@ class GraphicsController extends Controller
                 }
             }
 
-            $to_printer = Batch::with('itemsCount', 'first_item')
+            $to_printer = Batch::with('itemsCounts', 'first_item')
                 ->join('stations', 'batches.station_id', '=', 'stations.id')
-                ->whereHas('store', function ($q) {
-                    $q->where('permit_users', 'like', "%" . auth()->user()->id . "%");
-                })
+                // ->whereHas('store', function ($q) {
+                //     $q->where('permit_users', 'like', "%" . auth()->user()->id . "%");
+                // })
                 ->whereIn('batches.status', [2, 4])
                 ->where('stations.type', 'G')
                 ->where('graphic_found', '1')
@@ -520,10 +520,11 @@ class GraphicsController extends Controller
                 ->whereIn('batch_number', $batch_numbers)
                 ->count();
 
+            info("E");
+
             $scans = [];
             foreach ($to_printer as $batch) {
                 $data = Batch::lastScan($batch->batch_number);
-
                 $scans[$batch->batch_number] = $data['username'];
             }
 

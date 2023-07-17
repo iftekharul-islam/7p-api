@@ -260,9 +260,9 @@ class Wasatch
     public function notInQueue($batch)
     {
 
-        if ($this->QUEUES == null) {
-            $units = $this->getQueues();
-        }
+        // if ($this->QUEUES == null) {
+        // $units = $this->getQueues();
+        // }
 
         if (!is_array($this->QUEUES)) {
             return $this->QUEUES;
