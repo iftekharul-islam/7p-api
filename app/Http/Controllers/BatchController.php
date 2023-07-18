@@ -476,4 +476,56 @@ class BatchController extends Controller
 
         return str_replace("'", " ", $label);
     }
+
+    public function export_bulk(Request $request)
+    {
+        $batch_numbers = $request->get('batch_number');
+
+        $success = array();
+        $error = array();
+
+        if (is_array($batch_numbers)) {
+
+            if ($request->has('force')) {
+                $force = $request->get('force');
+            } else {
+                $force = 0;
+            }
+
+            foreach ($batch_numbers as $batch_number) {
+
+                $msg = Batch::export($batch_number, $force);
+
+                if (isset($msg['success'])) {
+                    $success[] = $msg['success'];
+                }
+
+                if (isset($msg['error'])) {
+                    $error[] = $msg['error'];
+                }
+            }
+
+            //$message = sprintf("Batches: %s are exported.", implode(", ", $batch_numbers));
+            $message = '';
+            if (count($success)) {
+                $message = '<div class="text-success">';
+                $message = $message . implode("<br />", $success);
+                $message = $message . '</div>';
+            }
+            if (count($error)) {
+                $message = '<div class="text-danger">';
+                $message = $message . implode("<br />", $error);
+                $message = $message . '</div>';
+            }
+            return response()->json([
+                'message' => $message,
+                'status' => 201
+            ], 201);
+        } else {
+            return response()->json([
+                'message' => 'No Batches Selected',
+                'status' => 203
+            ], 203);
+        }
+    }
 }

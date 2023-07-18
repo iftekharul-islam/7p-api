@@ -776,9 +776,6 @@ class Batch extends Model
 
     public static function export($id, $force = 0, $format = 'CSV')
     {
-
-
-
         if ($format == 'CSV') {
             $savepath = '/media/RDrive/5p_batch_csv_export';
         } else if ($format == 'XLS') {

@@ -285,7 +285,8 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
 
     Route::get('sent-to-printer', [GraphicsController::class, 'sentToPrinter']);
     Route::post('reprint_graphic', [GraphicsController::class, 'reprintGraphic']);
-
+    Route::get('reprint_bulk', [GraphicsController::class, 'reprintBulk']);
+    Route::get('export_batchbulk', [BatchController::class, 'export_bulk']);
 
     Route::get('printer-options', [GraphicsController::class, 'printerOption']);
     Route::get('destination-options', [RejectionController::class, 'destinationOption']);

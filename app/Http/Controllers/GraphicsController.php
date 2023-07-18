@@ -1716,6 +1716,50 @@ class GraphicsController extends Controller
         return $file;
     }
 
+    public function reprintBulk(Request $request)
+    {
+        set_time_limit(0);
+
+        $batch_numbers = $request->get('batch_number');
+
+        // $success = array();
+        // $error = array();
+
+        $success = 'Print Sublimation for batch ';
+        $error = 'Error for batch ';
+
+        if (is_array($batch_numbers)) {
+
+            foreach ($batch_numbers as $batch_number) {
+
+                $msg = $this->reprint($batch_number, $request->get('directory'));
+
+                if ($msg == 'success') {
+                    $success = $success . $batch_number . ',';
+                }
+
+                if (substr($msg, 0, 5) == 'ERROR') {
+                    $error = $error . $batch_number . ',';
+                }
+            }
+            if ($error != 'Error for batch ') {
+                return response()->json([
+                    'status' => 203,
+                    'message' => $error,
+                ], 203);
+            }
+            return response()->json([
+                'status' => 201,
+                'message' => $success,
+            ], 201);
+        } else {
+            return response()->json([
+                'status' => 203,
+                'message' => 'No Batches Selected'
+            ], 203);
+        }
+    }
+
     public function reprintGraphic(Request $request)
     {
         if (!$request->has('name')) {
