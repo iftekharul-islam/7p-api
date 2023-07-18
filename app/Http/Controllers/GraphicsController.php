@@ -1718,7 +1718,6 @@ class GraphicsController extends Controller
 
     public function reprintGraphic(Request $request)
     {
-
         if (!$request->has('name')) {
             Log::error('reprintGraphic: Name not Set');
             return response()->json([
@@ -1730,18 +1729,30 @@ class GraphicsController extends Controller
         $result = $this->reprint($request->get('name'), $request->get('directory'));
 
         if ($result != 'success' || !$request->has('goto')) {
-            return $result;
+            if ($result == 'success') {
+                return response()->json([
+                    'status' => 201,
+                    'message' => "Reprint " . $request->get('name')
+                ], 201);
+            }
+            return response()->json([
+                'status' => 203,
+                'message' => $result
+            ], 203);
         } else {
-            return redirect()->action('GraphicsController@showSublimation', ['select_batch' => $request->get('name')]);
+            return response()->json([
+                'status' => 206,
+                'select_batch' => $request->get('name')
+            ], 206);
         }
     }
 
     public function reprint($name, $directory = null)
     {
 
-        if (!file_exists($this->sort_root)) {
-            return 'ERROR Cannot find Graphics Directory';
-        }
+        // if (!file_exists($this->sort_root)) {
+        //     return 'ERROR Cannot find Graphics Directory';
+        // }
 
         $name = trim($name);
 
