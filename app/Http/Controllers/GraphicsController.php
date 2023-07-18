@@ -1794,9 +1794,9 @@ class GraphicsController extends Controller
     public function reprint($name, $directory = null)
     {
 
-        // if (!file_exists($this->sort_root)) {
-        //     return 'ERROR Cannot find Graphics Directory';
-        // }
+        if (!file_exists(public_path($this->sort_root))) {
+            return 'ERROR Cannot find Graphics Directory';
+        }
 
         $name = trim($name);
 
@@ -1822,8 +1822,8 @@ class GraphicsController extends Controller
          */
         if ($directory != '') {
             try {
-                Log::info('Reprint: ' . $this->sort_root . $directory . substr($filename, strrpos($filename, '/')));
-                $this->recurseCopy($filename, $this->sort_root . $directory . '/' . substr($filename, strrpos($filename, '/')));
+                Log::info('Reprint: ' . public_path($this->sort_root) . $directory . substr($filename, strrpos($filename, '/')));
+                $this->recurseCopy($filename, public_path($this->sort_root) . $directory . '/' . substr($filename, strrpos($filename, '/')));
                 return 'success';
             } catch (\Exception $e) {
                 Log::error('reprintGraphic: Could not copy File from Archive - ' . $e->getMessage());
