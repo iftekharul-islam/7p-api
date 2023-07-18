@@ -284,6 +284,8 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('create-graphics', [GraphicsController::class, 'index']);
 
     Route::get('sent-to-printer', [GraphicsController::class, 'sentToPrinter']);
+    Route::post('reprint_graphic', [GraphicsController::class, 'reprintGraphic']);
+
 
     Route::get('printer-options', [GraphicsController::class, 'printerOption']);
     Route::get('destination-options', [RejectionController::class, 'destinationOption']);

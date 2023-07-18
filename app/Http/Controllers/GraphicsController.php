@@ -520,8 +520,6 @@ class GraphicsController extends Controller
                 ->whereIn('batch_number', $batch_numbers)
                 ->count();
 
-            info("E");
-
             $scans = [];
             foreach ($to_printer as $batch) {
                 $data = Batch::lastScan($batch->batch_number);
@@ -1716,5 +1714,170 @@ class GraphicsController extends Controller
         }
 
         return $file;
+    }
+
+    public function reprintGraphic(Request $request)
+    {
+
+        if (!$request->has('name')) {
+            Log::error('reprintGraphic: Name not Set');
+            return response()->json([
+                'status' => 203,
+                'message' => 'Name not Set'
+            ], 203);
+        }
+
+        $result = $this->reprint($request->get('name'), $request->get('directory'));
+
+        if ($result != 'success' || !$request->has('goto')) {
+            return $result;
+        } else {
+            return redirect()->action('GraphicsController@showSublimation', ['select_batch' => $request->get('name')]);
+        }
+    }
+
+    public function reprint($name, $directory = null)
+    {
+
+        if (!file_exists($this->sort_root)) {
+            return 'ERROR Cannot find Graphics Directory';
+        }
+
+        $name = trim($name);
+
+        $filename = $this->getArchiveGraphic($name);
+
+        $batch_number = $this->getBatchNumber($name);
+
+        $batch = Batch::with('route.stations_list')
+            ->where('batch_number', $batch_number)
+            ->first();
+
+        if ($batch) {
+            Batch::note($batch->batch_number, $batch->station_id, '10', 'Graphic retrieved from archive and sent to graphic directory');
+            $batch->to_printer = '0';
+            $batch->save();
+        }
+
+        /*                   NOTE TO SELF
+         * The directory is being retrieved by the request URL,
+         * so if that does not exist, it does not move the graphic to the right folder
+         *
+         * WHICH causes it to return a `success` and not moving on to the next stage
+         */
+        if ($directory != '') {
+            try {
+                Log::info('Reprint: ' . $this->sort_root . $directory . substr($filename, strrpos($filename, '/')));
+                $this->recurseCopy($filename, $this->sort_root . $directory . '/' . substr($filename, strrpos($filename, '/')));
+                return 'success';
+            } catch (\Exception $e) {
+                Log::error('reprintGraphic: Could not copy File from Archive - ' . $e->getMessage());
+                return 'ERROR not copied from Archive';
+            }
+        } else {
+            $batch->station_id = $batch->route->stations_list->first()->station_id;
+            $batch->save();
+            $this->moveNext($batch, 'graphics', true);
+            return 'success';
+        }
+    }
+
+    private function recurseCopy($src, $dst, $rename = 0)
+    {
+
+        if (is_dir($src)) {
+
+            $dir = opendir($src);
+
+            mkdir($dst);
+
+            while (false !== ($file = readdir($dir))) {
+
+                if (($file != '.') && ($file != '..')) {
+
+                    if (is_dir($src . '/' . $file)) {
+
+                        $this->recurseCopy($src . '/' . $file, $dst . '/' . $file, $rename);
+                    } else {
+
+                        try {
+
+                            if (substr($file, -4) == '.tmp' || substr($file, -3) == '.db') {
+                                unlink($src . '/' . $file);
+                                continue;
+                            }
+
+                            if ($rename) {
+                                $new_file = $this->uniqueFileName($dst, $file, null, 1);
+                            } else {
+                                $new_file = $file;
+                            }
+
+                            copy($src . '/' . $file, $dst . '/' . $new_file);
+                        } catch (\Exception $e) {
+                            Log::error('recurseCopy: Cannot copy file ' . $dir . ' - ' . $e->getMessage());
+                        }
+                    }
+                }
+            }
+            closedir($dir);
+        } else {
+
+            if ($rename) {
+                if (strrpos($dst, '/')) {
+                    $file = substr($dst, strrpos($dst, '/') + 1);
+                    $dir = substr($dst, 0, strlen($dst) - strlen($file));
+                } else {
+                    $file = $dst;
+                    $dir = '/';
+                }
+
+                $new_file = $this->uniqueFileName($dir, $file, null, 1);
+            } else {
+                $new_file = $dst;
+                $dir = '';
+            }
+
+            try {
+                copy($src, $dir . $new_file);
+            } catch (\Exception $e) {
+                Log::error('recurseCopy: Cannot copy file ' . $dir . ' - ' . $e->getMessage());
+            }
+        }
+    }
+    public function uniqueFilename($dir, $filename, $suffix = '-COPY', $batch_rename = 0)
+    {
+
+        if (strpos($filename, '.')) {
+            $file = substr($filename, 0, strpos($filename, '.'));
+            $ext = substr($filename, strpos($filename, '.'));
+        } else {
+            $file = $filename;
+            $ext = '';
+        }
+
+        if ($batch_rename) {
+            $batch = $this->getBatchNumber($file);
+            if ($batch) {
+                $file = $batch;
+            }
+        } else if (strpos($filename, $suffix)) {
+            $file = substr($filename, 0, strpos($filename, $suffix));
+        }
+
+        try {
+            $num = count(glob($dir . $file . '*'));
+
+            if ($num > 0) {
+
+                return $file . $suffix . '-' . $num . $ext;
+            } else {
+
+                return $file . $ext;
+            }
+        } catch (\Exception $e) {
+            Log::error('uniqueFilename: Error creating name ' . $filename . ' - ' . $e->getMessage());
+            return false;
+        }
     }
 }
