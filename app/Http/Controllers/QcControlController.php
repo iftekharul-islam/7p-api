@@ -15,18 +15,20 @@ class QcControlController extends Controller
             ->get()
             ->pluck('id');
 
-        $totals = Batch::with('section', 'station')
+        $totals = Batch::with('section', 'station', 'store')
             ->searchStatus('active')
             ->whereIn('station_id', $qc_stations)
-            ->whereHas('store', function ($q) {
-                $q->where('permit_users', 'like', "%" . auth()->user()->id . "%");
-            })
+            // ->whereHas('store', function ($q) {
+            //     $q->where('permit_users', 'like', "%" . auth()->user()->id . "%");
+            // })
             ->groupBy('station_id', 'section_id')
             ->orderBy('section_id')
             ->selectRaw('section_id, station_id, COUNT(*) as count')
             ->get();
 
-        return response()->json($totals, 200);
+        return response()->json([
+            'totals' => $totals,
+        ], 200);
     }
 
     public function list(Request $request)
