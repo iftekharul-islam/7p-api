@@ -1,6 +1,6 @@
 <?php
 
-namespace Monogram;
+namespace Ship;
 
 use Imagick;
 use Illuminate\Support\Facades\Log;
@@ -216,9 +216,14 @@ class Sure3d
     return;
   }
 
-  public static function getThumb($item)
+  public static function
+
+  getThumb($item)
   {
     if ($item->sure3d == null) {
+      return false;
+    }
+    if (!isset($item->order->short_order)) {
       return false;
     }
 

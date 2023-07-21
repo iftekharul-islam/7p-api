@@ -7,7 +7,7 @@ use App\Models\Wap;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use library\Helper;
-use Monogram\Sure3d;
+use Ship\Sure3d;
 
 class WapController extends Controller
 {
@@ -41,7 +41,7 @@ class WapController extends Controller
                 ->toArray();
 
             $bins = Wap::with('order.shippable_items', 'order.items')
-                // ->whereIn('wap.id', $bin_list)
+                ->whereIn('wap.id', $bin_list)
                 ->select('wap.*', DB::raw('(SELECT MAX(created_at) FROM wap_items WHERE wap_items.bin_id = wap.id ) as last,
                                                     (SELECT COUNT(*) FROM wap_items WHERE wap_items.bin_id = wap.id ) as item_count'))
                 ->orderBy('order_id', 'ASC');
