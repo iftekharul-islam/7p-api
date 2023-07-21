@@ -176,7 +176,7 @@ class Order extends Model
 
     public function sku_summary()
     {
-        return $this->hasMany('App\Item', 'order_5p', 'id')
+        return $this->hasMany(Item::class, 'order_5p', 'id')
             ->where('is_deleted', '0')
             ->selectRaw('items.order_5p, items.item_thumb, items.child_sku, SUM(items.item_quantity) as quantity')
             ->groupBy('items.child_sku');
@@ -184,7 +184,7 @@ class Order extends Model
 
     public function shippable_items()
     {
-        return $this->hasMany('App\Item', 'order_5p', 'id')
+        return $this->hasMany(Item::class, 'order_5p', 'id')
             ->where('is_deleted', '0')
             ->searchStatus('shippable');
     }
