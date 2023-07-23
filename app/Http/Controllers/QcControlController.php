@@ -86,7 +86,7 @@ class QcControlController extends Controller
                     $related = Batch::related($batch_number);
 
                     if ($related != false) {
-                        $this->order('batch_number' = $related->batch_number, 'user_barcode' = $request->get('user_barcode'));
+                        // $this->order('batch_number' = $related->batch_number, 'user_barcode' = $request->get('user_barcode'));
                     } else {
                         return response()->json([
                             'message' => sprintf('Problem with Batch %s', $batch_number),

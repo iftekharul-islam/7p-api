@@ -1935,4 +1935,112 @@ class GraphicsController extends Controller
             return false;
         }
     }
+
+    public function uploadFile(Request $request)
+    {
+
+        if ($request->has('item_id') && $request->has('batch_number')) {
+            $request->has('batch_number') ? $select_batch = $request->get('batch_number') : $select_batch = null;
+            $request->has('item_id') ? $item_id = $request->get('item_id') : $item_id = null;
+            $batche = Batch::with('items', 'route.stations_list')
+                ->where('batch_number', $select_batch)
+                ->get();
+            foreach ($batche as $batch) {
+                foreach ($batch->items as $items) {
+                    if ($items->id == $item_id) {
+                        if (empty($items->tracking_number)) {
+                            $thumb = '/assets/images/template_thumbs/' . $items->order_id . "-" . $items->id . '.jpg';
+                            $items->tracking_number = NULL;
+                            $items->item_status = 1;
+                            $items->reached_shipping_station = 0;
+                            $items->item_thumb = 'http://order.monogramonline.com' . $thumb;
+                            $items->save();
+
+                            $batch->status = 2;
+                            $batch->section_id = 6;
+                            $batch->station_id = 92;
+                            $batch->prev_station_id = $batch->route->stations_list->first()->station_id;
+                            $batch->export_count = 1;
+                            $batch->csv_found = 0;
+                            $batch->graphic_found = 1;
+                            $batch->to_printer = 0;
+                            $batch->to_printer_date = null;
+                            $batch->archived = 1;
+                            $batch->save();
+
+                            $filename = $batch->batch_number . '.' . $request->file('upload_file')->getClientOriginalExtension();
+                            $filename = $this->uniqueFilename($this->sort_root . "archive/", $filename);
+
+                            if (move_uploaded_file($request->file('upload_file'), $_SERVER['DOCUMENT_ROOT'] . $this->sort_root . "archive/" . $filename)) {
+                                try {
+                                    ImageHelper::createThumb($this->sort_root . "archive/" . $filename, 0, base_path() . '/public_html' . $thumb, 350);
+                                } catch (\Exception $e) {
+                                    Log::error('Batch uploadFile createThumb: ' . $e->getMessage());
+                                }
+
+                                Batch::note($batch->batch_number, $batch->station_id, '111', 'Graphic Uploaded to Main');
+                                return response()->json([
+                                    'status' => 201,
+                                    'message' => 'Graphic Uploaded for Batch ' . $batch->batch_number
+                                ], 201);
+                            }
+                        }
+                    }
+                }
+            }
+            return response()->json([
+                'status' => 203,
+                'message' => 'Batch number required..'
+            ], 203);
+        }
+        if (!$request->has('batch_number')) {
+            return response()->json([
+                'status' => 203,
+                'message' => 'Batch number required..'
+            ], 203);
+        }
+
+        $batch = Batch::where('batch_number', $request->get('batch_number'))->first();
+
+        if (!$batch) {
+            return response()->json([
+                'status' => 203,
+                'message' => 'Batch not found'
+            ], 203);
+        }
+
+        $filename = $batch->batch_number . '.' . $request->file('upload_file')->getClientOriginalExtension();
+
+        $filename = $this->uniqueFilename($this->main_dir, $filename);
+
+        if (move_uploaded_file($request->file('upload_file'), $this->main_dir . $filename)) {
+            Batch::note($batch->batch_number, $batch->station_id, '11', 'Graphic Uploaded to Main');
+            return response()->json([
+                'status' => 201,
+                'message' => 'Graphic Uploaded for Batch ' . $batch->batch_number
+            ], 201);
+        }
+
+        Batch::note($batch->batch_number, $batch->station_id, '11', 'Error uploading graphic');
+        return response()->json([
+            'status' => 203,
+            'message' => 'Error uploading graphic for Batch ' . $batch->batch_number
+        ], 203);
+    }
+
+    public function uploadFileUsingLink(Request $request)
+    {
+
+        $this->uploadFileFromLink($request);
+
+        //        return response()->json(
+        //            [
+        //                "Status" => true,
+        //                "Message" => "Successful",
+        //                "Data" => $request->all(),
+        //                "Link_Decoded" => urldecode($request->get("link"))
+        //            ]
+        //        );
+        return redirect()->back()->withInput()->withSuccess("Successfully fetched graphic from Zakeke");
+    }
 }
