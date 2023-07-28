@@ -70,27 +70,58 @@ class WapController extends Controller
         $order = null;
         $bin = null;
         if ($id) {
-            $bin = Wap::with('items.batch', 'order.shippable_items')
-                ->where('id', $id)
-                ->first();
-
-            if (!$bin) {
-                return response()->json([
-                    "message" => "Bin not found",
-                    "status" => 203,
-                ], 203);
+            if (strtoupper(substr(trim($id), 0, 4)) == 'ORDR') {
+                $order_id = substr(trim($id), 4);
+            } else {
+                $order_id = trim($id);
             }
 
-            if ($bin->order) {
+            $bin = Wap::with('items.batch', 'order.shippable_items')
+                ->where('order_id', $order_id)
+                ->first();
+            info($bin);
+
+            if ($bin) {
+                $order = Order::with('items.batch.station', 'items.shipInfo', 'items.rejections.rejection_reason_info')
+                    ->where('short_order', $order_id)
+                    ->where('orders.is_deleted', '0')
+                    ->first();
+
+                info($order);
+
+                if ($order) {
+                    $order_id = $order->id;
+                    $bin = Wap::with('items.batch', 'order.shippable_items')
+                        ->where('order_id', $order->id)
+                        ->first();
+
+                    info($order->id);
+
+
+                    if (!$bin) {
+                        return response()->json([
+                            "message" => "Bin not found",
+                            "status" => 203,
+                        ], 203);
+                    }
+                } else {
+                    return response()->json([
+                        "message" => "Order not found",
+                        "status" => 203,
+                    ], 203);
+                }
+            }
+            if (isset($bin->order)) {
                 $order = $bin->order;
             }
         }
-        // if (!$order) {
-        //     return response()->json([
-        //         "message" => "Order not found",
-        //         "status" => 203,
-        //     ], 203);
-        // }
+
+        if (!$order) {
+            return response()->json([
+                "message" => "Order not found",
+                "status" => 203,
+            ], 203);
+        }
 
         $item_options = array();
         $thumbs = array();
@@ -107,6 +138,7 @@ class WapController extends Controller
             'order' => $order,
             'item_options' => $item_options,
             'thumbs' => $thumbs,
-        ]);
+            'status' => 200
+        ], 200);
     }
 }

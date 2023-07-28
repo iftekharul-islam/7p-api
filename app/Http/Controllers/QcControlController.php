@@ -28,7 +28,9 @@ class QcControlController extends Controller
             ->selectRaw('section_id, station_id, COUNT(*) as count')
             ->get();
 
-        return response()->json($totals, 200);
+        return response()->json([
+            'totals' => $totals
+        ], 200);
     }
 
     public function list(Request $request)
