@@ -17,7 +17,7 @@ class QcControlController extends Controller
             ->get()
             ->pluck('id');
 
-        $totals = Batch::with('section', 'station')
+        $totals = Batch::with('section', 'station', 'store')
             ->searchStatus('active')
             ->whereIn('station_id', $qc_stations)
             // ->whereHas('store', function ($q) {
