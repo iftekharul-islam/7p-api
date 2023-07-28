@@ -29,7 +29,7 @@ class QcControlController extends Controller
             ->get();
 
         return response()->json([
-            'totals' => $totals,
+            'totals' => $totals
         ], 200);
     }
 
