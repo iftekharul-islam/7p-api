@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use library\Helper;
+use Ship\Sure3d;
 
 class BatchController extends Controller
 {
@@ -150,6 +151,13 @@ class BatchController extends Controller
                 }
             }
         }
+        $newItems = $batch->items->map(function ($item) {
+            $item['sure3d_thumb'] = Sure3d::getThumb($item);
+            return $item;
+        });
+        info("Afnan");
+        info($newItems);
+        $batch['items'] = $newItems;
 
         return response()->json([
             'batch' => $batch,
