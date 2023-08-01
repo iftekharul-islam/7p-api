@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Batch;
 use App\Models\Item;
+use App\Models\Order;
 use App\Models\Rejection;
+use App\Models\Ship;
 use App\Models\Store;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class RejectionController extends Controller
 {
@@ -153,5 +157,108 @@ class RejectionController extends Controller
             ];
         }
         return $data;
+    }
+
+    public function rejectWapItem(Request $request)
+    {
+
+        //TODO - need to update for reject
+        $origin = $request->get('origin');
+
+        $rules = [
+            'item_id'           => 'required',
+            'reject_qty'        => 'required|integer|min:1',
+            'graphic_status'    => 'required',
+            'rejection_reason'  => 'required|exists:rejection_reasons,id',
+        ];
+
+        $validation = Validator::make($request->all(), $rules);
+
+        if ($validation->fails()) {
+            return redirect()->back()->withErrors($validation);
+        }
+
+        $item = Item::with('inventoryunit')
+            ->where('id', $request->get('item_id'))
+            ->first();
+
+        if ($item->item_status == 'rejected') {
+            return redirect()->back()->withErrors(['error' => 'Item Already Rejected']);
+        }
+
+        $batch_number = $item->batch_number;
+
+        if ($origin == 'QC') {
+            $batch = Batch::find($request->get('id'));
+
+            if ($batch && $batch->batch_number != $batch_number) {
+                return redirect()->back()->withErrors(['error' => sprintf('Please scan user ID')]);
+            }
+        } elseif ($origin == 'SL') {
+            $tracking_number = $item->tracking_number;
+        }
+
+        $result = $this->itemReject(
+            $item,
+            $request->get('reject_qty'),
+            $request->get('graphic_status'),
+            $request->get('rejection_reason'),
+            $request->get('rejection_message'),
+            $request->get('title'),
+            $request->get('scrap')
+        );
+
+        //send first reprint to production
+        if ($request->get('graphic_status') == '1') {
+
+            $count = Rejection::where('item_id', $result['reject_id'])->count();
+
+            if ($count == 1) {
+                $this->moveStation($result['new_batch_number']);
+
+                $msg = Batch::export($result['new_batch_number'], '0');
+
+                if (isset($msg['error'])) {
+                    Batch::note($result['new_batch_number'], '', 0, $msg['error']);
+                }
+            }
+        }
+
+        if ($origin == 'QC') {
+
+            return redirect()->route('qcShow', ['id' => $request->get('id'), 'batch_number' => $batch_number, 'label' => $result['label']]);
+        } elseif ($origin == 'BD') {
+
+            return redirect()->route('batchShow', ['batch_number' => $batch_number, 'label' => $result['label']]);
+        } elseif ($origin == 'WP') {
+
+            return redirect()->route('wapShow', ['bin' => $request->get('bin_id'), 'label' => $result['label'], 'show_ship' => '1']);
+        } elseif ($origin == 'SL') {
+
+            $order = Order::find($item->order_5p);
+
+            $order->order_status = 4;
+            $order->save();
+
+            Order::note("Order status changed from Shipped to To Be Processed - Item $item->id rejected after shipping", $order->order_5p, $order->order_id);
+
+            $shipment = Ship::with('items')
+                ->where('order_number', $order->id)
+                ->where('tracking_number', $tracking_number)
+                ->first();
+
+            if ($shipment && $shipment->items && count($shipment->items) == 0) {
+                $shipment->delete();
+            }
+
+            return redirect()->route('shipShow', ['search_for_first' => $tracking_number, 'search_in_first' => 'tracking_number', 'label' => $result['label']]);
+        } elseif ($origin == 'MP') {
+
+            return redirect()->action('GraphicsController@showBatch', ['scan_batches' => $request->get('scan_batches')]);
+        } else {
+
+            $label = $result['label'];
+            return view('prints.includes.label', compact('label'));
+        }
     }
 }
