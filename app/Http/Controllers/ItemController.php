@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Batch;
 use App\Models\Item;
 use App\Models\Option;
 use App\Models\Order;
 use App\Models\Store;
+use App\Models\Wap;
 use Illuminate\Http\Request;
 use Illuminate\Support\MessageBag;
 use library\Helper;
@@ -269,5 +271,87 @@ class ItemController extends Controller
             ];
         };
         return $search;
+    }
+
+    public function deleteOrderItem($order_5p, $item_id)
+    {
+        $item = Item::where('id', $item_id)
+            ->whereNull('tracking_number')
+            ->first();
+
+        if (!$item) {
+            return response()->json([
+                'message' => 'Item ' . $item_id . ' not found.',
+                'status' => 203
+            ], 203);
+        }
+
+        $item->item_status = 6;
+        $item->save();
+
+        if ($item->item_status == 'wap') {
+            Wap::removeItem($item->id, $item->order_5p);
+        }
+
+        if ($item->batch_number != '0') {
+            Batch::isFinished($item->batch_number);
+        }
+
+        $order_item_count = Item::where('order_5p', $order_5p)
+            ->where('item_status', '!=', 6)
+            ->where('item_status', '!=', 2)
+            ->where('is_deleted', '0')
+            ->count();
+
+        if ($order_item_count == 0) {
+            $order = Order::find($order_5p);
+
+            if ($order->order_status != 6) {
+                $order->order_status = 8;
+                $order->save();
+            }
+        }
+
+        return response()->json([
+            'message' => 'Item #' . $item_id . ' cancelled.',
+            'status' => 201
+        ], 201);
+    }
+
+    public function restoreOrderItem($order_5p, $item_id)
+    {
+        $item = Item::where('id', $item_id)
+            ->where('item_status', 6)
+            ->first();
+
+        if (!$item) {
+            return response()->json([
+                'message' => 'Item ' . $item_id . ' not found.',
+                'status' => 203
+            ], 203);
+        }
+
+        $order = Order::find($order_5p);
+
+        if (!$order) {
+            return response()->json([
+                'message' => 'Order ' . $order_5p . ' not found.',
+                'status' => 203
+            ], 203);
+        }
+        $item->batch_number = '0';
+        $item->item_status = 1;
+        $item->save();
+
+        if ($order->order_status != 4) {
+
+            $order->order_status = 4;
+            $order->save();
+        }
+
+        return response()->json([
+            'message' => 'Item #' . $item_id . ' restored.',
+            'status' => 201
+        ], 201);
     }
 }

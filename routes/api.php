@@ -171,6 +171,9 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('orders-update_method', [OrderController::class, 'updateMethod']);
     Route::post('orders-update_shipdate', [OrderController::class, 'updateShipDate']);
     Route::post('orders-item-tracking', [ShippingController::class, 'manualShip']);
+    Route::get('order-delete-item/{order_id}/{item_id}', [ItemController::class, 'deleteOrderItem']);
+    Route::get('order-restore-item/{order_id}/{item_id}', [ItemController::class, 'restoreOrderItem']);
+
     Route::get('order-operator-options', [OrderController::class, 'operatorOption']);
     Route::get('order-search-options', [OrderController::class, 'searchOption']);
     Route::get('order-status-options', [OrderController::class, 'statusOption']);
@@ -242,8 +245,9 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('quality-control-list', [QcControlController::class, 'list']);
     Route::post('quality-control-order', [QcControlController::class, 'order']);
     Route::get('wap', [WapController::class, 'index']);
-    Route::get('wap-details/{id}', [WapController::class, 'ShowBin']);
-
+    Route::get('wap-details', [WapController::class, 'ShowBin']);
+    Route::get('reprint-wap-label', [WapController::class, 'reprintWapLabel']);
+    Route::get('reject-wap-item', [RejectionController::class, 'rejectWapItem']);
 
     Route::get('section-reports', [ReportController::class, 'section']);
     Route::get('ship-date-reports', [ReportController::class, 'shipDate']);
