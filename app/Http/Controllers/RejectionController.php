@@ -9,6 +9,7 @@ use App\Models\Rejection;
 use App\Models\Ship;
 use App\Models\Store;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class RejectionController extends Controller
@@ -175,7 +176,10 @@ class RejectionController extends Controller
         $validation = Validator::make($request->all(), $rules);
 
         if ($validation->fails()) {
-            return redirect()->back()->withErrors($validation);
+            return response()->json([
+                'message' => $validation->errors()->first(),
+                'status' => 203
+            ], 203);
         }
 
         $item = Item::with('inventoryunit')
@@ -183,7 +187,10 @@ class RejectionController extends Controller
             ->first();
 
         if ($item->item_status == 'rejected') {
-            return redirect()->back()->withErrors(['error' => 'Item Already Rejected']);
+            return response()->json([
+                'message' => 'Item Already Rejected',
+                'status' => 203
+            ], 203);
         }
 
         $batch_number = $item->batch_number;
@@ -208,7 +215,6 @@ class RejectionController extends Controller
             $request->get('scrap')
         );
 
-        //send first reprint to production
         if ($request->get('graphic_status') == '1') {
 
             $count = Rejection::where('item_id', $result['reject_id'])->count();
@@ -224,41 +230,69 @@ class RejectionController extends Controller
             }
         }
 
-        if ($origin == 'QC') {
+        //TODO - need to update route for reject
 
-            return redirect()->route('qcShow', ['id' => $request->get('id'), 'batch_number' => $batch_number, 'label' => $result['label']]);
-        } elseif ($origin == 'BD') {
+        // if ($origin == 'QC') {
+        //     return redirect()->route('qcShow', ['id' => $request->get('id'), 'batch_number' => $batch_number, 'label' => $result['label']]);
+        // } elseif ($origin == 'BD') {
 
-            return redirect()->route('batchShow', ['batch_number' => $batch_number, 'label' => $result['label']]);
-        } elseif ($origin == 'WP') {
+        //     return redirect()->route('batchShow', ['batch_number' => $batch_number, 'label' => $result['label']]);
+        // } elseif ($origin == 'WP') {
 
-            return redirect()->route('wapShow', ['bin' => $request->get('bin_id'), 'label' => $result['label'], 'show_ship' => '1']);
-        } elseif ($origin == 'SL') {
+        //     return redirect()->route('wapShow', ['bin' => $request->get('bin_id'), 'label' => $result['label'], 'show_ship' => '1']);
+        // } elseif ($origin == 'SL') {
 
-            $order = Order::find($item->order_5p);
+        //     $order = Order::find($item->order_5p);
 
-            $order->order_status = 4;
+        //     $order->order_status = 4;
+        //     $order->save();
+
+        //     Order::note("Order status changed from Shipped to To Be Processed - Item $item->id rejected after shipping", $order->order_5p, $order->order_id);
+
+        //     $shipment = Ship::with('items')
+        //         ->where('order_number', $order->id)
+        //         ->where('tracking_number', $tracking_number)
+        //         ->first();
+
+        //     if ($shipment && $shipment->items && count($shipment->items) == 0) {
+        //         $shipment->delete();
+        //     }
+
+        //     return redirect()->route('shipShow', ['search_for_first' => $tracking_number, 'search_in_first' => 'tracking_number', 'label' => $result['label']]);
+        // } elseif ($origin == 'MP') {    
+        //     return redirect()->action('GraphicsController@showBatch', ['scan_batches' => $request->get('scan_batches')]);
+        // } else {
+
+        //     $label = $result['label'];
+        //     return view('prints.includes.label', compact('label'));
+        // }
+    }
+
+    public function badAddress(Request $request)
+    {
+        $order = Order::find($request->get('order_id'));
+
+        if (!$order) {
+            return response()->json([
+                'message' => 'Order not found',
+                'status' => 203
+            ], 203);
+        }
+
+        if ($order->order_status == 4) {
+            Log::info('Order ' . $request->get('order_id') . ' updated in WAP to address hold.');
+            $order->order_status = 11;
             $order->save();
 
-            Order::note("Order status changed from Shipped to To Be Processed - Item $item->id rejected after shipping", $order->order_5p, $order->order_id);
-
-            $shipment = Ship::with('items')
-                ->where('order_number', $order->id)
-                ->where('tracking_number', $tracking_number)
-                ->first();
-
-            if ($shipment && $shipment->items && count($shipment->items) == 0) {
-                $shipment->delete();
-            }
-
-            return redirect()->route('shipShow', ['search_for_first' => $tracking_number, 'search_in_first' => 'tracking_number', 'label' => $result['label']]);
-        } elseif ($origin == 'MP') {
-
-            return redirect()->action('GraphicsController@showBatch', ['scan_batches' => $request->get('scan_batches')]);
+            return response()->json([
+                'message' => $order->short_order . ' Address Sent to Customer Service',
+                'status' => 201
+            ], 201);
         } else {
-
-            $label = $result['label'];
-            return view('prints.includes.label', compact('label'));
+            return response()->json([
+                'message' => $order->short_order . ' Cannot be placed in Address Hold, order is not in progress',
+                'status' => 203
+            ], 203);
         }
     }
 }

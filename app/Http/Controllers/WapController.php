@@ -94,7 +94,9 @@ class WapController extends Controller
 
         if ($request->has('bin')) {
 
-            $bin = Wap::with('items.batch', 'order.shippable_items')
+            //TODO : check if query is valid or not
+
+            $bin = Wap::with('items.batch', 'order.shippable_items', 'order.items.batch', 'order.customer', 'order.store')
                 ->where('id', $request->get('bin'))
                 ->first();
 
@@ -195,9 +197,7 @@ class WapController extends Controller
         $thumbs = array();
 
         foreach ($order->items as $item) {
-
             $item_options[$item->id] = Helper::optionTransformer($item->item_option, 1, 1, 1, 1, 0, '<br>');
-
             $thumbs[$item->id] = Sure3d::getThumb($item);
         }
 

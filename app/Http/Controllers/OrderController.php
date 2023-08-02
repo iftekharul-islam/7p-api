@@ -425,7 +425,6 @@ class OrderController extends Controller
                 }
             } else {
                 $item = Item::find($data['id']);
-                info('item_id: ' . $data['item_id'] . ' item: ' . $item);
                 $item->child_sku = $data['child_sku'];
                 $item->item_option = json_encode($options);
                 if (isset($data['item_description'])) {
@@ -458,7 +457,7 @@ class OrderController extends Controller
             Order::note(trim($request->get('note')), $order->id);
         }
 
-        $responseType = $isVerified ? 201 : 201;
+        $responseType = 201;
 
 
         if ($request->get('type') == 'create') {
