@@ -779,9 +779,6 @@ class Shipper
             return 'Item Not Set';
         }
 
-        info("Tracking");
-        info($items);
-        info($order);
 
         $item_ids = array();
 
@@ -810,7 +807,7 @@ class Shipper
                 ZakekeController::setOrderAsShippedShipStation($order->short_order, $track_number);
             } catch (\Exception $exception) {
             }
-            Order::note('Tracking number ' . $track_number . ' added to item ' . $item->id, $order->id, $order->order_id);
+            Order::note('Tracking number ' . $track_number . ' added to item ' . $item?->id, $order->id, $order->order_id);
         }
         $remaining = Item::where('order_5p', $order->id)
             ->searchStatus('shippable')

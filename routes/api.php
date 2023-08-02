@@ -248,6 +248,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('wap-details', [WapController::class, 'ShowBin']);
     Route::get('reprint-wap-label', [WapController::class, 'reprintWapLabel']);
     Route::get('reject-wap-item', [RejectionController::class, 'rejectWapItem']);
+    Route::post('bad-address', [RejectionController::class, 'badAddress']);
 
     Route::get('section-reports', [ReportController::class, 'section']);
     Route::get('ship-date-reports', [ReportController::class, 'shipDate']);
