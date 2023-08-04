@@ -107,7 +107,7 @@ class Shipper
         $order = Order::with('store', 'customer')
             ->find($order_id);
 
-        if (count($order) == 0) {
+        if (!isset($order)) {
             return 'ERROR: Order Not Found Order: ' . $order_id . ' Origin: ' . $origin;
         }
 

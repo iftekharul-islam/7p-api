@@ -10,6 +10,7 @@
   "require": {
     "php": "^8.1",
     "barryvdh/laravel-dompdf": "^2.0",
+    "easypost/easypost-php": "^6.8",
     "guzzlehttp/guzzle": "^7.2",
     "laravel/framework": "^10.0",
     "laravel/sanctum": "^3.2",

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "11a88cbc9046221c10e5dd83327c8b1d",
+    "content-hash": "1b88db20704dcb2f91e5ab24e473f626",
     "packages": [
         {
             "name": "barryvdh/laravel-dompdf",
@@ -584,6 +584,64 @@
                 }
             ],
             "time": "2022-09-10T18:51:20+00:00"
+        },
+        {
+            "name": "easypost/easypost-php",
+            "version": "6.8.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/EasyPost/easypost-php.git",
+                "reference": "5f44adfeb590cac2994ac28a93afe2808dd48d33"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/EasyPost/easypost-php/zipball/5f44adfeb590cac2994ac28a93afe2808dd48d33",
+                "reference": "5f44adfeb590cac2994ac28a93afe2808dd48d33",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "guzzlehttp/guzzle": "^7.5",
+                "php": ">=7.4"
+            },
+            "require-dev": {
+                "allejo/php-vcr-sanitizer": "^1.0.9",
+                "php-coveralls/php-coveralls": "^2.5",
+                "php-vcr/php-vcr": "^1.5.5",
+                "phpunit/phpunit": "^9",
+                "roave/security-advisories": "dev-latest",
+                "rregeer/phpunit-coverage-check": "^0.3.1",
+                "squizlabs/php_codesniffer": "^3.7"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "EasyPost\\": "lib/EasyPost/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "EasyPost Developers",
+                    "email": "oss@easypost.com",
+                    "homepage": "https://www.easypost.com"
+                }
+            ],
+            "description": "EasyPost Shipping API Client Library for PHP",
+            "homepage": "https://github.com/EasyPost/easypost-php",
+            "keywords": [
+                "api",
+                "easypost",
+                "shipping"
+            ],
+            "support": {
+                "issues": "https://github.com/EasyPost/easypost-php/issues",
+                "source": "https://github.com/EasyPost/easypost-php/tree/v6.8.0"
+            },
+            "time": "2023-07-28T15:18:43+00:00"
         },
         {
             "name": "egulias/email-validator",
