@@ -56,7 +56,7 @@ class Wap extends Model
 
             $bin = Wap::where('order_id', $order_id)->first();
 
-            if ($bin && count($bin) > 0) {
+            if (isset($bin)) {
                 WapItem::where('bin_id', $bin->id)->delete();
 
                 $bin->order_id = NULL;
