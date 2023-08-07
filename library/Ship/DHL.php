@@ -5,11 +5,11 @@ namespace Monogram\Ship;
 
 
 use Exception;
-use Monogram\Helper;
 use Ship\Shipper;
 use Illuminate\Support\Facades\Log;
 use App\Ship;
 use App\DhlManifest;
+use library\Helper;
 
 class DHL
 {
@@ -33,7 +33,7 @@ class DHL
     public function getLabel($store, $order, $unique_order_id, $method = null, $packages = [0])
     {
 
-//        dd($store, $order, $unique_order_id, $method, $packages);
+        //        dd($store, $order, $unique_order_id, $method, $packages);
         $customer = $order->customer;
         $customerName = substr(Helper::removeSpecial($customer['ship_full_name']), 0, 35);
         $customerAddress1 = trim($customer['ship_address_1']);
@@ -88,85 +88,85 @@ class DHL
             $billingRef2 = '';
         }
 
-        $packageId = "40Monogramonline-".$order->short_order;#str_replace('-', '', $order->id);
-        $packageDescription = "Order ".$packageId;
+        $packageId = "40Monogramonline-" . $order->short_order; #str_replace('-', '', $order->id);
+        $packageDescription = "Order " . $packageId;
 
-        if (!isset($this->getServiceMethodCode[$method])){
+        if (!isset($this->getServiceMethodCode[$method])) {
             $method = "_SMARTMAIL_PARCEL_EXPEDITED";
             $this->getServiceMethodCode[$method];
         }
 
         $json_array = array(
             'shipments' =>
+            array(
+                0 =>
                 array(
-                    0 =>
+                    'pickup' => '5326256',
+                    'distributionCenter' => 'USEWR1',
+                    'packages' =>
+                    array(
+                        0 =>
                         array(
-                            'pickup' => '5326256',
-                            'distributionCenter' => 'USEWR1',
-                            'packages' =>
+                            'consigneeAddress' =>
+                            array(
+                                'name' => $customerName, //'Mohammad Tarikul Islam Jewel',
+                                'companyName' => $customer_company_name,
+                                'address1' => $customerAddress1,
+                                'address2' => $customerAddress2,
+                                'city' => trim($customer['ship_city']),
+                                'country' => $country_code,
+                                'phone' => $customer_phone,
+                                'postalCode' => $customer['ship_zip'],
+                                'state' => $customer['ship_state'],
+                                'email' => $customer['bill_email'],
+                            ),
+                            'packageDetails' =>
+                            array(
+                                'currency' => 'USD',
+                                'dutiesPaid' => 'N',
+                                'orderedProduct' => $this->getServiceMethodCode[$method], //'631',
+                                'packageId' => $packageId,
+                                'packageDesc' => $packageDescription,
+                                'mailtype' => 2, // Irregular Parcel
+                                'weight' => 1,
+                                'weightUom' => "OZ", #$weightUnit,
+                                'dimensionUom' => 'IN',
+                                'height' => 1,
+                                'width' => 5,
+                                'length' => 5,
+                                'billingRef1' => $billingRef1,
+                                'billingRef2' => $billingRef2
+                            ),
+                            'returnAddress' =>
+                            array(
+                                'name' => 'Customer Service Dept',
+                                'companyName' => substr($store->ship_name, 0, 35),
+                                'address1' => $store->address_1,
+                                'address2' => $store->address_2,
+                                'city' => $store->city,
+                                'state' => $store->state,
+                                'country' => 'US',
+                                'phone' => $store->phone,
+                                'postalCode' => $store->zip,
+
+
+                            ),
+                            'customsDetails' =>
+                            array(
+                                0 =>
                                 array(
-                                    0 =>
-                                        array(
-                                            'consigneeAddress' =>
-                                                array(
-                                                    'name' => $customerName,//'Mohammad Tarikul Islam Jewel',
-                                                    'companyName' => $customer_company_name,
-                                                    'address1' => $customerAddress1,
-                                                    'address2' => $customerAddress2,
-                                                    'city' => trim($customer['ship_city']),
-                                                    'country' => $country_code,
-                                                    'phone' => $customer_phone,
-                                                    'postalCode' => $customer['ship_zip'],
-                                                    'state' => $customer['ship_state'],
-                                                    'email' => $customer['bill_email'],
-                                                ),
-                                            'packageDetails' =>
-                                                array(
-                                                    'currency' => 'USD',
-                                                    'dutiesPaid' => 'N',
-                                                    'orderedProduct' => $this->getServiceMethodCode[$method],//'631',
-                                                    'packageId' => $packageId,
-                                                    'packageDesc' => $packageDescription,
-                                                    'mailtype' => 2, // Irregular Parcel
-                                                    'weight' => 1,
-                                                    'weightUom' => "OZ", #$weightUnit,
-                                                    'dimensionUom' => 'IN',
-                                                    'height' => 1,
-                                                    'width' => 5,
-                                                    'length' => 5,
-                                                    'billingRef1' => $billingRef1,
-                                                    'billingRef2' => $billingRef2
-                                                ),
-                                            'returnAddress' =>
-                                                array(
-                                                    'name' => 'Customer Service Dept',
-                                                    'companyName' => substr($store->ship_name, 0, 35),
-                                                    'address1' => $store->address_1,
-                                                    'address2' => $store->address_2,
-                                                    'city' => $store->city,
-                                                    'state' => $store->state,
-                                                    'country' => 'US',
-                                                    'phone' => $store->phone,
-                                                    'postalCode' => $store->zip,
-
-
-                                                ),
-                                            'customsDetails' =>
-                                                array(
-                                                    0 =>
-                                                        array(
-                                                            'itemDescription' => $packageDescription,
-                                                            'countryOfOrigin' => 'US',
-//                                                            'hsCode' => 'hscode',
-                                                            'packagedQuantity' => 1,
-                                                            'itemValue' => 1,
-                                                            'skuNumber' => '1P',
-                                                        ),
-                                                ),
-                                        ),
+                                    'itemDescription' => $packageDescription,
+                                    'countryOfOrigin' => 'US',
+                                    //                                                            'hsCode' => 'hscode',
+                                    'packagedQuantity' => 1,
+                                    'itemValue' => 1,
+                                    'skuNumber' => '1P',
                                 ),
+                            ),
                         ),
+                    ),
                 ),
+            ),
         );
 
 
@@ -182,7 +182,10 @@ class DHL
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 
         // Set headers
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        curl_setopt(
+            $ch,
+            CURLOPT_HTTPHEADER,
+            [
                 "Content-Type: application/json; charset=utf-8",
                 "Accept: application/zpl",
             ]
@@ -197,11 +200,11 @@ class DHL
             $resp = curl_exec($ch);
             $decoded_response = json_decode($resp, false, 512, JSON_BIGINT_AS_STRING);
 
-//            echo "<pre>";
-//            echo "Respond Result = ";
-//            print_r($decoded_response);
-//            echo "</pre>";
-//            dd($decoded_response, $resp);
+            //            echo "<pre>";
+            //            echo "Respond Result = ";
+            //            print_r($decoded_response);
+            //            echo "</pre>";
+            //            dd($decoded_response, $resp);
 
 
 
@@ -214,10 +217,10 @@ class DHL
                 curl_close($ch);
                 $trackingInfo = array();
                 $trackingInfo['image'] = $zpl_label;
-                if($method == "_PARCEL_INTERNATIONAL_DIRECT"){
+                if ($method == "_PARCEL_INTERNATIONAL_DIRECT") {
                     $trackingInfo['tracking_number'] = $packageId;
                     $trackingInfo['shipping_id'] = $packageId; // Need clarification on this.
-                }else{
+                } else {
                     $trackingInfo['tracking_number'] = $tracking_number;
                     $trackingInfo['shipping_id'] = $tracking_number; // Need clarification on this.
                 }
@@ -225,9 +228,9 @@ class DHL
                 $trackingInfo['mail_class'] = $method;
 
                 $trackingInfo['type'] = 'DHL';
-//            dd($trackingInfo, $decoded_response);
-//            echo "Response HTTP Status Code : " . curl_getinfo($ch, CURLINFO_HTTP_CODE);
-//            echo "\nResponse HTTP Body : " . json_encode($resp);
+                //            dd($trackingInfo, $decoded_response);
+                //            echo "Response HTTP Status Code : " . curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                //            echo "\nResponse HTTP Body : " . json_encode($resp);
                 return $trackingInfo;
             }
 
@@ -236,8 +239,6 @@ class DHL
             Log::error($e->getMessage());
             return 'ERROR: ' . $e->getMessage();
         }
-
-
     }
 
 
@@ -264,7 +265,6 @@ class DHL
         } else {
             return false;
         }
-
     }
 
     public function trackByNumber($tracking)
@@ -272,8 +272,8 @@ class DHL
 
         // Get cURL resource
         $ch = curl_init();
-//        $testUrl = 'https://api.dhlglobalmail.com/v2/mailitems/track?number='.$tracking.'&access_token='.$token.'&client_id=59995';
-//        dd($testUrl);
+        //        $testUrl = 'https://api.dhlglobalmail.com/v2/mailitems/track?number='.$tracking.'&access_token='.$token.'&client_id=59995';
+        //        dd($testUrl);
         // Set url
         curl_setopt($ch, CURLOPT_URL, 'https://api.dhlglobalmail.com/v2/mailitems/track?number=' . $tracking . '&access_token=' . $this->accessToken . '&client_id=59995');
         // Set method
@@ -282,7 +282,10 @@ class DHL
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 
         // Set headers
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        curl_setopt(
+            $ch,
+            CURLOPT_HTTPHEADER,
+            [
                 "Content-Type: application/json; charset=utf-8",
                 "Accept: application/json",
 
@@ -295,17 +298,16 @@ class DHL
         dd($resp);
 
         curl_close($ch);
-
     }
 
 
     public function getDhlManifest($dhlManifestDate)
     {
         $allTracking = Ship::whereNotNull('tracking_number')
-            ->where('postmark_date','like',$dhlManifestDate)
-            ->where('tracking_type',"DHL")
-            ->where('manifestStatus',0)
-            ->where('mail_class','!=',"_PARCEL_INTERNATIONAL_DIRECT")
+            ->where('postmark_date', 'like', $dhlManifestDate)
+            ->where('tracking_type', "DHL")
+            ->where('manifestStatus', 0)
+            ->where('mail_class', '!=', "_PARCEL_INTERNATIONAL_DIRECT")
             ->groupBy('unique_order_id')
             ->latest('created_at')
             ->limit(9000)
@@ -313,42 +315,45 @@ class DHL
                 'shipping.shipping_id AS packageId',
             ])->toArray();
 
-//        $single = [
-//            [
-//                "packageId" => "420926209374869903505395463479"
-//            ]
-//        ];
-////$allTracking = $single;
-//          dd($dhlManifestDate, $allTracking, json_encode($allTracking));
+        //        $single = [
+        //            [
+        //                "packageId" => "420926209374869903505395463479"
+        //            ]
+        //        ];
+        ////$allTracking = $single;
+        //          dd($dhlManifestDate, $allTracking, json_encode($allTracking));
 
-        if(empty($allTracking)){
-          #    echo "No DHL data found";
+        if (empty($allTracking)) {
+            #    echo "No DHL data found";
             Log::error("No DHL data found");
-          #    exit();
+            #    exit();
             return "No DHL data found";
         }
 
 
         $json_array['closeoutRequests'][0] = [
-                'packages' =>
-                    $allTracking
+            'packages' =>
+            $allTracking
         ];
-          #dd($json_array);
+        #dd($json_array);
         $token = $this->getAccessToken();
         $this->accessToken = $token;
         // Get cURL resource
         $ch = curl_init();
         // Set url
-          #curl_setopt($ch, CURLOPT_URL, 'https://api.dhlglobalmail.com/v2/locations/5326256/closeout/all?access_token=' . $token . '&client_id=59995');
+        #curl_setopt($ch, CURLOPT_URL, 'https://api.dhlglobalmail.com/v2/locations/5326256/closeout/all?access_token=' . $token . '&client_id=59995');
         curl_setopt($ch, CURLOPT_URL, 'https://api.dhlglobalmail.com/v2/locations/5326256/closeout/multi.json?access_token=' . $token . '&client_id=59995');
         // Set method
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
-          #curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
+        #curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
         // Set options
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 
         // Set headers
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        curl_setopt(
+            $ch,
+            CURLOPT_HTTPHEADER,
+            [
                 "Content-Type: application/json; charset=utf-8",
                 "Accept: application/zpl",
             ]
@@ -364,32 +369,32 @@ class DHL
             $resp = curl_exec($ch);
             $decoded_response = json_decode($resp, false, 512, JSON_BIGINT_AS_STRING);
             curl_close($ch);
-          #    dd($decoded_response);
+            #    dd($decoded_response);
             if ($decoded_response->meta->code != '200') {
-                if($decoded_response->meta->error[0]->error_message == "There are no items to closeout"){
+                if ($decoded_response->meta->error[0]->error_message == "There are no items to closeout") {
                     return $decoded_response->meta->error[0]->error_message;
                 }
 
                 Log::error('Error DhlManifestPdfUrl: "' . $decoded_response->meta->error[0]->error_message);
-          #        return 'Error DhlManifestPdfUrl: "' . curl_error($ch) . '" - Code: ' . curl_errno($ch);
+                #        return 'Error DhlManifestPdfUrl: "' . curl_error($ch) . '" - Code: ' . curl_errno($ch);
                 echo "<pre>";
-                    echo "\nPlease Send this error message to Jewel\n\n\n";
-                    echo 'API URL with token = https://api.dhlglobalmail.com/v2/locations/5326256/closeout/multi.json?access_token=' . $token . '&client_id=59995';
-                    echo "\nRequest Body as Json = ";
-                    print_r($body);
+                echo "\nPlease Send this error message to Jewel\n\n\n";
+                echo 'API URL with token = https://api.dhlglobalmail.com/v2/locations/5326256/closeout/multi.json?access_token=' . $token . '&client_id=59995';
+                echo "\nRequest Body as Json = ";
+                print_r($body);
                 echo "</pre>";
 
                 echo ('Error DhlManifestPdfUrl: "' . $decoded_response->meta->error[0]->error_message);
-                    echo "<pre>";
-                    echo "\n\n\nRespond Result = ";
-                    print_r($decoded_response);
+                echo "<pre>";
+                echo "\n\n\nRespond Result = ";
+                print_r($decoded_response);
                 echo "</pre>";
                 dd($decoded_response);
             } else {
                 $dhlManifestPdfUrl = $decoded_response->data->closeouts[0]->manifests[0]->url;
                 $manifestId = $decoded_response->data->closeouts[0]->manifests[0]->manifestId;
 
-                $this->dhlManifestArray =[];
+                $this->dhlManifestArray = [];
                 $this->dhlManifestArray['manifestDate'] = $dhlManifestDate;
                 $this->dhlManifestArray['store_id'] = "52053152";
                 $this->dhlManifestArray['mail_class'] = "_SMARTMAIL_PARCEL_EXPEDITED";
@@ -406,20 +411,18 @@ class DHL
             // Close request to clear up some resources
         } catch (Exception $e) {
             Log::error($e->getMessage());
-          #    return 'ERROR: ' . $e->getMessage();
+            #    return 'ERROR: ' . $e->getMessage();
             return $error['error'] = $e->getMessage();
         }
-
-
     }
 
     public function getDhlInternationalManifest($dhlManifestDate)
     {
         $allTracking = Ship::whereNotNull('tracking_number')
-            ->where('postmark_date','like',$dhlManifestDate)
-            ->where('tracking_type',"DHL")
-            ->where('manifestStatus',0)
-            ->where('mail_class',"_PARCEL_INTERNATIONAL_DIRECT")
+            ->where('postmark_date', 'like', $dhlManifestDate)
+            ->where('tracking_type', "DHL")
+            ->where('manifestStatus', 0)
+            ->where('mail_class', "_PARCEL_INTERNATIONAL_DIRECT")
             ->groupBy('unique_order_id')
             ->latest('created_at')
             ->limit(9000)
@@ -427,13 +430,13 @@ class DHL
                 'shipping.shipping_id AS packageId',
             ])->toArray();
 
-          #dd($dhlManifestDate, $allTracking, json_encode($allTracking));
+        #dd($dhlManifestDate, $allTracking, json_encode($allTracking));
 
-        if(empty($allTracking)){
-          #    echo "No DHL data found";
+        if (empty($allTracking)) {
+            #    echo "No DHL data found";
             Log::error("No DHL data found");
-          #    return "error";
-          #    dd($dhlManifestDate, $allTracking, json_encode($allTracking));
+            #    return "error";
+            #    dd($dhlManifestDate, $allTracking, json_encode($allTracking));
             $error = [];
             return "No DHL data found";
         }
@@ -441,25 +444,28 @@ class DHL
 
         $json_array['closeoutRequests'][0] = [
             'packages' =>
-                $allTracking
+            $allTracking
 
         ];
-          #dd($json_array);
+        #dd($json_array);
         $token = $this->getAccessToken();
         $this->accessToken = $token;
         // Get cURL resource
         $ch = curl_init();
         // Set url
-          #curl_setopt($ch, CURLOPT_URL, 'https://api.dhlglobalmail.com/v2/locations/5326256/closeout/all?access_token=' . $token . '&client_id=59995');
+        #curl_setopt($ch, CURLOPT_URL, 'https://api.dhlglobalmail.com/v2/locations/5326256/closeout/all?access_token=' . $token . '&client_id=59995');
         curl_setopt($ch, CURLOPT_URL, 'https://api.dhlglobalmail.com/v2/locations/5326256/closeout/multi.json?access_token=' . $token . '&client_id=59995');
         // Set method
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
-          #curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
+        #curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
         // Set options
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 
         // Set headers
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        curl_setopt(
+            $ch,
+            CURLOPT_HTTPHEADER,
+            [
                 "Content-Type: application/json; charset=utf-8",
                 "Accept: application/zpl",
             ]
@@ -477,31 +483,30 @@ class DHL
             curl_close($ch);
             #dd($decoded_response, $decoded_response->meta->code);
             if ($decoded_response->meta->code != "200") {
-                if($decoded_response->meta->error[0]->error_message == "There are no items to closeout"){
+                if ($decoded_response->meta->error[0]->error_message == "There are no items to closeout") {
                     return $decoded_response->meta->error[0]->error_message;
                 }
 
                 Log::error('Error DhlManifestPdfUrl: "' . $decoded_response->meta->error[0]->error_message);
 
                 echo "<pre>";
-                    echo "\nPlease Send this error message to Jewel\n\n\n";
-                    echo 'API URL with token = https://api.dhlglobalmail.com/v2/locations/5326256/closeout/multi.json?access_token=' . $token . '&client_id=59995';
-                    echo "\nRequest Body as Json = ";
-                    print_r($body);
+                echo "\nPlease Send this error message to Jewel\n\n\n";
+                echo 'API URL with token = https://api.dhlglobalmail.com/v2/locations/5326256/closeout/multi.json?access_token=' . $token . '&client_id=59995';
+                echo "\nRequest Body as Json = ";
+                print_r($body);
                 echo "</pre>";
 
                 echo ('Error DhlManifestPdfUrl: "' . $decoded_response->meta->error[0]->error_message);
                 echo "<pre>";
-                    echo "\n\n\nRespond Result = ";
-                    print_r($decoded_response);
+                echo "\n\n\nRespond Result = ";
+                print_r($decoded_response);
                 echo "</pre>";
                 dd($decoded_response);
-
             } else {
                 $dhlManifestPdfUrl = $decoded_response->data->closeouts[0]->manifests[0]->url;
                 $manifestId = $decoded_response->data->closeouts[0]->manifests[0]->manifestId;
 
-                $this->dhlManifestArray =[];
+                $this->dhlManifestArray = [];
                 $this->dhlManifestArray['manifestDate'] = $dhlManifestDate;
                 $this->dhlManifestArray['store_id'] = "52053152";
                 $this->dhlManifestArray['mail_class'] = "_PARCEL_INTERNATIONAL_DIRECT";
@@ -513,20 +518,19 @@ class DHL
                 $this->saveDhlManifest($this->dhlManifestArray);
                 $this->updateDHLMainfestStatus($dhlManifestDate);
                 return "success";
-            #   return redirect()->action('DhlManifestController@index')->withSuccess('DhlManifest saved successfully.');
-            #   $dhlManifestPdfUrl = $decoded_response->data->closeouts[0]->manifests[0]->url;
-            #   dd($decoded_response, $dhlManifestPdfUrl);
+                #   return redirect()->action('DhlManifestController@index')->withSuccess('DhlManifest saved successfully.');
+                #   $dhlManifestPdfUrl = $decoded_response->data->closeouts[0]->manifests[0]->url;
+                #   dd($decoded_response, $dhlManifestPdfUrl);
             }
 
             #   Close request to clear up some resources
         } catch (Exception $e) {
-            Log::error("DHL Error: ". $e->getMessage());
+            Log::error("DHL Error: " . $e->getMessage());
             return $e->getMessage();
         }
-
     }
 
-    public function saveDhlManifest ($dhlManifestArray)
+    public function saveDhlManifest($dhlManifestArray)
     {
         $dhlManifest = new DhlManifest();
         $dhlManifest->manifestDate  = trim($dhlManifestArray['manifestDate']);
@@ -540,16 +544,15 @@ class DHL
         $dhlManifest->save();
     }
 
-    private function updateDHLMainfestStatus($dhlManifestDate){
+    private function updateDHLMainfestStatus($dhlManifestDate)
+    {
 
         Ship::whereNotNull('tracking_number')
-            ->where('postmark_date','like', $dhlManifestDate)
-            ->where('tracking_type',"DHL")
-            ->where('manifestStatus',0)
+            ->where('postmark_date', 'like', $dhlManifestDate)
+            ->where('tracking_type', "DHL")
+            ->where('manifestStatus', 0)
             ->update([
                 'manifestStatus' => '1',
             ]);
-
     }
-
 }

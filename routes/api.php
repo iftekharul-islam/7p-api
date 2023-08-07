@@ -325,11 +325,11 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
 });
 
 
-Route::post('test', function () {
+Route::get('test', function () {
     return response()->json([
         'data' => 'http://7p.test/wasatch/staging-2/673216.xml',
         // 'data' => $downloadfile,
-        'message' => 'Printed',
+        'message' => 'Printed by',
         'status' => 201
     ], 201);
 });

@@ -381,7 +381,7 @@ class Shipper
                     Batch::isFinished($item->batch_number);
                 }
 
-                $relation = new ItemShip;
+                $relation = new ItemShip();
                 $relation->item_id = $item->id;
                 $relation->ship_id = $ship->id;
                 $relation->save();
@@ -611,7 +611,7 @@ class Shipper
 
     private function saveLabels($graphicImage, $unique_order_id)
     {
-        Log::info(sprintf('Saving label %S in %s', $unique_order_id, 'assets/images/shipping_label/' . $unique_order_id . ".zpl"));
+        // Log::info(sprintf('Saving label %S in %s', $unique_order_id, 'assets/images/shipping_label/' . $unique_order_id . ".zpl"));
         $lock_path = public_path('assets/images/shipping_label/');
         $myfile = fopen($lock_path . $unique_order_id . ".zpl", "wb") or die("Unable to open file!");
         fwrite($myfile, (string) $graphicImage);

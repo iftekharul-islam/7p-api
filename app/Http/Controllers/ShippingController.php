@@ -136,6 +136,7 @@ class ShippingController extends Controller
                 }
 
 
+                //test complete
                 $ship_info = $shipper->createShipment($request->get('origin'), $request->get('order_id'), $request->get('batch_number'), $packages, $item_ids, $params);
 
                 if (is_array($ship_info) && isset($ship_info['reminder'])) {
