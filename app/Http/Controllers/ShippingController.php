@@ -141,10 +141,17 @@ class ShippingController extends Controller
 
                 if (is_array($ship_info) && isset($ship_info['reminder'])) {
 
-                    return response()->json([
-                        'message' => 'Updated Successfully',
-                        'status' => 201
-                    ], 201);
+                    return response()->json(['params' => [
+                        'bin' => $request->get('bin'),
+                        'order_id' => $request->get('order_id'),
+                        'unique_order_id' => $ship_info['unique_order_id'],
+                        'reminder' => $ship_info['reminder']
+                    ], 'status' => 201, 'message' => 'Updated Successfully'], 201);
+
+                    // return response()->json([
+                    //     'message' => 'Updated Successfully',
+                    //     'status' => 201
+                    // ], 201);
                     // return redirect()->route(
                     //     'qcShow',
                     //     [
@@ -196,6 +203,13 @@ class ShippingController extends Controller
                 $ship_info = $shipper->createShipment($request->get('origin'), $request->get('order_id'), null, $packages, $item_ids, $params);
 
                 if (is_array($ship_info) && isset($ship_info['reminder'])) {
+
+                    return response()->json(['params' => [
+                        'bin' => $request->get('bin'),
+                        'order_id' => $request->get('order_id'),
+                        'unique_order_id' => $ship_info['unique_order_id'],
+                        'reminder' => $ship_info['reminder']
+                    ], 'message' => 'Updated Successfully', 'status' => 201], 201);
 
                     return response()->json(['message' => 'Updated Successfully', 'status' => 201], 201);
                     // return redirect()->route('wapShow', [
