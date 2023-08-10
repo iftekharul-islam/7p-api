@@ -244,6 +244,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('quality-control', [QcControlController::class, 'index']);
     Route::get('quality-control-list', [QcControlController::class, 'list']);
     Route::post('quality-control-order', [QcControlController::class, 'order']);
+    Route::post('quality-control-order-data', [QcControlController::class, 'showBatch']);
     Route::get('wap', [WapController::class, 'index']);
     Route::get('wap-details', [WapController::class, 'ShowBin']);
     Route::get('reprint-wap-label', [WapController::class, 'reprintWapLabel']);
