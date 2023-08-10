@@ -242,12 +242,15 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     // Shipping and WAP
     Route::get('must-ship-report', [ReportController::class, 'mustShipReport']);
     Route::get('quality-control', [QcControlController::class, 'index']);
-    Route::get('quality-control-list', [QcControlController::class, 'list']);
-    Route::post('quality-control-order', [QcControlController::class, 'order']);
+    Route::get('quality-control-list', [QcControlController::class, 'showStation']);
+    Route::post('quality-control-order', [QcControlController::class, 'scanIn']);
+    Route::post('quality-control-order-data', [QcControlController::class, 'showBatch']);
+    Route::post('quality-control-show-order', [QcControlController::class, 'showOrder']);
     Route::get('wap', [WapController::class, 'index']);
     Route::get('wap-details', [WapController::class, 'ShowBin']);
     Route::get('reprint-wap-label', [WapController::class, 'reprintWapLabel']);
     Route::get('reject-wap-item', [RejectionController::class, 'rejectWapItem']);
+    Route::get('reject-qc-item', [RejectionController::class, 'rejectQCItem']);
     Route::post('bad-address', [RejectionController::class, 'badAddress']);
     Route::post('ship-item', [ShippingController::class, 'shipItems']);
 
