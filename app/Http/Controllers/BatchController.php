@@ -536,4 +536,50 @@ class BatchController extends Controller
             ], 203);
         }
     }
+    private function moveStation($batch_number, $station_change = null)
+    {
+
+        $batch = Batch::with('route.stations_list')
+            ->where('batch_number', $batch_number)
+            ->first();
+
+        if (count($batch) < 1) {
+            return false;
+        } else {
+
+            if ($station_change == null || $station_change == 'G') {
+                $station_change = $batch->route->stations_list->first()->station_id;
+            } else if ($station_change == 'P') {
+                $station_change = $batch->route->production_stations->first()->id;
+            } else if ($station_change == 'Q') {
+                $station_change = $batch->route->qc_stations->first()->id;
+            }
+
+            $batch->prev_station_id = $batch->station_id;
+            $batch->station_id = $station_change;
+            $batch->status = 'active';
+            $batch->save();
+
+            $items = Item::where('batch_number', $batch->batch_number)
+                ->where('is_deleted', '0')
+                ->get();
+
+            foreach ($items as $item) {
+                $item->item_status = 1;
+                $item->save();
+            }
+
+            Rejection::where('to_batch', $batch->batch_number)
+                ->whereNull('to_station_id')
+                ->update([
+                    'supervisor_user_id' => auth()->user()->id,
+                    'to_station_id'      => $station_change,
+                    'complete'           => '1'
+                ]);
+
+            Batch::note($batch->batch_number, $batch->station_id, '5', 'Reject batch moved into production');
+
+            return true;
+        }
+    }
 }

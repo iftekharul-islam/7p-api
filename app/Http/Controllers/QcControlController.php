@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Batch;
 use App\Models\BatchScan;
 use App\Models\Item;
+use App\Models\Order;
 use App\Models\Station;
 use Illuminate\Http\Request;
 use library\Helper;
+use Ship\Sure3d;
 
 class QcControlController extends Controller
 {
@@ -33,7 +35,7 @@ class QcControlController extends Controller
         ], 200);
     }
 
-    public function list(Request $request)
+    public function showStation(Request $request)
     {
         if (!$request->has('station_id')) {
             return response()->json([
@@ -64,7 +66,7 @@ class QcControlController extends Controller
         ], 200);
     }
 
-    public function order(Request $request)
+    public function scanIn(Request $request)
     {
         if ($request->has('batch_number')) {
             if (substr(trim($request->get('batch_number')), 0, 4) == 'BATC') {
@@ -82,7 +84,6 @@ class QcControlController extends Controller
                     'status' => 203,
                 ], 203);
             } else {
-
                 if ($batch->status != 'active') {
 
                     $related = Batch::related($batch_number);
@@ -128,85 +129,13 @@ class QcControlController extends Controller
         $scan->in_date = date("Y-m-d H:i:s");
         $scan->save();
 
-        $batch_number = $batch->batch_number;
-        $id = $batch->id;
-        $reminder = $request->get('reminder');
-
-        $label = null;
-
-        $label_order = null;
-
-        if ($request->has('batch_number')) {
-
-            $qc_stations = Station::where('type', 'Q')
-                ->get()
-                ->pluck('id');
-
-            $batch = Batch::with('items.order.customer', 'items.wap_item.bin', 'prev_station', 'station', 'scanned_in.in_user')
-                ->searchStatus('qc_view')
-                ->whereIn('station_id', $qc_stations)
-                ->where('batch_number', $batch_number)
-                ->where('batches.id', $id)
-                ->first();
-
-            if (!$batch) {
-                return response()->json([
-                    'message' => sprintf('Batch %s not found', $batch_number),
-                    'status' => 203,
-                ], 203);
-            }
-
-            if (!$batch->scanned_in) {
-                return response()->json([
-                    'message' => sprintf('Batch %s not Scanned Into QC', $batch_number),
-                    'status' => 203,
-                ], 203);
-            }
-
-            if (isset($batch->items)) {
-                $complete = Item::searchStatus('production')
-                    ->where('batch_number', $batch_number)
-                    ->groupBy('batch_number')
-                    ->where('is_deleted', '0')
-                    ->count();
-
-                if ($complete == 0) {
-                    $this->scanOut($batch->batch_number);
-
-                    if ($batch->status != 'empty' && $batch->status != 'complete') {
-                        $batch->status = 'complete';
-                        $batch->save();
-                    }
-                }
-            }
-
-            $options = array();
-
-            foreach ($batch->items as $item) {
-                $options[$item->id] = Helper::optionTransformer($item->item_option, 0, 1, 1, 0, 0, '<br>');
-            }
-        } else {
-            return response()->json([
-                'message' => sprintf('No Batch Number Provided'),
-                'status' => 203,
-            ], 203);
-        }
-
-        $order_ids = array_unique($batch->items->pluck('order_5p')->toArray());
-
-        if ($batch->status == 'active' && count($order_ids) == 1) {
-            return response()->json([
-                'params' => [
-                    'batch_number' => $batch_number,
-                    'id' => $id,
-                    'order_5p' => $batch->items->first()->order_5p,
-                ],
-                'status' => 200,
-            ], 200);
-            return redirect()->action('QcController@showOrder', ['batch_number' => $batch_number, 'id' => $id, 'order_5p' => $batch->items->first()->order_5p]);
-        } else {
-            return view('quality_control.batch', compact('id', 'batch', 'batch_number', 'options', 'label', 'label_order', 'user', 'reminder'));
-        }
+        return response()->json([
+            'params' => [
+                'batch_number' => $batch->batch_number,
+                'id' => $batch->id,
+            ],
+            'status' => 200,
+        ], 200);
     }
     public function showBatch(Request $request)
     {
@@ -310,9 +239,8 @@ class QcControlController extends Controller
                     'id' => $id,
                     'order_5p' => $batch->items->first()->order_5p,
                 ],
-                'status' => 202,
-            ], 202);
-            return redirect()->action('QcController@showOrder', ['batch_number' => $batch_number, 'id' => $id, 'order_5p' => $batch->items->first()->order_5p]);
+                'status' => 206,
+            ], 206);
         } else {
             return response()->json([
                 'id' => $id,
@@ -325,7 +253,149 @@ class QcControlController extends Controller
                 'reminder' => $reminder,
 
             ], 200);
-            return view('quality_control.batch', compact('id', 'batch', 'batch_number', 'options', 'label', 'label_order', 'user', 'reminder'));
         }
+    }
+
+    public function showOrder(Request $request)
+    {
+        $batch_number = $request->get('batch_number');
+        $id = $request->get('id');
+        $order_5p = $request->get('order_5p');
+
+        if ($request->has('label') && $request->get('label') != 'session') {
+            $label = $request->get('label');
+        } else if ($request->get('label') == 'session') {
+            $label = $request->session()->pull('label', 'default');
+        } else {
+            $label = null;
+        }
+
+        $qc_stations = Station::where('type', 'Q')
+            ->get()
+            ->pluck('id');
+
+        $batch = Batch::with('scanned_in.in_user', 'items')
+            ->where('batch_number', $batch_number)
+            ->where('batches.id', $id)
+            ->first();
+
+        if (!$batch) {
+            return response()->json([
+                'message' => sprintf('Batch %s not found', $batch_number),
+                'status' => 203,
+            ], 203);
+            return redirect()->action('QcController@index')->withErrors(['error' => sprintf('Batch %s not found', $batch_number)]);
+        }
+
+        if ($batch->status != 'active') {
+            return response()->json([
+                'message' => sprintf('Batch %s status is %s', $batch_number, $batch->status),
+                'status' => 203,
+            ], 203);
+            return redirect()->action('QcController@index')->withErrors(['error' => sprintf('Batch %s status is %s', $batch_number, $batch->status)]);
+        }
+
+        if (!$batch->scanned_in) {
+            return response()->json([
+                'message' => sprintf('Batch %s not Scanned Into QC', $batch_number),
+                'status' => 203,
+            ], 203);
+            return redirect()->action('QcController@index')->withErrors(['error' => sprintf('Batch %s not Scanned Into QC', $batch_number)]);
+        }
+
+        $order = Order::with('customer')->find($order_5p);
+
+        if (!$order) {
+            return response()->json([
+                'message' => sprintf('Order %s not found', $order_5p),
+                'status' => 203,
+            ], 203);
+            return redirect()->action('QcController@index')->withErrors(['error' => sprintf('Order %s not found', $order_5p)]);
+        }
+
+        if ($order->order_status == 6 || $order->order_status == 8) {
+            $statuses = Order::statuses();
+            $order_ids = array_unique($batch->items->pluck('order_5p')->toArray());
+
+            if (count($batch->items) > 1 && count($order_ids) > 1) {
+                return response()->json([
+                    'params' => [
+                        'batch_number' => $batch_number,
+                        'id' => $id,
+                        'order_5p' => $order_5p,
+                    ],
+                    'status' => 206,
+                ], 206);
+                return redirect()->action('QcController@showBatch', ['batch_number' => $batch_number, 'id' => $id])
+                    ->withErrors(['error' => sprintf('Order %s - %s', $order->short_order, $statuses[$order->order_status])]);
+            } else {
+                return response()->json(['message' => sprintf('Order %s - %s', $order->short_order, $statuses[$order->order_status]), 'status' => 203,], 203);
+                return redirect()->action('QcController@index')
+                    ->withErrors(['error' => sprintf('Order %s - %s', $order->short_order, $statuses[$order->order_status])]);
+            }
+        }
+
+        $items = Item::searchStatus('shippable')
+            ->where('order_5p', $order_5p)
+            ->where('batch_number', $batch_number)
+            ->where('is_deleted', '0')
+            ->get();
+
+        if (!$items || count($items) == 0) {
+            return response()->json([
+                'message' => sprintf('No Shippable Items found'),
+                'status' => 203,
+            ], 203);
+            return redirect()->action('QcController@index')->withErrors(['error' => 'No Shippable Items found']);
+        }
+
+        $order_count = Item::searchStatus('shippable')
+            ->where('order_5p', $order_5p)
+            ->where('is_deleted', '0')
+            ->count();
+
+        if (count($items) == $order_count && $order->order_status == 4) {
+            $dest = 'ship';
+        } else {
+            $dest = 'wap';
+        }
+
+        $item_options = array();
+        $thumbs = array();
+
+        foreach ($items as $item) {
+
+            $item_options[$item->id] = Helper::optionTransformer($item->item_option, 1, 1, 1, 1, 0, '<br>');
+
+            $thumbs[$item->id] = Sure3d::getThumb($item);
+        }
+        $user = auth()->user();
+        return response()->json([
+            'id' => $id,
+            'batch' => $batch,
+            'batch_number' => $batch_number,
+            'order' => $order,
+            'items' => $items,
+            'item_options' => $item_options,
+            'dest' => $dest,
+            'thumbs' => $thumbs,
+            'label' => $label,
+            'user' => $user
+        ], 200);
+
+        return view('quality_control.order', compact(
+            'id',
+            'batch',
+            'batch_number',
+            'order',
+            'item_options',
+            'items',
+            'dest',
+            'btn_title',
+            'btn_text',
+            'btn_class',
+            'thumbs',
+            'label'
+        ));
     }
 }

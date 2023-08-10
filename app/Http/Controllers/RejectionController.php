@@ -295,4 +295,6 @@ class RejectionController extends Controller
             ], 203);
         }
     }
+
+    rejectQCItem
 }
