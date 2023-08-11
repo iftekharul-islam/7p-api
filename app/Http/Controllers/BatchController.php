@@ -303,10 +303,8 @@ class BatchController extends Controller
             if ($shipment && $shipment->items && count($shipment->items) == 0) {
                 $shipment->delete();
             }
-
             return redirect()->route('shipShow', ['search_for_first' => $tracking_number, 'search_in_first' => 'tracking_number', 'label' => $result['label']]);
         } elseif ($origin == 'MP') {
-
             return redirect()->action('GraphicsController@showBatch', ['scan_batches' => $request->get('scan_batches')]);
         } else {
 

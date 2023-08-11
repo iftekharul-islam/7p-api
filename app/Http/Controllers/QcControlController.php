@@ -146,7 +146,8 @@ class QcControlController extends Controller
         if ($request->has('label') && $request->get('label') != 'session') {
             $label = $request->get('label');
         } else if ($request->get('label') == 'session') {
-            $label = $request->session()->pull('label', 'default');
+            $label = 'default';
+            // $label = $request->session()->pull('label', 'default');
         } else {
             $label = null;
         }
@@ -175,7 +176,7 @@ class QcControlController extends Controller
                 ->get()
                 ->pluck('id');
 
-            $batch = Batch::with('items.order.customer', 'items.wap_item.bin', 'prev_station', 'station', 'scanned_in.in_user')
+            $batch = Batch::with('items.order.customer', 'items.wap_item.bin', 'items.order', 'prev_station', 'station', 'scanned_in.in_user')
                 ->searchStatus('qc_view')
                 ->whereIn('station_id', $qc_stations)
                 ->where('batch_number', $batch_number)
@@ -254,6 +255,16 @@ class QcControlController extends Controller
 
             ], 200);
         }
+    }
+
+    public function scanOut($batch_number)
+    {
+        $scan = BatchScan::where('batch_number', $batch_number)->latest()->get();
+
+        $scan = $scan[0];
+        $scan->out_user_id = auth()->user()->id;
+        $scan->out_date = date("Y-m-d H:i:s");
+        $scan->save();
     }
 
     public function showOrder(Request $request)
