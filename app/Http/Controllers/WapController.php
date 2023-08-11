@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Batch;
 use App\Models\Item;
 use App\Models\Order;
 use App\Models\Wap;
 use App\Models\WapItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use library\Helper;
 use Ship\Sure3d;
 
@@ -241,7 +243,7 @@ class WapController extends Controller
         $wap_item = WapItem::where('item_id', $item->id)->first();
         $order = $item->order;
 
-        if ($wap_item && ($wap_item->item_count == $count && $order->order_status == 4)) {
+        if ($wap_item && ($wap_item->item_count == $count && $order?->order_status == 4)) {
             $box = "^FO150,50^GB475,180,120^FS";
         } else {
             $box = '';
@@ -264,5 +266,146 @@ class WapController extends Controller
             "^FX^BY4,4,100^FO100,1000^BC^FDORDR$item->order_5p^FS^XZ";
 
         return str_replace("'", " ", $label);
+    }
+
+    public function addItems(Request $request)
+    {
+        $batch = Batch::find($request->get('id'));
+
+        if ($batch->batch_number != $request->get('batch_number')) {
+            return response()->json([
+                'message' => 'Please scan user ID',
+                'status' => 203
+            ], 203);
+        }
+
+        if ($request->get('action') == 'address') {
+
+            $order = Order::find($request->get('order_id'));
+
+            if ($order->order_status == 4) {
+
+                Log::info('Order ' . $request->get('order_id') . ' added to WAP as address hold.');
+                $order->order_status = 11;
+                $order->save();
+            } else {
+
+                Log::info('Order ' . $request->get('order_id') . ' failed to add to WAP as address hold.');
+                return response()->json([
+                    'message' => 'Order status not IN PROGRESS, cannot change status',
+                    'status' => 203
+                ], 203);
+            }
+        }
+
+        $items = Item::where('order_5p', $request->get('order_id'))
+            ->where('batch_number', $request->get('batch_number'))
+            ->searchStatus('production')
+            ->where('is_deleted', '0')
+            ->get();
+
+        $label = '';
+
+        $shippable = Item::where('order_5p', $request->get('order_id'))
+            ->searchStatus('shippable')
+            ->where('is_deleted', '0')
+            ->get();
+
+        $item_codes = $shippable->pluck('item_code')->toArray();
+
+        $size = 'A';
+
+        // foreach ($item_codes as $sku) {
+        //   if (substr($sku, 0, 2) == 'RW' || substr($sku, 0, 2) == 'RG' || substr($sku, 0, 2) == 'SD') {
+        //     $size = 'B';
+        //   }
+        // }
+
+        $bin = $this->findBin($request->get('order_id'), $size);
+
+        $user = auth()->user()->id;
+
+        $count = count($bin->items) + 1;
+
+        foreach ($items as $item) {
+            $wapitem = new WapItem;
+            $wapitem->item_id = $item->id;
+            $wapitem->bin_id = $bin->id;
+            $wapitem->user_id = $user;
+            $wapitem->item_count = $count++;
+            $wapitem->save();
+
+            $label .= $this->getLabel($bin, $item, count($shippable));
+
+            $item->item_status = 'WAP';
+            $item->save();
+
+            Order::note('Item ' . $item->id . ' added to WAP Bin ' . $bin->name, $item->order_5p, $item->order_id);
+        }
+
+        // $request->session()->put('label', $label);
+
+        return response()->json([
+            'params' => [
+                'id' => $request->get('id'),
+                'batch_number' => $request->get('batch_number'),
+                'label' => 'session',
+                'order_id' => $request->get('order_id'),
+            ],
+            'message' => 'Items added to WAP',
+            'status' => 201
+        ], 201);
+    }
+
+    private function findBin($order_id, $size = NULL)
+    {
+        //find order bin
+        $bin = Wap::where('order_id', $order_id)->first();
+
+        if (empty($bin)) {
+            //determine size
+            //$size = $this->binSize($order_id);
+            // $size = 'A';
+            //find empty bin
+            $bin_assigned = Wap::whereNull('order_id')
+                ->where('size', $size)
+                ->orderBy('id', 'ASC')
+                ->limit(1)
+                ->update([
+                    'order_id' => $order_id
+                ]);
+
+            if ($bin_assigned == 1) {
+                $bin = Wap::where('order_id', $order_id)->first();
+            } else {
+                //create bin
+                $bin = $this->createBin($order_id, $size);
+            }
+        }
+
+        return $bin;
+    }
+
+    private function createBin($order_ID, $size = NULL)
+    {
+        //add a wap bin
+        $last = Wap::where('size', $size)
+            ->orderBy('id', 'DESC')
+            ->first();
+
+        if ($last) {
+            $num = $last->num + 1;
+        } else {
+            $num = 1000;
+        }
+
+        $bin = new Wap;
+        $bin->size = $size;
+        $bin->num = $num;
+        $bin->name = sprintf('%s-%04d', $bin->size, $bin->num);
+        $bin->order_ID = $order_ID;
+        $bin->save();
+
+        return $bin;
     }
 }
