@@ -1,14 +1,14 @@
 <?php
 
 
-namespace Monogram\Ship;
+namespace Ship;
 
 
 use Exception;
 use Ship\Shipper;
 use Illuminate\Support\Facades\Log;
-use App\Ship;
-use App\DhlManifest;
+use App\Models\Ship;
+use App\Models\DhlManifest;
 use library\Helper;
 
 class DHL
@@ -32,7 +32,6 @@ class DHL
 
     public function getLabel($store, $order, $unique_order_id, $method = null, $packages = [0])
     {
-
         //        dd($store, $order, $unique_order_id, $method, $packages);
         $customer = $order->customer;
         $customerName = substr(Helper::removeSpecial($customer['ship_full_name']), 0, 35);
@@ -95,7 +94,6 @@ class DHL
             $method = "_SMARTMAIL_PARCEL_EXPEDITED";
             $this->getServiceMethodCode[$method];
         }
-
         $json_array = array(
             'shipments' =>
             array(
@@ -172,6 +170,8 @@ class DHL
 
         $token = $this->getAccessToken();
         $this->accessToken = $token;
+
+
         // Get cURL resource
         $ch = curl_init();
         // Set url
@@ -192,53 +192,60 @@ class DHL
         );
 
         $body = json_encode($json_array);
-        try {
-            // Set body
-            curl_setopt($ch, CURLOPT_POST, 1);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
-            // Send the request & save response to $resp
-            $resp = curl_exec($ch);
-            $decoded_response = json_decode($resp, false, 512, JSON_BIGINT_AS_STRING);
-
-            //            echo "<pre>";
-            //            echo "Respond Result = ";
-            //            print_r($decoded_response);
-            //            echo "</pre>";
-            //            dd($decoded_response, $resp);
+        // try {
+        // Set body
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+        // Send the request & save response to $resp
+        $resp = curl_exec($ch);
+        $decoded_response = json_decode($resp, false, 512, JSON_BIGINT_AS_STRING);
 
 
+        //            echo "<pre>";
+        //            echo "Respond Result = ";
+        //            print_r($decoded_response);
+        //            echo "</pre>";
+        //            dd($decoded_response, $resp);
 
-            if (!$resp) {
-                Log::error('Error: "' . curl_error($ch) . '" - Code: ' . curl_errno($ch));
-                return 'Error: "' . curl_error($ch) . '" - Code: ' . curl_errno($ch);
-            } else {
-                $zpl_label = $decoded_response->data->shipments[0]->packages[0]->responseDetails->labelDetails[0]->labelData;
-                $tracking_number = $decoded_response->data->shipments[0]->packages[0]->responseDetails->trackingNumber;
-                curl_close($ch);
-                $trackingInfo = array();
-                $trackingInfo['image'] = $zpl_label;
-                if ($method == "_PARCEL_INTERNATIONAL_DIRECT") {
-                    $trackingInfo['tracking_number'] = $packageId;
-                    $trackingInfo['shipping_id'] = $packageId; // Need clarification on this.
-                } else {
-                    $trackingInfo['tracking_number'] = $tracking_number;
-                    $trackingInfo['shipping_id'] = $tracking_number; // Need clarification on this.
-                }
-                $trackingInfo['unique_order_id'] = $unique_order_id;
-                $trackingInfo['mail_class'] = $method;
 
-                $trackingInfo['type'] = 'DHL';
-                //            dd($trackingInfo, $decoded_response);
-                //            echo "Response HTTP Status Code : " . curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                //            echo "\nResponse HTTP Body : " . json_encode($resp);
-                return $trackingInfo;
+
+        if (!$resp) {
+            Log::error('Error: "' . curl_error($ch) . '" - Code: ' . curl_errno($ch));
+            return 'Error: "' . curl_error($ch) . '" - Code: ' . curl_errno($ch);
+        } else {
+            $zpl_label = $decoded_response?->data?->shipments[0]?->packages[0]?->responseDetails?->labelDetails[0]?->labelData ?? null;
+            if (!$zpl_label) {
+                return 'Error: ZPL label is not found!';
             }
+            $tracking_number = $decoded_response?->data?->shipments[0]?->packages[0]?->responseDetails?->trackingNumber ?? null;
+            if (!$tracking_number) {
+                return 'Error: Tracking number is not found!';
+            }
+            curl_close($ch);
+            $trackingInfo = array();
+            $trackingInfo['image'] = $zpl_label;
+            if ($method == "_PARCEL_INTERNATIONAL_DIRECT") {
+                $trackingInfo['tracking_number'] = $packageId;
+                $trackingInfo['shipping_id'] = $packageId; // Need clarification on this.
+            } else {
+                $trackingInfo['tracking_number'] = $tracking_number;
+                $trackingInfo['shipping_id'] = $tracking_number; // Need clarification on this.
+            }
+            $trackingInfo['unique_order_id'] = $unique_order_id;
+            $trackingInfo['mail_class'] = $method;
 
-            // Close request to clear up some resources
-        } catch (Exception $e) {
-            Log::error($e->getMessage());
-            return 'ERROR: ' . $e->getMessage();
+            $trackingInfo['type'] = 'DHL';
+            //            dd($trackingInfo, $decoded_response);
+            //            echo "Response HTTP Status Code : " . curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            //            echo "\nResponse HTTP Body : " . json_encode($resp);
+            return $trackingInfo;
         }
+
+        // Close request to clear up some resources
+        // } catch (Exception $e) {
+        //     Log::error($e->getMessage());
+        //     return 'ERROR: ' . $e->getMessage();
+        // }
     }
 
 

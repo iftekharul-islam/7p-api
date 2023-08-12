@@ -267,34 +267,4 @@ class RejectionController extends Controller
         //     return view('prints.includes.label', compact('label'));
         // }
     }
-
-    public function badAddress(Request $request)
-    {
-        $order = Order::find($request->get('order_id'));
-
-        if (!$order) {
-            return response()->json([
-                'message' => 'Order not found',
-                'status' => 203
-            ], 203);
-        }
-
-        if ($order->order_status == 4) {
-            Log::info('Order ' . $request->get('order_id') . ' updated in WAP to address hold.');
-            $order->order_status = 11;
-            $order->save();
-
-            return response()->json([
-                'message' => $order->short_order . ' Address Sent to Customer Service',
-                'status' => 201
-            ], 201);
-        } else {
-            return response()->json([
-                'message' => $order->short_order . ' Cannot be placed in Address Hold, order is not in progress',
-                'status' => 203
-            ], 203);
-        }
-    }
-
-    rejectQCItem
 }

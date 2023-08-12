@@ -14,7 +14,7 @@ use App\Models\Wap;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use library\Helper;
-use Monogram\Ship\DHL;
+use Ship\DHL;
 use Monogram\Ship\ENDICIAL;
 use Ups\AddressValidation;
 use Ups\Entity\Address;
@@ -90,7 +90,7 @@ class Shipper
         //look for record in ws import table
     }
 
-    public function createShipment($origin, $order_id, $batch_number = NULL, $packages = [0], $item_ids = null, $params = [])
+    public function createShipment($origin, $order_id, $batch_number = NULL, $packages = [0], $item_ids = [], $params = [])
     {
         if (empty($origin)) {
             return 'ERROR: Origin not set. Order: ' . $order_id . ' Origin: ' . $origin;
@@ -145,11 +145,12 @@ class Shipper
         //
         // }
 
-        if ($origin == 'QC') {
+        $ids = json_decode($item_ids);
 
+        if ($origin == 'QC') {
             $all_items = Item::where('order_5p', $order_id)
                 ->searchStatus('shippable')
-                ->whereIn('id', $item_ids)
+                ->whereIn('id', $ids)
                 ->searchStatus('production')
                 ->where('is_deleted', '0')
                 ->get();

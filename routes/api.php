@@ -254,7 +254,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('reject-qc-item', [RejectionController::class, 'rejectQCItem']);
 
     Route::post('shipping-add-wap', [WapController::class, 'addItems']);
-    Route::post('bad-address', [RejectionController::class, 'badAddress']);
+    Route::post('bad-address', [WapController::class, 'badAddress']);
     Route::post('ship-item', [ShippingController::class, 'shipItems']);
 
     Route::get('section-reports', [ReportController::class, 'section']);

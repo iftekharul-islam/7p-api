@@ -235,6 +235,10 @@ class BatchController extends Controller
         info($item);
         if ($item->item_status == 'rejected') {
             return response()->json([
+                // 'message' => 'Item Already Rejected',
+                // 'status' => 201
+                'isRedirect' => '/quality-control/order',
+                'params' => ['id' => $request->get('id'), 'batch_number' => '123456', 'label' => 'Afnan'],
                 'message' => 'Item Already Rejected',
                 'status' => 201
             ], 201);
@@ -282,15 +286,26 @@ class BatchController extends Controller
         }
 
         if ($origin == 'QC') {
-            return redirect()->route('qcShow', ['id' => $request->get('id'), 'batch_number' => $batch_number, 'label' => $result['label']]);
+            return response()->json([
+                'isRedirect' => '/quality-control/order',
+                'params' => ['id' => $request->get('id'), 'batch_number' => $batch_number, 'label' => $result['label']],
+                'message' => 'Item Rejected',
+                'status' => 201
+            ], 201);
         } elseif ($origin == 'BD') {
             return response()->json([
-                'message' => $result['label'],
+                'isRedirect' => '/batch-list' . $batch_number,
+                'params' => null,
+                'message' => 'Item Rejected',
                 'status' => 201
             ], 201);
         } elseif ($origin == 'WP') {
-
-            return redirect()->route('wapShow', ['bin' => $request->get('bin_id'), 'label' => $result['label'], 'show_ship' => '1']);
+            return response()->json([
+                'isRedirect' => '/wap',
+                'params' => ['bin' => $request->get('bin_id'), 'label' => $result['label'], 'show_ship' => '1'],
+                'message' => 'Item Rejected',
+                'status' => 201
+            ], 201);
         } elseif ($origin == 'SL') {
             $order = Order::find($item->order_5p);
             $order->order_status = 4;
@@ -303,14 +318,26 @@ class BatchController extends Controller
             if ($shipment && $shipment->items && count($shipment->items) == 0) {
                 $shipment->delete();
             }
-            return redirect()->route('shipShow', ['search_for_first' => $tracking_number, 'search_in_first' => 'tracking_number', 'label' => $result['label']]);
+            return response()->json([
+                'isRedirect' => '#', //page is not create yet
+                'params' => ['search_for_first' => $tracking_number, 'search_in_first' => 'tracking_number', 'label' => $result['label']],
+                'message' => 'Item Rejected',
+                'status' => 201
+            ], 201);
         } elseif ($origin == 'MP') {
-            return redirect()->action('GraphicsController@showBatch', ['scan_batches' => $request->get('scan_batches')]);
+            return response()->json([
+                'isRedirect' => '/move-batches',
+                'params' => ['scan_batches' => $request->get('scan_batches')],
+                'message' => 'Item Rejected',
+                'status' => 201
+            ], 201);
         } else {
 
             $label = $result['label'];
             return response()->json([
-                'message' => $label,
+                'isRedirect' => $result['label'],
+                'params' => ['label' => $label],
+                'message' => 'Item Rejected',
                 'status' => 201
             ], 201);
         }
@@ -541,7 +568,7 @@ class BatchController extends Controller
             ->where('batch_number', $batch_number)
             ->first();
 
-        if (count($batch) < 1) {
+        if ($batch) {
             return false;
         } else {
 

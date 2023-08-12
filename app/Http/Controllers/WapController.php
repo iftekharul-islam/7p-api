@@ -88,7 +88,11 @@ class WapController extends Controller
                 $label = file_get_contents($filename);
                 $label = trim(preg_replace('/\n+/', ' ', $label));
             } else {
-                session()->flash('error', 'Label Not Found');
+                return response()->json([
+                    'message' => 'Label not found',
+                    'status' => 203
+                ], 203);
+                // session()->flash('error', 'Label Not Found');
             }
         } else {
             $label = null;
@@ -284,12 +288,10 @@ class WapController extends Controller
             $order = Order::find($request->get('order_id'));
 
             if ($order->order_status == 4) {
-
                 Log::info('Order ' . $request->get('order_id') . ' added to WAP as address hold.');
                 $order->order_status = 11;
                 $order->save();
             } else {
-
                 Log::info('Order ' . $request->get('order_id') . ' failed to add to WAP as address hold.');
                 return response()->json([
                     'message' => 'Order status not IN PROGRESS, cannot change status',
@@ -407,5 +409,33 @@ class WapController extends Controller
         $bin->save();
 
         return $bin;
+    }
+
+    public function badAddress(Request $request)
+    {
+        $order = Order::find($request->get('order_id'));
+
+        if (!$order) {
+            return response()->json([
+                'message' => 'Order not found',
+                'status' => 203
+            ], 203);
+        }
+
+        if ($order->order_status == 4) {
+            Log::info('Order ' . $request->get('order_id') . ' updated in WAP to address hold.');
+            $order->order_status = 11;
+            $order->save();
+
+            return response()->json([
+                'message' => $order->short_order . ' Address Sent to Customer Service',
+                'status' => 201
+            ], 201);
+        } else {
+            return response()->json([
+                'message' => $order->short_order . ' Cannot be placed in Address Hold, order is not in progress',
+                'status' => 203
+            ], 203);
+        }
     }
 }
