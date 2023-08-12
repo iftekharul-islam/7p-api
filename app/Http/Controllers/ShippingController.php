@@ -63,7 +63,6 @@ class ShippingController extends Controller
     public function shipItems(Request $request)
     {
         if ($request->has('order_id') && $request->has('origin')) {
-
             $shipper = new Shipper;
 
             $packages = array();
@@ -74,7 +73,6 @@ class ShippingController extends Controller
             //     $item_ids = json_decode($item_ids, true);
             // }
             // return $item_ids;
-
 
             $ounces = $request->get('ounces');
             $pounds = $request->get('pounds');
@@ -135,9 +133,10 @@ class ShippingController extends Controller
                         ->withErrors(['error' => 'Batch Number not correct']);
                 }
 
-
                 //test complete
+                info("A");
                 $ship_info = $shipper->createShipment($request->get('origin'), $request->get('order_id'), $request->get('batch_number'), $packages, $item_ids, $params);
+                info("B");
 
                 if (is_array($ship_info) && isset($ship_info['reminder'])) {
 
@@ -199,8 +198,9 @@ class ShippingController extends Controller
                     //     ->withErrors(['error' => $ship_info]);
                 }
             } elseif ($request->get('origin') == 'WAP') {
-
+                info("C");
                 $ship_info = $shipper->createShipment($request->get('origin'), $request->get('order_id'), null, $packages, $item_ids, $params);
+                info("D");
 
                 if (is_array($ship_info) && isset($ship_info['reminder'])) {
 
@@ -229,7 +229,7 @@ class ShippingController extends Controller
                     //     ->withErrors(['error' => $ship_info]);
                 }
             } else if ($request->get('origin') == 'OR') {
-
+                info("E");
                 $ship_info = $shipper->createShipment(
                     $request->get('origin'),
                     $request->get('order_id'),
@@ -238,6 +238,7 @@ class ShippingController extends Controller
                     $item_ids,
                     $params
                 );
+                info("F");
 
                 if (is_array($ship_info) && isset($ship_info['reminder'])) {
 
