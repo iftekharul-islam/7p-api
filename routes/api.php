@@ -210,6 +210,9 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     // Graphics API
     Route::get('preview-batches', [ItemController::class, 'getBatch']);
     Route::get('unbatchable-items', [ItemController::class, 'unbatchableItems']);
+    Route::post('add-child-sku', [LogisticsController::class, 'addChildSKU']);
+
+
     Route::get('print-sublimation', [GraphicsController::class, 'showSublimation']);
     Route::post('sublimation-print', [GraphicsController::class, 'printSublimation']);
     Route::get('print-sublimation-queues', [GraphicsController::class, 'showSublimationQueues']);
@@ -325,6 +328,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('stock-image-options', [InventoryController::class, 'stockImageOption']);
     Route::get('email-template-options', [EmailTemplateController::class, 'emailTemplateOptions']);
     Route::get('reason-options', [RejectionReasonController::class, 'reasonOption']);
+
     Route::get('email-template-keywords', [EmailTemplateController::class, 'emailTemplateKeywords']);
 
     Route::get('skus', [SpecificationSheetController::class, 'skus']);

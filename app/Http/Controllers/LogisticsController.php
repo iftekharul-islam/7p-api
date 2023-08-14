@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\InventoryUnit;
 use App\Models\Option;
+use App\Models\Parameter;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+use library\Helper;
 
 class LogisticsController extends Controller
 {
@@ -123,5 +126,99 @@ class LogisticsController extends Controller
         } else {
             return redirect()->action('LogisticsController@sku_list')->withErrors('No Child SKUs selected');
         }
+    }
+
+    public function childSKUOption()
+    {
+        $parameters = Parameter::where('is_deleted', '0')
+            ->get();
+
+        $batch_routes = BatchRoute::where('is_deleted', '0')
+            ->orderBy('batch_route_name')
+            ->get()
+            ->pluck('batch_route_name', 'id');
+        return response()->json([
+            'parameters' => $parameters,
+            'batch_routes' => $batch_routes
+        ]);
+    }
+
+    public function addChildSKU(Request $request)
+    {
+        if (!isset($request->child_sku)) {
+            return response()->json([
+                'message' => 'Child SKU is required',
+                'status' => 203
+            ], 203);
+        }
+
+        $child_sku = Option::where('child_sku', $request->get('child_sku'))->first();
+
+        if ($child_sku) {
+            return redirect()->back()->withInput()->withErrors('Child SKU ' . $request->get('child_sku') . ' already exists');
+        }
+
+        $unique_row_value = Helper::generateUniqueRowId();
+
+        $parameters = Parameter::where('is_deleted', '0')
+            ->get();
+
+        if ($parameters->count() == 0) {
+            return response()->json([
+                'message' => 'No Parameters available.',
+                'status' => 203
+            ], 203);
+        }
+
+        $is_code_field_found = false;
+        $code = '';
+        $dataToStore = [];
+        foreach ($parameters as $parameter) {
+            $parameter_value = $parameter->parameter_value;
+            $form_field = Helper::textToHTMLFormName($parameter_value);
+            if ($form_field == 'code') {
+                $is_code_field_found = true;
+                $code = $request->get($form_field, '');
+            }
+            $dataToStore[$parameter_value] = $request->get($form_field, '');
+        }
+        // check if the code is already existing on database or not
+        $option = null;
+
+        $parent_sku = trim($request->get('parent_sku'), '');
+        $graphic_sku = trim($request->get('graphic_sku'), '');
+        $child_sku = trim($request->get('child_sku'), '');
+        $id_catalog = trim($request->get('id_catalog'), '');
+
+        if ($is_code_field_found) {
+            $option = Option::where('child_sku', $child_sku)
+                ->first();
+        }
+
+        if (!$option) {
+            $option = new Option();
+            $option->unique_row_value = $unique_row_value;
+            $option->child_sku = $child_sku;
+        }
+
+        $option->parent_sku = $parent_sku;
+        $option->graphic_sku = $graphic_sku;
+        $option->id_catalog = $id_catalog;
+        $option->allow_mixing = intval($request->get('allow_mixing', 1));
+        $option->batch_route_id = intval($request->get('batch_route_id', Helper::getDefaultRouteId()));
+        $option->parameter_option = json_encode($dataToStore);
+        $option->sure3d = intval($request->get('sure3d', 0));
+        $option->orientation = 0;
+
+        $option->save();
+
+        return response()->json([
+            'message' => 'Child SKU inserted.',
+            'status' => 201
+        ], 201);
+
+        return redirect()
+            ->action('LogisticsController@sku_list', ['search_for_first' => $child_sku, 'search_in_first' => 'child_sku'])
+            ->with('success', "Child sku inserted.");
     }
 }
