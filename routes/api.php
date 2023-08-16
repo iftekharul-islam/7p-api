@@ -209,6 +209,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
 
     // Graphics API
     Route::get('preview-batches', [ItemController::class, 'getBatch']);
+    Route::post('preview-batches', [ItemController::class, 'postBatch']);
     Route::get('unbatchable-items', [ItemController::class, 'unbatchableItems']);
     Route::post('add-child-sku', [LogisticsController::class, 'addChildSKU']);
 

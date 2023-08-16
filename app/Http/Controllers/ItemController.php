@@ -183,6 +183,44 @@ class ItemController extends Controller
         ));
     }
 
+    public function postBatch(Request $request)
+    {
+        // return response()->json([
+        //     'message' => 'Batching in progress...',
+        //     'status' => 201
+        // ], 201);
+
+        $batches = $request->get('batches');
+
+        if (!$batches) {
+            return response()->json([
+                'message' => 'No batch is selected',
+                'status' => 203
+            ], 203);
+        }
+
+        if ($request->get('backorder')) {
+            $prefix = 'B01-';
+            $status = 'back order';
+        } else {
+            $prefix = '';
+            $status = 'active';
+        }
+
+
+        if (Batching::createBatch($batches, $prefix, $status)) {
+            return response()->json([
+                'message' => 'Batching in progress...',
+                'status' => 201
+            ], 201);
+        } else {
+            return response()->json([
+                'message' => 'Batching already in progress... try again later',
+                'status' => 203
+            ], 203);
+        }
+    }
+
     public function unbatchableItems(Request $request)
     {
         $items = Batching::failures();
