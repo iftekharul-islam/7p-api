@@ -62,9 +62,6 @@ class Batching
 				$batches[] = sprintf("%s|%s|%s|%s|%s", $count, $batch_route['id'], $item->item_table_id, $item->batch, $item->store_id);
 			}
 		}
-
-		info("batch");
-		info($batches);
 		Batching::createBatch($batches, '', 'active', $export);
 
 		return;
@@ -563,11 +560,9 @@ class Batching
 		return $batches;
 	}
 
+	//TODO - $batches is in string like "1|247|1475|0|1". it should be in object
 	public static function createBatch($batches, $prefix = '', $status = 'active', $export_batch = null)
 	{
-		info("createBatch");
-		info($batches);
-		info($export_batch);
 
 		if (Batching::islocked()) {
 			Log::info('Existing AutoBatch ' . count($batches) . ' executing');
