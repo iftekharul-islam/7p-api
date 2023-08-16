@@ -134,6 +134,7 @@ class ItemController extends Controller
         ];
     }
 
+    //TODO need to optimize - takes too much time
     public function getBatch(Request $request)
     {
         $locked = Batching::islocked();
