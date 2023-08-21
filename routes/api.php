@@ -261,6 +261,11 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('bad-address', [WapController::class, 'badAddress']);
     Route::post('ship-item', [ShippingController::class, 'shipItems']);
 
+    Route::get('shipping', [ShippingController::class, 'index']);
+    Route::get('shipping-search-in-options', [ShippingController::class, 'searchInOption']);
+    Route::post('ship-order-returned', [ShippingController::class, 'shipmentReturned']);
+    Route::get('ship-order-void', [ShippingController::class, 'voidShipment']);
+
     Route::get('section-reports', [ReportController::class, 'section']);
     Route::get('ship-date-reports', [ReportController::class, 'shipDate']);
     Route::get("order-items-reports", [ReportController::class, 'orderItems']);

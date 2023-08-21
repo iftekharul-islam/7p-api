@@ -3,6 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Batch;
+use App\Models\Item;
+use App\Models\Order;
+use App\Models\Ship;
+use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -10,6 +14,101 @@ use Ship\Shipper;
 
 class ShippingController extends Controller
 {
+    public static $search_in = [
+        'unique_order_id' => 'Package ID',
+        'mail_class' => 'Shipped Via',
+        'order_id' => 'Order',
+        'batch_number' => 'Batch Number',
+        'tracking_number' => 'Tracking number',
+        'tracking_type' => 'Tracking Type',
+        'item_id' => 'Item id',
+        'name' => 'Name',
+        'address_one' => 'Address 1',
+        'company' => 'Company',
+        'city' => 'City',
+        'state' => 'State',
+        'postal_code' => 'Postal code',
+        'country' => 'Country',
+        'email' => 'Email',
+        'user' => 'Shipped By'
+    ];
+
+    public function index(Request $request)
+    {
+        $label = null;
+        $error = null;
+
+        if ($request->has('label')) {
+            $label = $request->get('label');
+        } elseif ($request->has('unique_order_id')) {
+
+            $filename = 'assets/images/shipping_label/' . $request->get('unique_order_id') . '.zpl';
+            if (file_exists($filename)) {
+
+                $label = file_get_contents($filename);
+                $label = trim(preg_replace('/\n+/', ' ', $label));
+                $pattern = '/"/';
+                $label = preg_replace($pattern, '', $label);
+                //                dd("Exist ",$filename, $label);
+            } else {
+                //                dd("No Exist ",$filename);
+                $error = 'Label Not Found';
+            }
+        }
+
+        if (
+            !$request->has('search_for_first') && !$request->has('search_for_second')
+            && !$request->has('start_date') && !$request->has('end_date')
+        ) {
+            $start_date = date("Y-m-d");
+        } else {
+            $start_date = $request->get('start_date');
+        }
+
+        if ($request->has('unique_order_id')) {
+            $ships = Ship::with('items.batch', 'items.order.customer', 'user')
+                ->searchStoreId($request->get('store_id'))
+                ->where('is_deleted', '0')
+                ->where('unique_order_id', $request->get('unique_order_id'))
+                ->groupBy('tracking_number')
+                ->latest('transaction_datetime')
+                ->paginate(10);
+        } else {
+            $ships = Ship::with('items.batch', 'items.order.customer', 'user')
+                ->where('is_deleted', '0')
+                ->searchCriteria($request->get('search_for_first'), $request->get('search_in_first'))
+                ->searchCriteria($request->get('search_for_second'), $request->get('search_in_second'))
+                ->searchStoreId($request->get('store_id'))
+                ->searchWithinDate($start_date, $request->get('end_date'))
+                // postmark_date transaction_datetime
+                ->groupBy('tracking_number')
+                ->latest('transaction_datetime')
+                ->paginate(10);
+        }
+
+        $yesterday = $last30 = date("Y-m-d H:i:s", strtotime('-1 days'));
+
+        return response()->json([
+            'message' => $error,
+            'ships' => $ships,
+            'label' => $label,
+            'yesterday' => $yesterday,
+            'status' => $error ? 203 : 200
+        ], 201);
+    }
+
+    public function searchInOption()
+    {
+        $options = [];
+        foreach (static::$search_in as $key => $value) {
+            $options[] = [
+                'label' => $value,
+                'value' => $key,
+            ];
+        }
+        return $options;
+    }
+
     public function manualShip(Request $request)
     {
         /*
@@ -267,5 +366,81 @@ class ShippingController extends Controller
             Log::info('5. ShipItems: Origin or order_id not set');
             return response()->json(['message' => 'Origin or order_id not set.', 'status' => 203], 203);
         }
+    }
+
+    public function shipmentReturned(Request $request)
+    {
+        if (!isset($request->tracking_number)) {
+            return response()->json([
+                'message' => 'Tracking number not found!',
+                'status' => 203
+            ], 203);
+        }
+
+        $items = Item::where('tracking_number', $request->get('tracking_number'))
+            ->where('is_deleted', '0')
+            ->get();
+
+        foreach ($items as $item) {
+            $item->tracking_number = NULL;
+            $item->item_status = 'reshipment';
+            $item->save();
+        }
+
+        $shipment = Ship::where('tracking_number', $request->tracking_number)
+            ->where('is_deleted', '0')
+            ->first();
+
+        if (!$shipment) {
+            return response()->json([
+                'message' => 'Shipment not found',
+                'status' => 203
+            ], 203);
+        }
+
+        $order_id = $shipment->order_number;
+
+        $shipment->is_deleted = '1';
+        $shipment->save();
+
+        $order = Order::find($order_id);
+
+        if (!$order) {
+            $order = Order::where('order_id', $order_id)->where('is_deleted', '0')->first();
+        }
+
+        if ($order) {
+            $order->order_status = 10;
+            $order->save();
+
+            Order::note("Shipment returned. Tracking number " . $shipment->tracking_number, $order->id, $order->order_id);
+        }
+        return response()->json([
+            'message' => 'Shipment returned Successfully',
+            'data' => [
+                'order_id' => $order_id
+            ],
+            'status' => 201
+        ], 201);
+
+        return redirect()->action('OrderController@details', ['order_id' => $order->id]);
+    }
+
+    public function voidShipment(Request $request)
+    {
+        if ($request->ship_id == null) {
+            return response()->json([
+                'message' => 'Shipment ID Required',
+                'status' => 203
+            ], 203);
+        }
+
+        $shipper = new Shipper;
+        $response = $shipper->voidShipment($request->ship_id);
+
+        return response()->json([
+            'message' => "Shipment Voided",
+            'status' => 201
+        ], 201);
     }
 }
