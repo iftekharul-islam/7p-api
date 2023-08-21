@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Http\Controllers\ShippingController;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -25,13 +26,13 @@ class Ship extends Model
 
     public function order()
     {
-        return $this->belongsTo('App\Order', 'order_number', 'id');
+        return $this->belongsTo(Order::class, 'order_number', 'id');
     }
 
     public function items()
     {
         return $this->hasMany(Item::class, 'tracking_number', 'tracking_number')
-            ->where('is_deleted', 0)
+            ->where('is_deleted', '0')
             ->where('item_status', 2);
     }
 
@@ -149,7 +150,7 @@ class Ship extends Model
     {
         logger($store_id);
         $stores = Store::query();
-        if (count($store_id)) {
+        if (isset($store_id)) {
             $stores->whereIn('store_id', $store_id);
         }
         $store_id = $stores->where('permit_users', 'like', "%" . auth()->user()->id . "%")
@@ -159,7 +160,7 @@ class Ship extends Model
             ->pluck('store_id')
             ->toArray();
 
-        if (count($store_id)) {
+        if (isset($store_id)) {
             return $query->whereHas('order', function ($q) use ($store_id) {
                 $q->whereIn('store_id', $store_id);
             });

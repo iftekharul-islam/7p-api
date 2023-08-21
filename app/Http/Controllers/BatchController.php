@@ -232,7 +232,6 @@ class BatchController extends Controller
             ->where('id', $request->get('item_id'))
             ->first();
 
-        info($item);
         if ($item->item_status == 'rejected') {
             return response()->json([
                 // 'message' => 'Item Already Rejected',

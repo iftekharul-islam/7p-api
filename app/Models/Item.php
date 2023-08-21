@@ -283,7 +283,7 @@ class Item extends Model
     public function order()
     {
         return $this->belongsTo(Order::class, 'order_5p')
-            ->where('is_deleted', 0);
+            ->where('is_deleted', '0');
     }
 
     public function batch()
