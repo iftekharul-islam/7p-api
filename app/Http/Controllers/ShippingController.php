@@ -37,7 +37,7 @@ class ShippingController extends Controller
     {
         $label = null;
         $error = null;
-
+        $success = null;
         if ($request->has('label')) {
             $label = $request->get('label');
         } elseif ($request->has('unique_order_id')) {
@@ -49,6 +49,8 @@ class ShippingController extends Controller
                 $label = trim(preg_replace('/\n+/', ' ', $label));
                 $pattern = '/"/';
                 $label = preg_replace($pattern, '', $label);
+                // TODO - need to emplement printer
+                $success = "Need to implement printer";
                 //                dd("Exist ",$filename, $label);
             } else {
                 //                dd("No Exist ",$filename);
@@ -89,11 +91,11 @@ class ShippingController extends Controller
         $yesterday = $last30 = date("Y-m-d H:i:s", strtotime('-1 days'));
 
         return response()->json([
-            'message' => $error,
+            'message' => $error ?? $success,
             'ships' => $ships,
             'label' => $label,
             'yesterday' => $yesterday,
-            'status' => $error ? 203 : 200
+            'status' => $error ? 203 : ($success ? 201 : 200)
         ], 201);
     }
 

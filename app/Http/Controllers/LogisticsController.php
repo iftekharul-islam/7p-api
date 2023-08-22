@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Inventory;
+use App\Models\BatchRoute;
 use App\Models\InventoryUnit;
 use App\Models\Option;
 use App\Models\Parameter;
