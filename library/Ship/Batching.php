@@ -177,8 +177,6 @@ class Batching
 			->orderBy('sort_order')
 			->get();
 
-		info($stores_result);
-
 		$query_array = array();
 
 		$together = array();
