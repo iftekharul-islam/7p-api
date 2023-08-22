@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\BatchRoute;
+use App\Models\Inventory;
 use App\Models\InventoryUnit;
 use App\Models\Option;
 use App\Models\Parameter;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use library\Helper;
 
@@ -34,7 +35,8 @@ class LogisticsController extends Controller
         $options = $options->groupBy('parameter_options.child_sku')
             ->orderBy('parameter_options.parent_sku', 'ASC')
             ->paginate($request->get('perPage', 10));
-        return $options;
+
+        return response()->json($options, 200);
     }
 
     public function updateSKUs(Request $request)
