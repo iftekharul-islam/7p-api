@@ -53,5 +53,10 @@
         "DROPSHIP": false,
         "DROPSHIP_SKU": "",
         "DROPSHIP_COST": 0
+    },
+    "266147": {
+        "DROPSHIP": false,
+        "DROPSHIP_SKU": "",
+        "DROPSHIP_COST": 0
     }
 }

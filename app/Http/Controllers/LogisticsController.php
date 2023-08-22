@@ -158,6 +158,10 @@ class LogisticsController extends Controller
         $child_sku = Option::where('child_sku', $request->get('child_sku'))->first();
 
         if ($child_sku) {
+            return response()->json([
+                'message' => 'Child SKU ' . $request->get('child_sku') . ' already exists',
+                'status' => 203
+            ], 203);
             return redirect()->back()->withInput()->withErrors('Child SKU ' . $request->get('child_sku') . ' already exists');
         }
 
@@ -223,5 +227,89 @@ class LogisticsController extends Controller
         return redirect()
             ->action('LogisticsController@sku_list', ['search_for_first' => $child_sku, 'search_in_first' => 'child_sku'])
             ->with('success', "Child sku inserted.");
+    }
+
+    public function getSKUs(string $id)
+    {
+        if (!isset($id)) {
+            return response()->json([
+                'message' => 'Unique Row Value is required',
+                'status' => 203
+            ], 203);
+        }
+
+        $options = Option::where('unique_row_value', $id)
+            ->first();
+
+        if (!$options) {
+            return response()->json([
+                'message' => 'Your input is wrong.',
+                'status' => 203
+            ], 203);
+        }
+        $data = [];
+        $file = "/var/www/order.monogramonline.com/BypassOption.json";
+        if (file_exists($file)) {
+            $data = json_decode(file_get_contents($file), true);
+        }
+        $options['bypass_option'] = $data[$options['child_sku']] ?? false;
+
+        return response()->json($options, 200);
+    }
+
+    public function updateSku(Request $request)
+    {
+        if (!isset($request->unique_row_value)) {
+            return response()->json([
+                'message' => 'Unique Row Value is required',
+                'status' => 203
+            ], 203);
+        }
+
+        $unique_row_value = $request->get('unique_row_value');
+
+        $parent_sku = trim($request->get('parent_sku'), '');
+        $graphic_sku = trim($request->get('graphic_sku'), '');
+        $child_sku = trim($request->get('child_sku'), '');
+        $id_catalog = trim($request->get('id_catalog'), '');
+        $sure3d = trim($request->get('sure3d'), '');
+
+
+        $bypassOption = (bool)trim($request->get('bypass_option'), '');
+
+        // TODO - No such file or directory
+        // $file = "/var/www/order.monogramonline.com/BypassOption.json";
+        // $data = [];
+        // if (file_exists($file)) {
+        //     $data = json_decode(file_get_contents($file), true);
+        // }
+        // $data[$child_sku] = $bypassOption;
+        // file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT));
+
+
+        if (empty($child_sku)) {
+            return response()->json([
+                'message' => 'Child SKU or Stock Number is required',
+                'status' => 203
+            ], 203);
+        }
+
+        // todo: if child sku is changed, change on items.child_sku too
+
+        Option::where('unique_row_value', $unique_row_value)
+            ->update([
+                'id_catalog' => $id_catalog,
+                'parent_sku' => $parent_sku,
+                'child_sku' => $child_sku,
+                'graphic_sku' => $graphic_sku,
+                'allow_mixing' => intval($request->get('allow_mixing', 1)),
+                'batch_route_id' => intval($request->get('batch_route_id', Helper::getDefaultRouteId())),
+                'sure3d' => intval($request->get('sure3d', 0)),
+            ]);
+
+        return response()->json([
+            'message' => 'Child SKU updated.',
+            'status' => 201
+        ], 201);
     }
 }
