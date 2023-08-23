@@ -205,7 +205,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('item-store-options', [ItemController::class, 'storeOption']);
 
     Route::get('config-child-sku', [LogisticsController::class, 'index']);
-    Route::get('update-config-child-sku', [LogisticsController::class, 'updateSKUs']);
+    Route::post('update-child-skus', [LogisticsController::class, 'updateSKUs']);
     Route::get('get-config-child-sku/{id}', [LogisticsController::class, 'getSKUs']);
     Route::post('update-child-sku', [LogisticsController::class, 'updateSku']);
 

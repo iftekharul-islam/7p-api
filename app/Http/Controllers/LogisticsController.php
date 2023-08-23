@@ -43,29 +43,21 @@ class LogisticsController extends Controller
     {
         if ($request->has('child_skus')) {
             $skus = array_filter($request->get('child_skus'));
-
             $skus = array_map('htmlspecialchars_decode', $skus);
-
             if (count($skus) > 0) {
-
                 $update = array();
-
                 if ($request->has('allow_mixing_update') && $request->get('allow_mixing_update') != '') {
                     $update['allow_mixing'] = $request->get('allow_mixing_update');
                 }
-
                 if ($request->has('batch_route_id_update') && $request->get('batch_route_id_update') != 0) {
                     $update['batch_route_id'] = $request->get('batch_route_id_update');
                 }
-
                 if ($request->has('graphic_sku_update') && $request->get('graphic_sku_update') != '') {
                     $update['graphic_sku'] = $request->get('graphic_sku_update');
                 }
-
                 if ($request->has('sure3d_update') && $request->get('sure3d_update') != '') {
                     $update['sure3d'] = $request->get('sure3d_update');
                 }
-
                 if ($request->has('frame_size_update') && $request->get('frame_size_update') != '') {
                     $update['frame_size'] = $request->get('frame_size_update');
                 }
@@ -82,17 +74,17 @@ class LogisticsController extends Controller
                         ->update($update);
                 }
 
-                if ($request->has('stocknos')) {
+                if ($request->has('stocklist')) {
 
                     foreach ($skus as $sku) {
 
                         InventoryUnit::where('child_sku', $sku)->delete();
 
-                        foreach ($request->get('stocknos') as $stock_no) {
+                        foreach ($request->get('stocklist') as $stock_no) {
                             $unit = new InventoryUnit;
                             $unit->child_sku = $sku;
-                            $unit->stock_no_unique = $stock_no;
-                            $unit->unit_qty = $request->get('QTY_' . $stock_no);
+                            $unit->stock_no_unique = $stock_no['value'];
+                            $unit->unit_qty = $stock_no['qty'] ?? 0;
                             if (auth()->user()) {
                                 $unit->user_id = auth()->user()->id;
                             } else {
@@ -103,6 +95,11 @@ class LogisticsController extends Controller
                     }
                 }
             }
+
+            return response()->json([
+                'message' => 'Child SKUs updated.',
+                'status' => 201
+            ], 201);
 
             return redirect()->action(
                 'LogisticsController@sku_list',
@@ -127,7 +124,10 @@ class LogisticsController extends Controller
                 ]
             );
         } else {
-            return redirect()->action('LogisticsController@sku_list')->withErrors('No Child SKUs selected');
+            return response()->json([
+                'message' => 'No Child SKUs selected',
+                'status' => 203
+            ], 203);
         }
     }
 
