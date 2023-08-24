@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BatchRoute;
+use App\Models\Design;
 use App\Models\InventoryUnit;
 use App\Models\Option;
 use App\Models\Parameter;
@@ -61,7 +62,7 @@ class LogisticsController extends Controller
                 if ($request->has('frame_size_update') && $request->get('frame_size_update') != '') {
                     $update['frame_size'] = $request->get('frame_size_update');
                 }
-                //dd($update, $request->all());
+                //TODO - need to check error message for body
                 if (count($update) > 0) {
 
                     if (auth()->user()) {
@@ -74,6 +75,7 @@ class LogisticsController extends Controller
                         ->update($update);
                 }
 
+                //TODO - need to check error message for body
                 if ($request->has('stocklist')) {
 
                     foreach ($skus as $sku) {
@@ -311,5 +313,102 @@ class LogisticsController extends Controller
             'message' => 'Child SKU updated.',
             'status' => 201
         ], 201);
+    }
+
+    public function updateSingleSku(Request $request)
+    {
+        $parameter_option = Option::with('design')
+            ->where('unique_row_value', $request->get('unique_row_value'))
+            ->first();
+
+        if (!$parameter_option) {
+            return response()->json([
+                'message' => 'Child SKU not found',
+                'status' => 203
+            ], 203);
+        }
+
+        if (!$parameter_option->design) {
+            Design::check($parameter_option->graphic_sku);
+        }
+
+        $update_flag = FALSE;
+
+        if ($parameter_option->batch_route_id != trim($request->get('route'))) {
+
+            $route_exists = BatchRoute::find(trim($request->get('route')));
+
+            if ($route_exists) {
+                $parameter_option->batch_route_id = trim($request->get('route'));
+                $update_flag = TRUE;
+            } else {
+                return response()->json([
+                    'message' => 'Route does not Exist',
+                    'status' => 203
+                ], 203);
+                return 'Route does not Exist';
+            }
+        }
+
+        if ($parameter_option->allow_mixing != trim($request->get('mix'))) {
+
+            $parameter_option->allow_mixing = trim($request->get('mix'));
+            $update_flag = TRUE;
+        }
+
+        if ($parameter_option->graphic_sku != trim($request->get('graphic_sku'))) {
+            $parameter_option->graphic_sku = trim($request->get('graphic_sku'));
+            $parameter_option->save();
+
+            Design::updateGraphicInfo(1, $parameter_option->id);
+
+            $parameter_option = Option::with('design')->where('unique_row_value', $request->get('unique_row_value'))->first();
+            $msg = "Updated ";
+            $msg .= $parameter_option->design->template ? '' : ' - NoTemplate ';
+            $msg .= $parameter_option->design->xml ? '' : ' - NoXML ';
+            return response()->json([
+                'message' => $msg,
+                'status' => 201
+            ], 201);
+
+            // return 'Updated - ' . $parameter_option->design->template ? '' : ' - NoTemplate ' .
+            //     $parameter_option->design->xml ? '' : ' - NoXML ';
+        }
+
+        if ($parameter_option->sure3d != trim($request->get('sure3d'))) {
+            $parameter_option->sure3d = trim($request->get('sure3d'));
+            $update_flag = TRUE;
+        }
+
+
+        if ($parameter_option->orientation != trim($request->get('orientation'))) {
+            $parameter_option->orientation = trim($request->get('orientation'));
+            $update_flag = TRUE;
+        }
+
+        if ($parameter_option->frame_size != trim($request->get('frame_size'))) {
+            $parameter_option->frame_size = trim($request->get('frame_size'));
+            $update_flag = TRUE;
+        }
+
+        if ($parameter_option->mirror != trim($request->get('mirror'))) {
+            $parameter_option->mirror = trim($request->get('mirror'));
+            $update_flag = TRUE;
+        }
+
+        if ($update_flag) {
+            $parameter_option->save();
+            return response()->json([
+                'message' => 'Updated',
+                'status' => 201
+            ], 201);
+            return 'Updated';
+        } else {
+            return response()->json([
+                'message' => 'No Update',
+                'status' => 203
+            ], 203);
+            return 'No Update';
+        }
     }
 }
