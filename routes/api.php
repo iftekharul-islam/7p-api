@@ -208,6 +208,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('update-child-skus', [LogisticsController::class, 'updateSKUs']);
     Route::get('get-config-child-sku/{id}', [LogisticsController::class, 'getSKUs']);
     Route::post('update-child-sku', [LogisticsController::class, 'updateSku']);
+    Route::post('update-single-sku', [LogisticsController::class, 'updateSingleSku']);
 
     // Graphics API
     Route::get('preview-batches', [ItemController::class, 'getBatch']);
