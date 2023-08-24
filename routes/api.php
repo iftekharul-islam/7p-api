@@ -33,6 +33,7 @@ use App\Http\Controllers\SpecificationSheetController;
 use App\Http\Controllers\StationController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\StoreItemController;
+use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TemplateController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserPermissionController;
@@ -313,6 +314,8 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('reprint_bulk', [GraphicsController::class, 'reprintBulk']);
     Route::get('export_batchbulk', [BatchController::class, 'export_bulk']);
 
+    Route::get('task', [TaskController::class, 'index']);
+
     Route::get('printer-options', [GraphicsController::class, 'printerOption']);
     Route::get('destination-options', [RejectionController::class, 'destinationOption']);
     Route::get('graphics-status-options', [GraphicsController::class, 'statusOption']);
@@ -337,6 +340,8 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('stock-image-options', [InventoryController::class, 'stockImageOption']);
     Route::get('email-template-options', [EmailTemplateController::class, 'emailTemplateOptions']);
     Route::get('reason-options', [RejectionReasonController::class, 'reasonOption']);
+    Route::get('user-options', [UserController::class, 'userOption']);
+    Route::get('task-search-in-options', [TaskController::class, 'searchInOption']);
 
     Route::get('email-template-keywords', [EmailTemplateController::class, 'emailTemplateKeywords']);
 

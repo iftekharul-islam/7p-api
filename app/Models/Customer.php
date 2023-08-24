@@ -10,7 +10,7 @@ class Customer extends Model
 
     public function order()
     {
-        return $this->hasMany('App\Order')
+        return $this->hasMany(Order::class)
             ->where('is_deleted', 0);
     }
 
