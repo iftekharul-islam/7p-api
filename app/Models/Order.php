@@ -213,7 +213,7 @@ class Order extends Model
 
     public function shippingInfo()
     {
-        return $this->hasMany('App\Ship', 'order_number', 'order_id');
+        return $this->hasMany(Ship::class, 'order_number', 'order_id');
     }
 
     public function notes()
@@ -434,7 +434,7 @@ class Order extends Model
         $statuses = Order::statuses();
 
         return [
-            'App\Order',
+            Order::class,
             $this->id,
             url(sprintf('/orders/details/%s', $this->id)),
             'Order: ' . $this->short_order,

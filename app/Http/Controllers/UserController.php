@@ -130,4 +130,19 @@ class UserController extends Controller
         $user->syncRoles($role);
         return true;
     }
+
+    public function userOption(Request $request)
+    {
+        $users = User::where('is_deleted', '0')
+            ->orderBy('username')
+            ->get();
+        $data = [];
+        foreach ($users as $user) {
+            $data[] = [
+                'value' => $user->id,
+                'label' => $user->username
+            ];
+        }
+        return $data;
+    }
 }
