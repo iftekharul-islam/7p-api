@@ -315,6 +315,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('export_batchbulk', [BatchController::class, 'export_bulk']);
 
     Route::get('task', [TaskController::class, 'index']);
+    Route::post('tasks/{id}', [TaskController::class, 'delete']);
 
     Route::get('printer-options', [GraphicsController::class, 'printerOption']);
     Route::get('destination-options', [RejectionController::class, 'destinationOption']);

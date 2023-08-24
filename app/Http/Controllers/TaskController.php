@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Task;
+use App\Models\TaskNote;
 use App\Models\User;
 use Illuminate\Http\Request;
 
@@ -67,6 +68,32 @@ class TaskController extends Controller
             'tasks' => $tasks,
             'array' => $array
         ]);
+    }
+
+    public function delete($id)
+    {
+        $task = Task::find($id);
+
+        if ($task) {
+            $task->status = 'C';
+            $task->save();
+
+            $note = new TaskNote();
+            $note->task_id = $id;
+            $note->text = 'Task Closed';
+            $note->user_id = auth()->user()->id;
+            $note->save();
+
+            return response()->json([
+                'message' => 'Task Closed',
+                'status' => 201
+            ], 201);
+        } else {
+            return response()->json([
+                'message' => 'Task Not Found',
+                'status' => 203
+            ], 203);
+        }
     }
 
     public function searchInOption()
