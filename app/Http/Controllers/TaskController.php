@@ -46,11 +46,15 @@ class TaskController extends Controller
                 ->orderBy('created_at', 'ASC')
                 ->get();
         } else {
-            $tasks = Task::with('taskable', 'assigned_user', 'create_user', 'notes')
+            // TODO - Fix this
+            // $tasks = Task::with('taskable', 'assigned_user', 'create_user', 'notes')
+            $tasks = Task::with('assigned_user', 'create_user', 'notes')
                 ->where('id', $request->get('task_id'))
                 ->get();
 
-            $array = Task::getTaskable($tasks->first()->taskable_id, $tasks->first()->taskable_type);
+            // TODO - Fix this
+            // $array = Task::getTaskable($tasks->first()->taskable_id, $tasks->first()->taskable_type);
+            $array = [];
         }
 
         foreach ($tasks as $task) {
