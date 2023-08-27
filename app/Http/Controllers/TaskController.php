@@ -70,6 +70,129 @@ class TaskController extends Controller
         ]);
     }
 
+    public function store(Request $request)
+    {
+        if (!$request->user || $request->user == 'undefined') {
+            return response()->json([
+                'message' => 'Please select a user for this task',
+                'status' => 203
+            ], 203);
+        }
+
+        if (!$request->has('id')) {
+            $ids = Task::findTaskable($request->get('associate_with'), $request->get('model'));
+            if ($ids) {
+                $id = $ids[0];
+                $model = $request->get('model');
+            } else {
+                $id = null;
+                $model = null;
+            }
+        } else {
+            $id = $request->get('id');
+            $model = $request->get('model');
+        }
+
+        $task = Task::new(
+            $request->get('text'),
+            $request->get('user'),
+            $model,
+            $id,
+            $request->get('close_event'),
+            $request->get('previous_task'),
+            null,
+            $request->get('due_date')
+        );
+        if ($task) {
+            $this->save_attachment($task->id, $request->file('attach'));
+        }
+
+        return response()->json([
+            'message' => 'Task Created',
+            'params' => [
+                'task_id' => $task->id
+            ],
+            'status' => 201
+        ], 201);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $task = Task::find($id);
+
+        if (!$task) {
+            return;
+        }
+
+        $note = null;
+
+        if ($request->has('note_text')) {
+            $note = new TaskNote;
+            $note->task_id = $id;
+            $note->text = $request->get('note_text');
+            $note->user_id = auth()->user()->id;
+            $note->save();
+
+            $task->msg_read = '0';
+            $task->save();
+        }
+
+        $saved = $this->save_attachment($id, $request->file('attach'));
+
+        if ($saved) {
+            $task->msg_read = '0';
+            $task->save();
+        }
+
+        if ($request->reassign) {
+
+            if ($request->get('reassign') != $task->assigned_user_id) {
+
+                $new_user = User::find($request->get('reassign'));
+
+                $note_text = '  ( Reassigned to '  . $new_user->username . ' )';
+
+                if (!$note) {
+                    $note = new TaskNote;
+                    $note->task_id = $id;
+                    $note->user_id = auth()->user()->id;
+                }
+
+                $note->text .= $note_text;
+                $note->save();
+
+                $task->assigned_user_id = $request->get('reassign');
+                $task->msg_read = '0';
+                $task->save();
+            }
+        }
+        return response()->json([
+            'message' => 'Task Updated',
+            'params' => [
+                'task_id' => $task->id
+            ],
+            'status' => 201
+        ], 201);
+    }
+
+    private function save_attachment($id, $file)
+    {
+        if ($file == null) {
+            return false;
+        }
+        $filename = $id . date("_Ymd_His.", strtotime('now')) . $file->getClientOriginalExtension();
+        if (move_uploaded_file($file, base_path() . '/public_html/assets/attachments/' . $filename)) {
+            $note = new TaskNote;
+            $note->task_id = $id;
+            $note->text = $filename;
+            $note->ext = strtolower($file->getClientOriginalExtension());
+            $note->user_id = auth()->user()->id;
+            $note->save();
+            return true;
+        }
+        return false;
+    }
+
     public function delete($id)
     {
         $task = Task::find($id);
