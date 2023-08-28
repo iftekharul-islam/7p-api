@@ -836,7 +836,7 @@ class Shipper
             ->where('order_number', $order->id)
             ->first();
 
-        if (count($shipment) == 0) {
+        if (!$shipment) {
 
             $methods = Shipper::listMethods();
 
