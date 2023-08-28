@@ -116,6 +116,8 @@ class ShippingController extends Controller
         /*
          * Stops orders from being duplicated
          */
+
+        //  TODO need to optimize time
         $track = $request->get('track_number', "ERR");
 
         if (Cache::has("TRACKING_DUPLICATE_$track")) {
