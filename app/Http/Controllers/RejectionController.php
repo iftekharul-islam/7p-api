@@ -20,8 +20,8 @@ class RejectionController extends Controller
     public function index(Request $request)
     {
         $batch_array = array();
-        $store_ids = Store::where('permit_users', 'like', "%" . auth()->user()->id . "%")
-            ->where('is_deleted', '0')
+        $store_ids = Store::where('is_deleted', '0')
+            // ->where('permit_users', 'like', "%" . auth()->user()->id . "%")
             ->where('invisible', '0')
             ->get()
             ->pluck('store_id')
@@ -74,25 +74,35 @@ class RejectionController extends Controller
             $total_items = count($items);
 
             foreach ($items as $item) {
-                // if (!array_key_exists($item->batch_number, $batch_array)) {
-                // $batch_array[$item->batch_number]['items'] = $items->where('batch_number', $item->batch_number)->all();
-                $batch_array[$item->batch_number]['items'][] = $item;
-                $batch_array[$item->batch_number]['summaries'] = $item->batch->summary_count;
-                $batch_array[$item->batch_number]['id'] = $item->batch->id;
-                // }
+
+                if (!array_key_exists($item->batch_number, $batch_array)) {
+                    $batch_array[$item->batch_number]['items'] = $items->where('batch_number', $item->batch_number)->all();
+                    $batch_array[$item->batch_number]['summaries'] = $item->batch->summary_count;
+                    $batch_array[$item->batch_number]['id'] = $item->batch->id;
+                }
             }
 
-            $batch_arr = [];
-            foreach ($batch_array as $key => $value) {
-                $batch_arr[] = [
-                    ...$value,
-                    'key' => $key
-                ];
-            }
+            // foreach ($items as $item) {
+            //     // if (!array_key_exists($item->batch_number, $batch_array)) {
+            //     // $batch_array[$item->batch_number]['items'] = $items->where('batch_number', $item->batch_number)->all();
+            //     $batch_array[$item->batch_number]['items'][] = $item;
+            //     $batch_array[$item->batch_number]['summaries'] = $item->batch->summary_count;
+            //     $batch_array[$item->batch_number]['id'] = $item->batch->id;
+            //     // }
+            // }
+
+            // $batch_arr = [];
+            // foreach ($batch_array as $key => $value) {
+            //     $batch_arr[] = [
+            //         ...$value,
+            //         'key' => $key
+            //     ];
+            // }
+
         }
 
         return response()->json([
-            'batch_array' => $batch_arr ?? null,
+            'batch_array' => $batch_array ?? null,
             'total_items' => $total_items,
             'label' => $label,
             'summary' => $summary,
@@ -266,5 +276,85 @@ class RejectionController extends Controller
         //     $label = $result['label'];
         //     return view('prints.includes.label', compact('label'));
         // }
+    }
+
+    public function sendToStart(Request $request)
+    {
+        $batch_numbers = $request->get('batches');
+
+        $error = array();
+        $success = array();
+
+        foreach ($batch_numbers as $batch_number) {
+
+            $result = $this->moveStation($batch_number);
+
+            if ($result) {
+                $success[] = 'Batch ' . $batch_number . ' Moved to Production';
+            } else {
+                $error[] = 'Error moving '  . $batch_number;
+            }
+
+            $msg = Batch::export($batch_number, '0');
+
+            if (isset($msg['success'])) {
+                $success[] = $msg['success'];
+            }
+
+            if (isset($msg['error'])) {
+                $error[] = $msg['error'];
+            }
+        }
+
+        return redirect()->action('RejectionController@index', ['graphic_status' => $request->get('graphic_status'), 'section' => $request->get('section')])
+            ->with('success', $success)
+            ->withErrors($error);
+    }
+
+    private function moveStation($batch_number, $station_change = null)
+    {
+
+        $batch = Batch::with('route.stations_list')
+            ->where('batch_number', $batch_number)
+            ->first();
+
+        if (!$batch) {
+            return false;
+        } else {
+
+            if ($station_change == null || $station_change == 'G') {
+                $station_change = $batch->route->stations_list->first()->station_id;
+            } else if ($station_change == 'P') {
+                $station_change = $batch->route->production_stations->first()->id;
+            } else if ($station_change == 'Q') {
+                $station_change = $batch->route->qc_stations->first()->id;
+            }
+
+            $batch->prev_station_id = $batch->station_id;
+            $batch->station_id = $station_change;
+            $batch->status = 'active';
+            $batch->save();
+
+            $items = Item::where('batch_number', $batch->batch_number)
+                ->where('is_deleted', '0')
+                ->get();
+
+            foreach ($items as $item) {
+                $item->item_status = 1;
+                $item->save();
+            }
+
+            Rejection::where('to_batch', $batch->batch_number)
+                ->whereNull('to_station_id')
+                ->update([
+                    'supervisor_user_id' => auth()->user()->id,
+                    'to_station_id'      => $station_change,
+                    'complete'           => '1'
+                ]);
+
+            Batch::note($batch->batch_number, $batch->station_id, '5', 'Reject batch moved into production');
+
+            return true;
+        }
     }
 }

@@ -169,25 +169,23 @@ class Shipper
             if (count($all_items) > count($items)) {
                 return 'ERROR: Shippable items outside of batch, cannot ship this order from QC. Order: ' . $order_id . ' Batch: ' . $batch_number;
             }
-        } elseif ($origin == 'WAP' && ($item_ids == null || empty($item_ids))) {
-
+        } elseif ($origin == 'WAP' && ($ids == null || empty($ids))) {
             $items = Item::selectRaw('id, (item_unit_price * item_quantity) as amount, item_description')
                 ->where('order_5p', $order_id)
-                ->whereIn('id', $item_ids)
+                ->whereIn('id', $ids)
                 ->where('is_deleted', '0')
                 ->searchStatus('wap')
                 ->get();
-        } elseif ($origin == 'WAP' && ($item_ids != null && !empty($item_ids))) {
-
+        } elseif ($origin == 'WAP' && ($ids != null && !empty($ids))) {
             $items = Item::selectRaw('id, (item_unit_price * item_quantity) as amount, item_description')
                 ->where('order_5p', $order_id)
-                ->whereIn('id', $item_ids)
+                ->whereIn('id', $ids)
                 ->where('is_deleted', '0')
                 ->searchStatus('wap')
                 ->get();
         } elseif ($origin == 'OR') {
 
-            if (is_array($item_ids)) {
+            if (is_array($ids)) {
 
                 $items = Item::selectRaw('id, (item_unit_price * item_quantity) as amount, item_description')
                     ->where('is_deleted', '0')
@@ -762,9 +760,6 @@ class Shipper
 
     public function enterTracking($item_id, $order_5p, $track_number, $method)
     {
-
-        info($item_id);
-
         if ($item_id != 'all') {
             $items = Item::with('order')
                 ->where('id', $item_id)

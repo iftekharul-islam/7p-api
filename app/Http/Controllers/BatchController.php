@@ -293,7 +293,7 @@ class BatchController extends Controller
             ], 201);
         } elseif ($origin == 'BD') {
             return response()->json([
-                'isRedirect' => '/batch-list' . $batch_number,
+                'isRedirect' => '/batch-list/' . $batch_number,
                 'params' => null,
                 'message' => 'Item Rejected',
                 'status' => 201

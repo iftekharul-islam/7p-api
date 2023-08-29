@@ -244,6 +244,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
 
     Route::get('move-batches', [ProductController::class, 'moveNextStation']);
     Route::get('rejects', [RejectionController::class, 'index']);
+    Route::post('send-to-start', [RejectionController::class, 'sendToStart']);
     Route::get('back-orders', [BackorderController::class, 'index']);
     Route::get('back-orders-show', [BackorderController::class, 'show']);
 
