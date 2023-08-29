@@ -1377,6 +1377,7 @@ class GraphicsController extends Controller
                 return $notInQueue;
             }
 
+            // TODO - need to check this function (emergency)
             $summary_file = $this->createSummary($batch_number);
 
             // if (!file_exists($summary_file)) {

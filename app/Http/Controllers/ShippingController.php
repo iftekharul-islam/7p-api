@@ -235,9 +235,7 @@ class ShippingController extends Controller
                 }
 
                 //test complete
-                info("A");
                 $ship_info = $shipper->createShipment($request->get('origin'), $request->get('order_id'), $request->get('batch_number'), $packages, $item_ids, $params);
-                info("B");
 
                 if (is_array($ship_info) && isset($ship_info['reminder'])) {
 
@@ -299,9 +297,7 @@ class ShippingController extends Controller
                     //     ->withErrors(['error' => $ship_info]);
                 }
             } elseif ($request->get('origin') == 'WAP') {
-                info("C");
                 $ship_info = $shipper->createShipment($request->get('origin'), $request->get('order_id'), null, $packages, $item_ids, $params);
-                info("D");
 
                 if (is_array($ship_info) && isset($ship_info['reminder'])) {
 
