@@ -11,6 +11,7 @@ use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use library\Helper;
 
 class RejectionController extends Controller
 {
@@ -306,6 +307,11 @@ class RejectionController extends Controller
             }
         }
 
+        return response()->json([
+            'message' => $success[0],
+            'status' => 201
+        ], 201);
+
         return redirect()->action('RejectionController@index', ['graphic_status' => $request->get('graphic_status'), 'section' => $request->get('section')])
             ->with('success', $success)
             ->withErrors($error);
@@ -356,5 +362,74 @@ class RejectionController extends Controller
 
             return true;
         }
+    }
+
+    public function reprintLabel(Request $request)
+    {
+
+        $rejection = Rejection::with(
+            'item.order',
+            'rejection_reason_info',
+            'user',
+            'from_batch_info.scans.station',
+            'from_batch_info.scans.in_user',
+            'from_batch_info.scans.out_user'
+        )
+            ->where('id', $request->get('id'))
+            ->first();
+
+        $label = $this->getLabel($rejection);
+        return response()->json([
+            'message' => 'Label Reprinted',
+            'params' => ['label' => $label],
+            'status' => 201,
+        ], 201);
+        return redirect()->action('RejectionController@index', ['label' => $label]);
+    }
+
+    public function getLabel($rejection)
+    {
+
+        $item = $rejection->item;
+        $order_id = $rejection->item->order->short_order;
+
+        if ($rejection->rejection_reason_info) {
+            $reason = $rejection->rejection_reason_info->rejection_message;
+        } else {
+            $reason = '';
+        }
+
+        $username = $rejection->user->username;
+
+        $last_scan = null;
+
+        foreach ($rejection->from_batch_info->scans as $scan) {
+            if ($scan->station->type == "P") {
+                if (isset($scan->in_user)) {
+                    $last_scan = $scan->station->station_name . ' : IN ' . $scan->in_user->username . ' ' . substr($scan->in_date, 0, 10);
+                }
+
+                if (isset($scan->out_user)) {
+                    $last_scan .= ' - OUT ' . $scan->out_user->username . ' ' . substr($scan->in_date, 0, 10);
+                }
+                break;
+            }
+        }
+
+
+        $label = "^XA" .
+            "^FX^CF0,200^FO100,50^FDREJECT^FS^FO50,220^GB700,1,3^FS" .
+            "^FX^CF0,30^FO50,240^FDItem ID: $rejection->item_id^FS^FO350,240^FDOrder ID:$order_id^FS^FO50,280^FDBatch: $rejection->to_batch^FS" .
+            "^FO50,320^FDDate: $rejection->created_at^FS^FO50,370^GB700,1,3^FS^FO50,400^FB750,3,,^FD$item->item_description^FS" .
+            "^FO50,440^FB750,2,,^FDSKU:$item->child_sku^FS" .
+            "^FO100,480^FB560,6,,^FD" . Helper::optionTransformer($item->item_option, 1, 0, 0, 1, 0, ',  ') . "^FS" .
+            "^FX^FO50,630^GB700,270,3^FS^CF0,40^FO75,650^FDRejected QTY: $rejection->reject_qty^FS" .
+            "^FO350,650^FDRejected By: $username^FS^CF0,50^FO75,700^FDReason: $reason^FS" .
+            "^FO75,750^FB700,3,,^FD$rejection->rejection_message^FS" .
+            "^CF0,20^FO60,875^FDSCAN : $last_scan^FS" .
+            "^FX^BY5,2,150^FO50,920^BC^FDITEM$rejection->item_id^FS" .
+            "^XZ";
+
+        return str_replace("'", " ", $label);
     }
 }
