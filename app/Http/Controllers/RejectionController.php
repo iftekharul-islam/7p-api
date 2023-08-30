@@ -432,4 +432,80 @@ class RejectionController extends Controller
 
         return str_replace("'", " ", $label);
     }
+
+    public function process(Request $request)
+    {
+        $error = array();
+        $success = array();
+
+        if (!$request->get('station_change')) {
+            return response()->json([
+                'message' => 'Please select station',
+                'status' => 203
+            ], 203);
+        }
+
+        if (!$request->get('supervisor_message')) {
+            return response()->json([
+                'message' => 'Please enter supervisor message',
+                'status' => 203
+            ], 203);
+        }
+
+        foreach ($request->get('supervisor_message') as $id => $msg) {
+
+            if ($msg != '') {
+                $record = Rejection::find($id);
+
+                $record->supervisor_message = $record->supervisor_message . ' ' . $msg;
+                $record->save();
+            }
+        }
+
+        if ($request->get('station_change') != '0') {
+            $result = $this->moveStation($request->get('batch_number'), substr($request->get('station_change'), 0, 1));
+
+            if ($result) {
+                $success[] = 'Batch ' . $request->get('batch_number') . ' Moved';
+            } else {
+                $error[] = 'Error moving '  . $request->get('batch_number');
+            }
+        }
+
+        if ($request->get('station_change') == 'G') {
+
+            $msg = Batch::export($request->get('batch_number'), '0');
+
+            if (isset($msg['success'])) {
+                $success[] = $msg['success'];
+            }
+
+            if (isset($msg['error'])) {
+                $error[] = $msg['error'];
+            }
+        } else if ($request->get('station_change') == 'GM') {
+
+            touch(GraphicsController::$manual_dir . $request->get('batch_number') . '.csv');
+            $success[] = 'Batch ' . $request->get('batch_number') . ' sent to Manual Graphics';
+        }
+
+        if (count($success)) {
+            return response()->json([
+                'message' => $success[0],
+                'status' => 201
+            ], 203);
+        } else {
+            return response()->json([
+                'message' => $error[0],
+                'status' => 203
+            ], 201);
+        }
+
+        return redirect()->action(
+            'RejectionController@index',
+            ['graphic_status' => $request->get('graphic_status'), 'section' => $request->get('section'), 'reason' => $request->get('reason')]
+        )
+            ->with('success', $success)
+            ->withErrors($error);
+    }
 }

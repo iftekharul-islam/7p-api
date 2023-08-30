@@ -246,6 +246,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('rejects', [RejectionController::class, 'index']);
     Route::post('send-to-start', [RejectionController::class, 'sendToStart']);
     Route::post('reprint-label', [RejectionController::class, 'reprintLabel']);
+    Route::post('process', [RejectionController::class, 'process']);
     Route::get('back-orders', [BackorderController::class, 'index']);
     Route::get('back-orders-show', [BackorderController::class, 'show']);
 
@@ -306,7 +307,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
 
     Route::get('export-data', [StoreController::class, 'exportData']);
     Route::get('export-qb', [StoreController::class, 'qbExport']);
-    Route::post('export-qb-csv', [StoreController::class, 'qbCsvExport']);
+    Route::get('export-qb-csv', [StoreController::class, 'qbCsvExport']);
 
     Route::get('create-graphics', [GraphicsController::class, 'index']);
     Route::post('graphics-upload-file', [GraphicsController::class, 'uploadFile']);

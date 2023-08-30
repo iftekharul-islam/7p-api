@@ -1947,7 +1947,10 @@ class GraphicsController extends Controller
                 ->where('batch_number', $select_batch)
                 ->get();
             foreach ($batche as $batch) {
+                info("A");
                 foreach ($batch->items as $items) {
+                    info("B");
+
                     if ($items->id == $item_id) {
                         if (empty($items->tracking_number)) {
                             $thumb = '/assets/images/template_thumbs/' . $items->order_id . "-" . $items->id . '.jpg';
@@ -2015,6 +2018,7 @@ class GraphicsController extends Controller
         $filename = $this->uniqueFilename($this->main_dir, $filename);
 
         if (move_uploaded_file($request->file('upload_file'), $this->main_dir . $filename)) {
+            info("A");
             Batch::note($batch->batch_number, $batch->station_id, '11', 'Graphic Uploaded to Main');
             return response()->json([
                 'status' => 201,
