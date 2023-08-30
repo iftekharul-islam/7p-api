@@ -175,7 +175,7 @@ class GenericCsv extends StoreInterface
     }
 
     if (isset($data[18])) {
-      $order->ship_date = Carbon::parse($data[18])->toDateTimeString();
+      $order->ship_date = Carbon::now()->format('Y-m-d H:i:s');
     }
     if (isset($data[19])) {
       $status = [

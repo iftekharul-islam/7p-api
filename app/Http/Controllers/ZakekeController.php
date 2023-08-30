@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Batch;
-use App\BatchNote;
+use App\Models\Batch;
+use App\Models\BatchNote;
 use App\Http\Other\Maker;
-use App\Item;
-use App\Section;
-use App\StoreItem;
-use App\Wap;
+use App\Models\Item;
+use App\Models\Section;
+use App\Models\StoreItem;
+use App\Models\Wap;
 use Illuminate\Contracts\Validation\ValidationException;
 use Illuminate\Http\Request;
-use App\Option;
-use App\Order;
+use App\Models\Option;
+use App\Models\Order;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -21,8 +21,8 @@ use Illuminate\Support\Facades\Validator;
 use LaravelShipStation\ShipStation;
 use Market\Dropship;
 use Market\ShipStationImport;
-use Monogram\Batching;
-use Monogram\CSV;
+use Ship\Batching;
+use Ship\CSV;
 
 class ZakekeController extends Controller
 {
@@ -37,7 +37,7 @@ class ZakekeController extends Controller
             ->with("items")
             ->get();
 
-        $notes = \App\BatchNote::where("batch_number", "637537")->get();
+        $notes = \App\Models\BatchNote::where("batch_number", "637537")->get();
 
         foreach ($notes as $note) {
             if (stripos($note->note, "(automatically from link)") !== false) {

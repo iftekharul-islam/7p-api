@@ -131,6 +131,9 @@ class Quickbooks
     $line[] = 'Total';
     $lines[] = $line;
 
+    // TODO -- need to change this json file url
+    // TODO -- shows "something went wrong" error in frontend for this json file missing issue
+
     $file = "/var/www/order.monogramonline.com/Inventories.json";
     $data = json_decode(file_get_contents($file), true);
 
