@@ -235,4 +235,21 @@ class TaskController extends Controller
         }
         return $data;
     }
+
+    public function userTasks()
+    {
+        $unread = Task::where('assigned_user_id', auth()->user()->id)
+            ->where('status', 'O')
+            ->where('msg_read', '=', '0')
+            ->count();
+
+        $all_msg = Task::where('assigned_user_id', auth()->user()->id)
+            ->where('status', 'O')
+            ->count();
+
+        return response()->json([
+            'unread' => $unread,
+            'all_msg' => $all_msg
+        ]);
+    }
 }

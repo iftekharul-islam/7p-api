@@ -107,12 +107,13 @@ class PermissionController extends Controller
 
     public function userPermission()
     {
-        if (!Auth()->user()->id) return [];
-        $permission = User::with('roles.permissions')->find(Auth()->user()->id);
-        $permissions = [];
-        foreach ($permission->roles[0]->permissions as $key => $value) {
-            array_push($permissions, $value->name);
-        };
-        return $permissions;
+        // if (!Auth()->user()->id) return [];
+        // $permission = User::with('roles.permissions')->find(Auth()->user()->id);
+        // $permissions = [];
+        // foreach ($permission->roles[0]->permissions as $key => $value) {
+        //     array_push($permissions, $value->name);
+        // };
+        // return $permissions;
+        return ['user'];
     }
 }

@@ -606,4 +606,27 @@ class BatchController extends Controller
             return true;
         }
     }
+
+    public function exportBatch($id, $force = '0', $format = 'CSV')
+    {
+        info($id);
+        info($force);
+        info($format);
+        $exported = Batch::export($id, $force, $format);
+
+        isset($exported['success']) ? $success = $exported['success'] : $success = null;
+        isset($exported['error']) ? $error = $exported['error'] : $error = null;
+
+        if ($success) {
+            return response()->json([
+                'message' => $success,
+                'status' => 201
+            ], 201);
+        } else {
+            return response()->json([
+                'message' => $error,
+                'status' => 203
+            ], 203);
+        }
+    }
 }
