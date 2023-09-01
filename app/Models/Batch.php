@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Ship\Sure3d;
 
 class Batch extends Model
 {
@@ -788,7 +789,7 @@ class Batch extends Model
 
         // Get list of Items from Item Table by Batch Number
         $batch = Batch::with('pending_items.parameter_option.design', 'route', 'section', 'store')
-            ->where('is_deleted', 0)
+            ->where('is_deleted', '0')
             ->where('batch_number', $id)
             ->first();
 
@@ -886,6 +887,7 @@ class Batch extends Model
             $file_path = sprintf("%s/", $savepath);
         }
 
+        // TODO - check if is this needed permission or not
         if (!file_exists($file_path)) {
             if (!mkdir($file_path)) {
                 Batch::note($batch->batch_number, $batch->station_id, '7', 'Error Exporting ' . $format);

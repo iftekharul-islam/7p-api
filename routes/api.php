@@ -240,6 +240,8 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('batch-list', [BatchController::class, 'index']);
     Route::get('batch-list/{batch_number}', [BatchController::class, 'show']);
     Route::get('reject_item', [BatchController::class, 'rejectItem']);
+    Route::get('export-batch/{id}/{force}/{format}', [BatchController::class, 'exportBatch']);
+    Route::post('reprint-graphic', [GraphicsController::class, 'reprintGraphic']);
 
 
     Route::get('move-batches', [ProductController::class, 'moveNextStation']);
@@ -352,14 +354,6 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('email-template-keywords', [EmailTemplateController::class, 'emailTemplateKeywords']);
 
     Route::get('skus', [SpecificationSheetController::class, 'skus']);
-});
 
-
-Route::get('test', function () {
-    return response()->json([
-        'data' => 'http://7p.test/wasatch/staging-2/673216.xml',
-        // 'data' => $downloadfile,
-        'message' => 'Printed by',
-        'status' => 201
-    ], 201);
+    Route::get('user-tasks', [TaskController::class, 'userTasks']);
 });
