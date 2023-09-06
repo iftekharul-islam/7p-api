@@ -418,7 +418,7 @@ class Helper
 
     public function shopify_call($api_endpoint, $query = array(), $method = 'GET', $request_headers = array())
     {
-        $token = "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";
+        $token = "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";
         $shop = "monogramonline";
 
         // Build URL
@@ -506,5 +506,56 @@ class Helper
     {
         //$string = str_replace(' ', '-', $string); // Replaces all spaces with hyphens.
         return preg_replace('/[^A-Za-z0-9,\-]/', ' ', $string); // Removes special chars.
+    }
+
+    public function getUrlWithoutParaMeter($url)
+    {
+        $url_parts = parse_url($url);
+        if (isset($url_parts['scheme'])) {
+            $constructed_url = $url_parts['scheme'] . '://' . $url_parts['host'] . $url_parts['path'];
+        } else {
+            $constructed_url = $url;
+        }
+        return $constructed_url;
+    }
+
+    public function isKeyExist($sku, $keyString, $value)
+    {
+
+        //$k = str_replace(['Choose ', 'Select '], '', substr($key, $len));
+        //            Log::info("isKeyExist key = ".$keyString." -> value = ".$value);
+
+        $restrictedArray = [
+            "I've reviewed my design. Everything is correct.",
+            "I've reviewed my design. Everything is correct.%0D%0A",
+            "_pplr_preview",
+            "Preview",
+            "_Photo_crop",
+            "_font size PERSONALIZATION",
+            "_pc_pricing_ref",
+            "_pc_pricing_qty",
+            "_pc_pricing_origin",
+            "_pc_pricing_qty_split",
+        ];
+        //        Log::info($sku." => ".$keyString);
+        if (in_array($keyString, $restrictedArray)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public function optionsValuesFilter($string)
+    {
+        #$string = str_replace(' ', '-', $string);
+        //        $this->jdbg("Before Value =", $string);
+        $string = explode("+", $string);
+
+        //        $string = preg_replace("/[^A-Za-z0-9\- &.@'!,$*]/',", trim($string[0]));
+        //        $string = preg_replace('/[^A-Za-z0-9\- .@!,$*]/', '', trim($string[0]));
+        $string = preg_replace('/[^A-Za-z0-9\-.&@"!,$* \'()]/', '', trim($string[0]));
+        //        $this->jdbg("After Value =", $string);
+        //        Log::info("---------------------------------------------------------------------------------");
+        return $string;
     }
 }
