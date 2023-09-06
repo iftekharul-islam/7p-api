@@ -240,12 +240,15 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('batch-list', [BatchController::class, 'index']);
     Route::get('batch-list/{batch_number}', [BatchController::class, 'show']);
     Route::get('reject_item', [BatchController::class, 'rejectItem']);
+    Route::get('export-batch/{id}/{force}/{format}', [BatchController::class, 'exportBatch']);
+    Route::post('reprint-graphic', [GraphicsController::class, 'reprintGraphic']);
 
 
     Route::get('move-batches', [ProductController::class, 'moveNextStation']);
     Route::get('rejects', [RejectionController::class, 'index']);
     Route::post('send-to-start', [RejectionController::class, 'sendToStart']);
     Route::post('reprint-label', [RejectionController::class, 'reprintLabel']);
+    Route::post('process', [RejectionController::class, 'process']);
     Route::get('back-orders', [BackorderController::class, 'index']);
     Route::get('back-orders-show', [BackorderController::class, 'show']);
 
@@ -306,7 +309,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
 
     Route::get('export-data', [StoreController::class, 'exportData']);
     Route::get('export-qb', [StoreController::class, 'qbExport']);
-    Route::post('export-qb-csv', [StoreController::class, 'qbCsvExport']);
+    Route::get('export-qb-csv', [StoreController::class, 'qbCsvExport']);
 
     Route::get('create-graphics', [GraphicsController::class, 'index']);
     Route::post('graphics-upload-file', [GraphicsController::class, 'uploadFile']);
@@ -351,14 +354,20 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('email-template-keywords', [EmailTemplateController::class, 'emailTemplateKeywords']);
 
     Route::get('skus', [SpecificationSheetController::class, 'skus']);
-});
+
+    Route::get('user-tasks', [TaskController::class, 'userTasks']);
 
 
-Route::get('test', function () {
-    return response()->json([
-        'data' => 'http://7p.test/wasatch/staging-2/673216.xml',
-        // 'data' => $downloadfile,
-        'message' => 'Printed by',
-        'status' => 201
-    ], 201);
+
+
+    Route::get('getshopifyorder', [OrderController::class, 'getShopifyOrder']);
+    // get('shopify-order/{id}', 'OrderController@shopifyOrderById');
+    // get('shopify-thumb/{order_id}/{item_id}', 'OrderController@shopifyThumb');
+    // get('update-shopify-thumb/{order_id}/{item_id}', 'OrderController@updateShopifyThumb');
+    Route::get('initial_token_generate_request', [OrderController::class, 'initialTokenGenerateRequest']);
+    Route::get('generate_shopify_token', [OrderController::class, 'generateShopifyToken']);
+    Route::get('getShopifyorderbyordernumber', [OrderController::class, 'getShopifyOrderByOrderNumber']);
+    Route::get('synorderbydate', [OrderController::class, 'synOrderByDate']);
+    // get('synOrderBetweenId', 'OrderController@synOrderBetweenId');
+    // get('getcouponproducts', 'CouponController@getCouponProducts');
 });

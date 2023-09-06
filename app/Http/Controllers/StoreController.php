@@ -305,7 +305,6 @@ class StoreController extends Controller
 
             if ($store->input == '3') {
                 $className = "Market" . "\\" . $store->class_name;
-
                 $controller = new $className;
                 $result = $controller->importCsv($store, $request->file('file'));
                 $errors = $result['errors'];
@@ -664,7 +663,22 @@ class StoreController extends Controller
             // }
         } catch (Exception $e) {
             Log::error('Error Creating qbCsvExport - ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Stores and dates required to create Quickbooks export',
+                'status' => 204,
+            ], 204);
         }
+    }
+
+    public function pretty($array)
+    {
+
+        $arr = explode(",", implode(",", $array));
+        $str = "";
+        foreach (array_chunk($arr, 5) as $sub) {
+            $str .= trim(implode(", ", $sub)) . ",<br>\n";
+        }
+        return $str;
     }
 
     public function companyOption()
