@@ -1132,6 +1132,7 @@ class OrderController extends Controller
             //            );
             $orderInfo = $helper->shopify_call("/admin/api/2023-01/orders.json", $array, 'GET');
             $orderInfo = json_decode($orderInfo['response'] ?? [], JSON_PRETTY_PRINT);
+
             return response()->json([
                 'message' => 'Order Synced',
                 'note' => 'This is response data. Just remove this return  in line 1137 in synOrderByDate function in OrderController to store these records',
