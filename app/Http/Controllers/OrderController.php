@@ -1114,7 +1114,7 @@ class OrderController extends Controller
             $created_at_max = date("Y-m-d") . " T23:59:59-05:00"; // 2020-03-01
         }
 
-        if ($request->get('created_at_max')) {
+        if ($created_at_max) {
 
             $array = array(
                 #"created_at_min" => $created_at_min . "T16:00:00-05:00", #2020-04-01T00:00:00-05:00
@@ -1132,6 +1132,12 @@ class OrderController extends Controller
             //            );
             $orderInfo = $helper->shopify_call("/admin/api/2023-01/orders.json", $array, 'GET');
             $orderInfo = json_decode($orderInfo['response'] ?? [], JSON_PRETTY_PRINT);
+
+            return response()->json([
+                'message' => 'Order Synced',
+                'note' => 'This is response data. Just remove this return  in line 1137 in synOrderByDate function in OrderController to store these records',
+                'data' => $orderInfo,
+            ]);
 
             if (isset($orderInfo['errors'])) {
                 dd($orderInfo['errors'], " Order not found");
