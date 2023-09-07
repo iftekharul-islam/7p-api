@@ -28,3 +28,5 @@ Route::get('getShopifyorderbyordernumber', [OrderController::class, 'getShopifyO
 Route::get('synorderbydate', [OrderController::class, 'synOrderByDate']);
 // get('synOrderBetweenId', 'OrderController@synOrderBetweenId');
 // get('getcouponproducts', 'CouponController@getCouponProducts');
+
+Route::post('hook', [OrderController::class, 'hook']);

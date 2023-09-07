@@ -8,6 +8,7 @@ use App\Models\Option;
 use App\Models\Parameter;
 use App\Models\Product;
 use App\Models\StoreItem;
+use GuzzleHttp\Client;
 use Illuminate\Support\Str;
 
 class Helper
@@ -557,5 +558,23 @@ class Helper
         //        $this->jdbg("After Value =", $string);
         //        Log::info("---------------------------------------------------------------------------------");
         return $string;
+    }
+
+    public function dowFileToDir($remotUrl, $savePath)
+    {
+        try {
+            set_time_limit(0);
+            $client = new Client([
+                'verify' => false
+            ]);
+
+            //'/path/to/save/image.jpg'
+            $response = $client->get($remotUrl, ['sink' => $savePath]);
+            sleep(2);
+            return $response->getStatusCode();
+        } catch (RequestException $e) {
+            Log::info($e->getMessage());
+            //            echo 'Error saving the image: ' . $e->getMessage();
+        }
     }
 }
