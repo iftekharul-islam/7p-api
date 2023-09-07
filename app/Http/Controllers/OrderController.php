@@ -1143,6 +1143,7 @@ class OrderController extends Controller
             $orderInfo = json_decode($orderInfo['response'] ?? [], JSON_PRETTY_PRINT);
 
 
+
             if (isset($orderInfo['errors'])) {
                 return response()->json([
                     'error' => $orderInfo['errors'],
