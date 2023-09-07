@@ -22,9 +22,9 @@ use Ship\Shipper;
 
 class OrderController extends Controller
 {
-    private $domain = "7p.test";
+    private $domain = "https://7papi.monogramonline.com";
     protected $archiveFilePath = "";
-    protected $remotArchiveUrl = "https://7p.test/media/archive/";
+    protected $remotArchiveUrl = "https://7papi.monogramonline.com/media/archive/";
     protected $sort_root = '/media/RDrive/';
 
     private static $state_abbrev = array(
@@ -161,6 +161,7 @@ class OrderController extends Controller
         } else {
             $status = 'not_cancelled';
         }
+        logger('start date', [$start, $request->get('end_date')]);
 
         $orders = Order::with('store', 'items', 'customer')
             ->where('is_deleted', '0')
@@ -942,7 +943,7 @@ class OrderController extends Controller
                     // CRON-TODO : Need to check this domain
 
                     info("pushPurchaseToOms3");
-                    $url = "http://" . $this->domain . "/hook";
+                    $url = $this->domain . "/hook";
                     $response = $this->curlPost($url, $purchaseData);
                     $result = json_decode($response, true);
                     // $res = Http::post($url, $purchaseData);
@@ -1193,7 +1194,7 @@ class OrderController extends Controller
 
             $ch = curl_init();
             foreach ($shopifyOrdeIds as $key => $orderId) {
-                $url = "http://" . $this->domain . "/getshopifyorder?orderid=" . $orderId;
+                $url = $this->domain . "/getshopifyorder?orderid=" . $orderId;
                 curl_setopt($ch, CURLOPT_URL, $url);
                 $result = curl_exec($ch);
             }
@@ -1488,9 +1489,9 @@ class OrderController extends Controller
                         //                        $thumb = '/assets/images/template_thumbs/' . $filenameWithoutExtension . '.jpg';
                         $thumb = '/assets/images/template_thumbs/' . $item->order_id . "-" . $item->id . '.jpg';
                         ImageHelper::createThumb($this->archiveFilePath, 0, base_path() . '/public_html' . $thumb, 350);
-                        $item_thumb = 'https://' . $this->domain . $thumb;
+                        $item_thumb = $this->domain . $thumb;
                     } catch (Exception $e) {
-                        $item_thumb = 'https://' . $this->domain . '/assets/images/no_image.jpg';
+                        $item_thumb = $this->domain . '/assets/images/no_image.jpg';
                         Log::error(sprintf(
                             "Hook found undefinded offset 2 on item thumb %s Order# %s.",
                             $request->get('Item-Thumb-' . $item_count_index),
@@ -1612,7 +1613,7 @@ class OrderController extends Controller
                     }
                 }
                 //                else {
-                //                    $product->product_url = 'https://' . $this->domain . '/assets/images/no_image.jpg';
+                //                    $product->product_url = $this->domain . '/assets/images/no_image.jpg';
                 //                }
                 $product->product_url = $item->item_url;
                 $product->product_name = $item->item_description;
