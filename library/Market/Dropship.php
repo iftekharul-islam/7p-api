@@ -522,7 +522,7 @@ class Dropship
                     ->where("vendor_sku", $item['sku'])
                     ->first();
 
-                $price = $itemInfo['cost'];
+                $price = $itemInfo['cost'] ?? 0;
                 $shipDate = Dropship::getShipDateFromStarting(Carbon::parse($order['createDate']))->toDateTimeString();
 
                 $line = [

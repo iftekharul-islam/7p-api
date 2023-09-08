@@ -3,7 +3,7 @@
 namespace Market;
 
 use App\Http\Controllers\ZakekeController;
-use App\Order;
+use App\Models\Order;
 use App\Customer;
 use App\Item;
 use App\Ship;
@@ -35,71 +35,73 @@ class ShipStationImport
         "ups_next_day_air" => "UP*S_AIR_1DAY",
     ];
 
-    public function pushTracking($order, $tracking) {
+    public function pushTracking($order, $tracking)
+    {
 
         $order = Order::where("id", $order)
             ->first();
 
-                $username = ZakekeController::SHIP_STATION_API_KEY;
-                $password = ZakekeController::SHIP_STATION_API_SECRET;
+        $username = ZakekeController::SHIP_STATION_API_KEY;
+        $password = ZakekeController::SHIP_STATION_API_SECRET;
 
-                $curl = curl_init();
+        $curl = curl_init();
 
 
-                $orderId = "";
-                $dt = ZakekeController::getShipStationOrders();
+        $orderId = "";
+        $dt = ZakekeController::getShipStationOrders();
 
-                /*
+        /*
                  * Processes/get the real real order ID from ship station
                  */
-                foreach ($dt['orders'] as $theOrder) {
-                    if($theOrder['orderNumber'] === $order->short_order) {
-                        $orderId = $theOrder['orderId'];
-                        break;
-                    }
-                }
+        foreach ($dt['orders'] as $theOrder) {
+            if ($theOrder['orderNumber'] === $order->short_order) {
+                $orderId = $theOrder['orderId'];
+                break;
+            }
+        }
 
-               $date = Carbon::now()->toDateTimeString();
-                $fields = '{"orderNumber":"{ORDER}","carrierCode":"ups_walleted","shipDate":"{DATE}","trackingNumber":"{TRACKING}","notifyCustomer":true,"notifySalesChannel":true}';
-                $fields = str_replace(
-                    [
-                        "{ORDER}",
-                        "{DATE}",
-                        "{TRACKING}",
-                    ],
-                    [
-                        $orderId,
-                        $date,
-                        $tracking
-                    ],
-                    $fields
-                );
+        $date = Carbon::now()->toDateTimeString();
+        $fields = '{"orderNumber":"{ORDER}","carrierCode":"ups_walleted","shipDate":"{DATE}","trackingNumber":"{TRACKING}","notifyCustomer":true,"notifySalesChannel":true}';
+        $fields = str_replace(
+            [
+                "{ORDER}",
+                "{DATE}",
+                "{TRACKING}",
+            ],
+            [
+                $orderId,
+                $date,
+                $tracking
+            ],
+            $fields
+        );
 
-                curl_setopt_array($curl, array(
-                    CURLOPT_URL => "https://ssapi.shipstation.com/orders/markasshipped",
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_ENCODING => "",
-                    CURLOPT_MAXREDIRS => 10,
-                    CURLOPT_TIMEOUT => 0,
-                    CURLOPT_FOLLOWLOCATION => true,
-                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                    CURLOPT_POSTFIELDS => $fields,
-                    CURLOPT_USERPWD => $username . ":" . $password,
-                    CURLOPT_HTTPHEADER => array(
-                        "Content-Type: application/json"
-                    ),
-                ));
-               curl_setopt($curl, CURLOPT_POST, 1);
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => "https://ssapi.shipstation.com/orders/markasshipped",
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => "",
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_POSTFIELDS => $fields,
+            CURLOPT_USERPWD => $username . ":" . $password,
+            CURLOPT_HTTPHEADER => array(
+                "Content-Type: application/json"
+            ),
+        ));
+        curl_setopt($curl, CURLOPT_POST, 1);
 
-              $response = curl_exec($curl);
-             curl_close($curl);
-             $data = json_decode($response, true);
+        $response = curl_exec($curl);
+        curl_close($curl);
+        $data = json_decode($response, true);
 
-             dd($data);
-           Order::note('Successfully updated tracking number in Ship Station to ' . $tracking, $order->id, $order->order_id);
+        //  dd($data);
+        Order::note('Successfully updated tracking number in Ship Station to ' . $tracking, $order->id, $order->order_id);
     }
 
-    public function importCsv($file) {
+    public function importCsv($file)
+    {
 
         if (!file_exists($file)) {
             return ['errors' => "Error, connection is not working", 'order_ids' => []];
@@ -116,7 +118,8 @@ class ShipStationImport
 
         set_time_limit(0);
 
-        $valid_keys = [ 'order',
+        $valid_keys = [
+            'order',
             'name',
             'address1',
             'address2',
@@ -134,8 +137,8 @@ class ShipStationImport
             'thumbnail',
             'graphic',
             // Andre added
-             'ship via',
-             'Ship By Date',
+            'ship via',
+            'Ship By Date',
             "pws_zakeke"
             //  'Status',
             //  'P1',
@@ -151,7 +154,7 @@ class ShipStationImport
             return ['errors' => $error, 'order_ids' => $order_ids];
         }
 
-        foreach ($results as $line)  {
+        foreach ($results as $line) {
 
             if ($line[0] == 'order') {
                 continue;
@@ -162,7 +165,7 @@ class ShipStationImport
                 continue;
             }
 
-         //   Log::info('ShipStation Import: Processing order ' . $line[0]);
+            //   Log::info('ShipStation Import: Processing order ' . $line[0]);
 
 
             if ($id == '' || $line[0] != $id) {
@@ -172,8 +175,8 @@ class ShipStationImport
                     ->where('orders.order_id', $store->store_id . '-' . $line[0])
                     ->first();
 
-                if ( $previous_order ) {
-               //    Log::info('ShipStation Import : Order number already in Database ' . $line[0]);
+                if ($previous_order) {
+                    //    Log::info('ShipStation Import : Order number already in Database ' . $line[0]);
                     $error[] = 'Order number already in Database ' . $line[0];
                     continue;
                 }
@@ -184,7 +187,7 @@ class ShipStationImport
             }
 
             $usePWSZakeke = false;
-            if(isset($line[19])) {
+            if (isset($line[19])) {
                 $usePWSZakeke = (bool) $line[19];
             }
 
@@ -193,7 +196,6 @@ class ShipStationImport
             }
 
             $this->setOrderTotals($order_5p);
-
         }
 
         if (count($order_ids) == 0) {
@@ -231,7 +233,8 @@ class ShipStationImport
     }
 
 
-    private function insertOrder($storeid, $data) {
+    private function insertOrder($storeid, $data)
+    {
 
         // -------------- Customers table data insertion started ----------------------//
         $customer = new Customer();
@@ -271,12 +274,12 @@ class ShipStationImport
         $order->order_comments = $data[9];
         $order->order_status = 4;
 
-        if(isset($data[17])) {
+        if (isset($data[17])) {
 
             $carrier = "";
             $method = "";
 
-            if(isset(self::CONVERSION[$data[17]])) {
+            if (isset(self::CONVERSION[$data[17]])) {
                 $shipinfo = explode('*', self::CONVERSION[$data[17]]);
                 $carrier = $shipinfo[0] ?? "";
                 $method = $shipinfo[1] ?? ""; // Error maybe check
@@ -287,18 +290,18 @@ class ShipStationImport
         }
 
 
-        if(isset($data[18])) {
+        if (isset($data[18])) {
             $order->ship_date = Carbon::parse($data[18])->toDateTimeString();
         }
 
 
         // The above is using it instead
-        if(isset($data[19])) {
+        if (isset($data[19])) {
             $status = [
-                4,6,7,8,9,10,11,12,15,13,23
+                4, 6, 7, 8, 9, 10, 11, 12, 15, 13, 23
             ];
 
-            if(in_array($data[19], $status)) {
+            if (in_array($data[19], $status)) {
                 $order->order_status = $data[19];
             }
         }
@@ -309,15 +312,14 @@ class ShipStationImport
         /*
          * Handle batching the order if it's true
          */
-        if($batch) {
-
+        if ($batch) {
         }
 
         $customer->save();
 
         try {
             $order->customer_id = $customer->id;
-        } catch ( \Exception $exception ) {
+        } catch (\Exception $exception) {
             Log::error('Failed to insert customer id in ShipStation');
         }
 
@@ -328,7 +330,7 @@ class ShipStationImport
 
         try {
             $order_5p = $order->id;
-        } catch ( \Exception $exception ) {
+        } catch (\Exception $exception) {
             $order_5p = '0';
             Log::error('Failed to get 5p order id in ShipStation');
         }
@@ -338,7 +340,8 @@ class ShipStationImport
         return $order->id;
     }
 
-    private function insertItem($storeid, $order_5p, $data, $usePwsZakeke = false) {
+    private function insertItem($storeid, $order_5p, $data, $usePwsZakeke = false)
+    {
 
         $product = null;
 
@@ -371,7 +374,7 @@ class ShipStationImport
             $options['graphic'] = $data[16];
         }
 
-        if($usePwsZakeke) {
+        if ($usePwsZakeke) {
             $options['PWS Zakeke'] = $usePwsZakeke;
         }
 
@@ -402,7 +405,8 @@ class ShipStationImport
         return true;
     }
 
-    private function setOrderTotals ($order_5p) {
+    private function setOrderTotals($order_5p)
+    {
         if ($order_5p != null) {
             $order = Order::with('items')
                 ->where('id', $order_5p)
@@ -412,7 +416,9 @@ class ShipStationImport
                 return;
             }
             $order->item_count = $order->items->count();
-            $order->total = $order->items->sum( function ($i) { return $i->item_quantity * $i->item_unit_price; });
+            $order->total = $order->items->sum(function ($i) {
+                return $i->item_quantity * $i->item_unit_price;
+            });
             $order->save();
             return;
         }

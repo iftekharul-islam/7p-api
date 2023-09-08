@@ -22,7 +22,7 @@ use Ship\Shipper;
 
 class OrderController extends Controller
 {
-    private $domain = "https://7papi.monogramonline.com";
+    private $domain = "http://7p.test";
     protected $archiveFilePath = "";
     protected $remotArchiveUrl = "https://7papi.monogramonline.com/media/archive/";
     protected $sort_root = '/media/RDrive/';
@@ -161,7 +161,7 @@ class OrderController extends Controller
         } else {
             $status = 'not_cancelled';
         }
-        logger('start date', [$start, $request->get('end_date')]);
+        logger('test start date', [$start, $request->get('end_date')]);
 
         $orders = Order::with('store', 'items', 'customer')
             ->where('is_deleted', '0')
@@ -1840,5 +1840,227 @@ class OrderController extends Controller
         }
 
         return $total_price;
+    }
+
+    public function shopifyOrderById($id, $flag = false)
+    {
+        $array = ['ids' => $id];
+        $helper = new Helper;
+        $orderInfo = $helper->shopify_call("/admin/api/2023-01/orders.json", $array, 'GET');
+        try {
+            $orderInfo = json_decode($orderInfo['response'], JSON_PRETTY_PRINT);
+        } catch (\Exception $e) {
+            Log::error('getShopifyOrderError = ' . $e->getMessage());
+            dd($e->getMessage());
+        }
+        if ($flag) {
+            return $orderInfo;
+        }
+
+        return response()->json([
+            'message' => 'Order found',
+            'data' => $orderInfo
+        ]);
+    }
+
+    public function shopifyThumb($orderId, $item_id, $flag = false)
+    {
+        $data = $this->shopifyOrderById($orderId, true);
+        if (!isset($data['orders'])) {
+            Log::error('order is not available');
+            return response()->json([
+                'message' => "Order is not available",
+            ], 200);
+        }
+        $order = $data['orders'][0];
+        if (!empty($order)) {
+            $items = $order['line_items'];
+            if (count($items)) {
+                foreach ($items as $item) {
+                    if ($item['id'] == $item_id) {
+                        $productInfo = $this->getShopifyproduct($item['product_id']);
+                        if ($flag) return $productInfo['image']['src'];
+                        return response()->json([
+                            'message' => 'Order Thumb found',
+                            'link' => $productInfo['image']['src'],
+                            'data' => []
+                        ]);
+                    }
+                }
+            } else {
+                Log::error('order line items is not available');
+                return false;
+            }
+        } else {
+            Log::error('order is not available');
+            return false;
+        }
+    }
+
+    public function updateShopifyThumb($orderId, $item_id)
+    {
+        $dummy_Image = 'https://' . $this->domain . '/assets/images/no_image.jpg';
+        $item = Item::where('item_id', $item_id)->first();
+        if ($item) {
+            $product = Product::where('product_model', $item->item_code)->first();
+            if ($product) {
+                $thumb = $this->shopifyThumb($orderId, $item_id, true);
+                $product->product_thumb = $thumb ? $thumb : $dummy_Image;
+                $product->save();
+
+                return response()->json([
+                    'message' => 'Order Thumb successfully Updated',
+                    'status' => 201
+                ], 201);
+            } else {
+                Log::error('product is not available');
+                return response()->json([
+                    'message' => "Product is not available",
+                    'status' => 203
+                ], 203);
+            }
+
+            return response()->json([
+                'message' => 'Ship Date Updated',
+                'status' => 201
+            ], 201);
+        } else {
+            Log::error('item is not available');
+            return response()->json([
+                'message' => "Item is not available",
+                'status' => 203
+            ], 203);
+        }
+    }
+
+    public function synOrderBetweenId(Request $request)
+    {
+        # https://order.monogramonline.com/synOrderBetweenId?since_id_from=2940557361315&since_id_to=2947019079843
+        $shopifyOrdeIds = [];
+        $ordersIn5p = [];
+
+        if ($request->get("since_id_from")) {
+            $sinceIdFrom = $request->get("since_id_from");
+        } else {
+            return response()->json([
+                'message' => 'since_id_from = not exist ',
+            ]);
+        }
+
+        if ($request->get("since_id_to")) {
+            $sinceIdTo = $request->get("since_id_to");
+        } else {
+            return response()->json([
+                'message' => 'since_id_to = not exist ',
+            ]);
+        }
+
+        // echo "The time is " . date("H");
+
+        $created_at_min = date("Y-m-d T H:i:s-05:00", strtotime('-2 hour'));
+        $created_at_max = date("Y-m-d", strtotime('-0 days'));
+
+        $array = array(
+            "created_at_min" => $created_at_min, #2020-04-01T00:00:00-05:00
+            "created_at_max" => $created_at_max . "T23:59:59-05:00", #2020-04-13T23:59:59-05:00
+            "limit" => $request->get("limit") ?? 5,
+            "fields" => "created_at,id,name,total-price"
+        );
+        //dd("synOrderBetweenId", $array, $created_at_min, $sinceIdFrom, $sinceIdTo);
+
+        if ($request->get('since_id_from')) {
+
+            $helper = new Helper;
+
+            $array = array(
+                "since_id" => 2942795514019,
+                "limit" => $request->get("limit") ?? 5,
+                "fields" => "created_at,id,name,total-price,limit"
+            );
+
+            $orderInfo = $helper->shopify_call("/admin/api/2023-01/orders.json", $array, 'GET');
+            $orderInfo = json_decode($orderInfo['response'], JSON_PRETTY_PRINT);
+
+            if (isset($orderInfo['errors'])) {
+                return response()->json([
+                    'message' => $orderInfo['errors'], " Order not found",
+                ]);
+            }
+
+            $shopifyOrdeIdsWithName = [];
+            foreach ($orderInfo['orders'] as $key => $order) {
+                $shopifyOrdeIds[$order['id']] = $order['id'];
+                $shopifyOrdeIdsWithName[$order['name']] = $order['id'];
+                //                Log::info("Order_id from Shopify = ".$order['id']);
+            }
+
+            $shopifyOrdeIdsx = $shopifyOrdeIds;
+            //dd($array, $orderInfo, $shopifyOrdeIds,$shopifyOrdeIdsWithName);
+            $created_at_min = "sdsd";
+            $created_at_max = "sdsds";
+
+            ########### Code for get list of orders numbers by Date ###################
+            $existingOrders = Order::where('orders.is_deleted', '0')->where(
+                'orders.order_date',
+                '>=',
+                $created_at_min . ' 00:00:00'
+            )->where(
+                'orders.order_date',
+                '<=',
+                $created_at_max . ' 23:59:59'
+            )->where(
+                'orders.store_id',
+                '=',
+                '52053153'
+            )->latest('orders.created_at')->limit(5000)->get([
+                'orders.short_order',
+                'orders.order_id',
+                'order_date',
+            ])->toArray();
+            foreach ($existingOrders as $key => $orderId) {
+                //                Log::info("Order_id from 5p = ".$orderId['short_order']);
+                $ordersIn5p[] = $orderId['short_order'];
+                if (isset($shopifyOrdeIds[$orderId['short_order']])) {
+                    unset($shopifyOrdeIds[$orderId['short_order']]);
+                }
+            }
+            ########### Code for get list of orders numbers by Date ###################
+            if (empty($shopifyOrdeIds)) {
+                return response()->json([
+                    'message' => "Nothing to insert",
+                    'data' => "Nothing to insert",
+                    "Number of orders in shopify= " . count($shopifyOrdeIdsx) . " - Number of orders in 5p= " . count($existingOrders) . " = diff = " . (count($shopifyOrdeIdsx) - count($existingOrders)),
+                    "Missing Orders = ",
+                    $shopifyOrdeIds,
+                    "Following already inserted: ",
+                    $shopifyOrdeIdsWithName
+                ]);
+            }
+
+            $ch = curl_init();
+            foreach ($shopifyOrdeIds as $key => $orderId) {
+                $url = $this->domain . "/getshopifyorder?orderid=" . $orderId;
+                curl_setopt($ch, CURLOPT_URL, $url);
+                $result = curl_exec($ch);
+                Log::info(print_r($result));
+            }
+            curl_close($ch);
+
+            return response()->json([
+                'message' => 'Order Synced',
+                'data' => [
+                    "Number of orders in shopify= " . count($shopifyOrdeIdsx) . " - Number of orders in 5p= " . count($existingOrders) . " = diff = " . (count($shopifyOrdeIdsx) - count($existingOrders)),
+                    "Missing Orders = ",
+                    $shopifyOrdeIds,
+                    $shopifyOrdeIdsx,
+                    $ordersIn5p,
+                    $shopifyOrdeIdsWithName
+                ]
+            ]);
+        } else {
+            return response()->json([
+                'message' => 'Order Not found',
+            ]);
+        }
     }
 }

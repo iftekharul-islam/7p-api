@@ -5,7 +5,9 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BackorderController;
 use App\Http\Controllers\BatchController;
 use App\Http\Controllers\BatchRouteController;
+use App\Http\Controllers\CouponController;
 use App\Http\Controllers\CsController;
+use App\Http\Controllers\CustomController;
 use App\Http\Controllers\EmailTemplateController;
 use App\Http\Controllers\GraphicsController;
 use App\Http\Controllers\InventoryAdjustmentController;
@@ -361,13 +363,17 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
 
 
     Route::get('getshopifyorder', [OrderController::class, 'getShopifyOrder']);
-    // get('shopify-order/{id}', 'OrderController@shopifyOrderById');
-    // get('shopify-thumb/{order_id}/{item_id}', 'OrderController@shopifyThumb');
-    // get('update-shopify-thumb/{order_id}/{item_id}', 'OrderController@updateShopifyThumb');
+    Route::get('shopify-order/{id}', [OrderController::class, 'shopifyOrderById']);
+    Route::get('shopify-thumb/{order_id}/{item_id}', [OrderController::class, 'shopifyThumb']);
+    Route::get('update-shopify-thumb/{order_id}/{item_id}', [OrderController::class, 'updateShopifyThumb']);
     Route::get('initial_token_generate_request', [OrderController::class, 'initialTokenGenerateRequest']);
     Route::get('generate_shopify_token', [OrderController::class, 'generateShopifyToken']);
     Route::get('getShopifyorderbyordernumber', [OrderController::class, 'getShopifyOrderByOrderNumber']);
     Route::get('synorderbydate', [OrderController::class, 'synOrderByDate']);
-    // get('synOrderBetweenId', 'OrderController@synOrderBetweenId');
-    // get('getcouponproducts', 'CouponController@getCouponProducts');
+    Route::get('synOrderBetweenId', [OrderController::class, 'synOrderBetweenId']);
+    Route::get('getcouponproducts', [CouponController::class, 'getCouponProducts']);
+
+    // Route::get('deleteorderbydate', [OrderController::class, 'deleteOrderByDate']);
+
+    Route::get("import/ship-station", [CustomController::class, 'shipStation']);
 });

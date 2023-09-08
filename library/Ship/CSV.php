@@ -21,7 +21,7 @@ class CSV
 
     $fully_specified_path = sprintf("%s%s", $file_path, $filename);
 
-    if ($headings != NULL) {
+    if ($headings != null) {
       $fh = fopen($fully_specified_path, $mode);
       fputcsv($fh, $headings, $delimiter);
       fclose($fh);
