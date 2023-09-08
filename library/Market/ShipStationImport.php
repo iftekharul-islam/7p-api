@@ -4,20 +4,20 @@ namespace Market;
 
 use App\Http\Controllers\ZakekeController;
 use App\Models\Order;
-use App\Customer;
-use App\Item;
+use App\Models\Customer;
+use App\Models\Item;
 use App\Ship;
 use App\Product;
 use App\Parameter;
-use App\Store;
+use App\Models\Store;
 use App\StoreItem;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use LaravelShipStation\ShipStation;
-use Monogram\Batching;
-use Monogram\Helper;
-use Monogram\CSV;
+use Ship\Batching;
+use Ship\CSV;
 use Excel;
+use library\Helper;
 use Monogram\Sure3d;
 
 
@@ -102,7 +102,6 @@ class ShipStationImport
 
     public function importCsv($file)
     {
-
         if (!file_exists($file)) {
             return ['errors' => "Error, connection is not working", 'order_ids' => []];
         }
@@ -192,7 +191,7 @@ class ShipStationImport
             }
 
             if (!$this->insertItem($store->store_id, $order_5p, $line, $usePWSZakeke)) {
-                $error[] = $item_result;
+                $error[] = "Error inserting item for order";
             }
 
             $this->setOrderTotals($order_5p);

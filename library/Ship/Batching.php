@@ -44,14 +44,10 @@ class Batching
 	public static function auto($max_units = 0, $store_id = null, $export = 1, $specificOrder = "")
 	{
 		$end = date("Y-m-d", strtotime("+1 day"));
-		info("from auto");
-		info($store_id);
-		info($end);
+
 
 		$batch_routes = Batching::createAbleBatches(0, false, "2022-08-01", $end, null, null, $store_id, null, null, $max_units);
 
-		info("batch Route");
-		info($batch_routes);
 		$batches = array();
 
 		$count = 0;

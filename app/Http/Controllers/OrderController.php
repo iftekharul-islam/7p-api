@@ -1069,7 +1069,7 @@ class OrderController extends Controller
                     'access_token' => $access_token
                 ]
             ]);
-            echo $access_token;
+            // echo $access_token;
         } else {
             // Someone is trying to be shady!
             return response()->json([
