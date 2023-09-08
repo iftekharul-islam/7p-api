@@ -396,7 +396,7 @@ class DHL
                 echo "\n\n\nRespond Result = ";
                 print_r($decoded_response);
                 echo "</pre>";
-                dd($decoded_response);
+                // dd($decoded_response);
             } else {
                 $dhlManifestPdfUrl = $decoded_response->data->closeouts[0]->manifests[0]->url;
                 $manifestId = $decoded_response->data->closeouts[0]->manifests[0]->manifestId;
@@ -508,7 +508,7 @@ class DHL
                 echo "\n\n\nRespond Result = ";
                 print_r($decoded_response);
                 echo "</pre>";
-                dd($decoded_response);
+                // dd($decoded_response);
             } else {
                 $dhlManifestPdfUrl = $decoded_response->data->closeouts[0]->manifests[0]->url;
                 $manifestId = $decoded_response->data->closeouts[0]->manifests[0]->manifestId;

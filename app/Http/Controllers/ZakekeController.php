@@ -44,7 +44,7 @@ class ZakekeController extends Controller
             }
         }
 
-        dd($order);
+        // dd($order);
     }
 
     public function test2(Request $request)
