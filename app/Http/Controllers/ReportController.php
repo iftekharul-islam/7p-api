@@ -296,7 +296,7 @@ class ReportController extends Controller
 
         $total = $items->sum('items_count') + $backorders->sum('items_count') +  $rejects->sum('items_count') +
             $CS_rejects->sum('items_count') + $CS->sum('items_count') + $qc->sum('items_count') +
-            $unbatched->items_count + $WAP->items_count;
+            ($unbatched->items_count ?? 0) + ($WAP->items_count ?? 0);
 
 
         foreach ($date as $key => $value) {

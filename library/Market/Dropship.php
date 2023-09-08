@@ -432,7 +432,6 @@ class Dropship
 
     public static function getDropShipOrders()
     {
-
         $tag = "41195"; // Personalized;
         $username = "8f6fd3ba674246bea607af316e4cd311";
         $password = "12554651d87449c5acca216568a5d4e6";
@@ -572,6 +571,9 @@ class Dropship
         $path = storage_path() . "/EDI/General/";
 
         $path = $csv->createFile($csvData, $path, null, $filename, ',');
+
+        $import = new ShipStationImport();
+        $import->importCsv($path);
 
         return $path;
     }

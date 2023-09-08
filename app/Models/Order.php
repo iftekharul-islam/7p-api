@@ -422,12 +422,12 @@ class Order extends Model
         if (!$start_date) {
             return;
         }
-//        $starting = sprintf("%s 00:00:00", $start_date);
-//        $ending = sprintf("%s 23:59:59", $end_date ? $end_date : $start_date);
-//        logger('starting ending', [$starting, $ending]);
+        $starting = sprintf("%s 00:00:00", $start_date);
+        $ending = sprintf("%s 23:59:59", $end_date ? $end_date : $start_date);
+        //        logger('starting ending', [$starting, $ending]);
 
-        return $query->whereDate('order_date', '>=', $start_date)
-            ->whereDate('order_date', '<=', $end_date);
+        return $query->whereDate('order_date', '>=', $starting)
+            ->whereDate('order_date', '<=', $ending);
     }
 
     public function outputArray()

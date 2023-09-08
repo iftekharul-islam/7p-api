@@ -891,7 +891,7 @@ class Batch extends Model
 
         // TODO - check if is this needed permission or not
         if (!file_exists($file_path)) {
-            if (!mkdir($file_path)) {
+            if (!mkdir($file_path, 0755, true)) {
                 Batch::note($batch->batch_number, $batch->station_id, '7', 'Error Exporting ' . $format);
                 Log::error('Batch Export: could not create directory ' . $file_path);
                 return ['error' => 'Could not create directory ' . $file_path . '  - Batch: ' . $id];
