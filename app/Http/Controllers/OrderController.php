@@ -22,7 +22,8 @@ use Ship\Shipper;
 
 class OrderController extends Controller
 {
-    private $domain = "http://7p.test";
+    // private $domain = "http://7p.test";
+    private $domain = "https://7papi.monogramonline.com";
     protected $archiveFilePath = "";
     protected $remotArchiveUrl = "https://7papi.monogramonline.com/media/archive/";
     protected $sort_root = '/media/RDrive/';
