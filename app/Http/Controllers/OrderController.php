@@ -2068,4 +2068,55 @@ class OrderController extends Controller
             ]);
         }
     }
+    public function deleteOrderById($id)
+    {
+        $order = Order::where('short_order', $id)->first();
+        if ($order) {
+            $order->is_deleted = "1";
+            $order->save();
+            Item::where('order_5p', $order->id)->update(['is_deleted' => 1]);
+            Customer::where('id', $order->customer_id)->update(['is_deleted' => 1]);
+            return response()->json([
+                'message' => 'Order Deleted',
+                'status' => 201
+            ], 201);
+        } else {
+            return response()->json([
+                'message' => 'Order Not found',
+                'status' => 203
+            ], 203);
+        }
+    }
+
+    public function deleteOrderByDate(Request $request)
+    {
+        $orders = Order::where('is_deleted', '0')->where(
+            'order_date',
+            '>=',
+            $request->get('from') . ' 00:00:00'
+        )->where(
+            'order_date',
+            '<=',
+            $request->get('to') . ' 23:59:59'
+        )->get();
+
+        $error_list = [];
+        $success_list = [];
+
+        foreach ($orders as $order) {
+            $data = $this->deleteOrderById($order->short_order);
+            if ($data->getStatusCode() == 203) {
+                $error_list[] = $order->order_id;
+            }
+            if ($data->getStatusCode() == 201) {
+                $success_list[] = $order->order_id;
+            }
+        }
+
+        return response()->json([
+            'message' => 'Order Deleted',
+            'error list' => $error_list,
+            'success list' => $success_list,
+        ]);
+    }
 }
