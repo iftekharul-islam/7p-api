@@ -202,6 +202,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('customer-service-action', [CsController::class, 'actionButton']);
 
     Route::get('items-list', [ItemController::class, 'index']);
+    Route::get('items/syn_item_thm/{order_id}/{item_id}', [ItemController::class, 'syn_item_id']);
     Route::get('graphic-items-list', [ItemController::class, 'indexGraphic']);
     Route::get('item-search-options', [ItemController::class, 'searchOption']);
     Route::get('item-status-options', [ItemController::class, 'statusOption']);
@@ -376,4 +377,8 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     // Route::get('deleteorderbydate', [OrderController::class, 'deleteOrderByDate']);
 
     Route::get("import/ship-station", [CustomController::class, 'shipStation']);
+
+
+
+    Route::get('test-api', [ItemController::class, 'test']);
 });
