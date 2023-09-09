@@ -96,9 +96,12 @@ class ImageHelper
     set_time_limit(0);
     Log::error("BEGIN " . $image_path);
     if (stripos($image_path, "pdf") !== false) {
-      shell_exec("pdftoppm -jpeg $image_path " . $image_path);
+      $image_path =  public_path() . $image_path;
+      $thumb_path =  public_path() . $thumb_path;
 
-      shell_exec("mv $image_path" . "-1.jpg " . str_replace("pdf", "jpg", $thumb_path));
+      info("Need to find out");
+      shell_exec("pdftoppm -jpeg $image_path " . $image_path);
+      shell_exec("mv  $image_path" . "-1.jpg " . str_replace("pdf", "jpg", $thumb_path));
     } else {
       $image = new Imagick($image_path);
 

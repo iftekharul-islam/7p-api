@@ -467,9 +467,7 @@ class ItemController extends Controller
     public function test()
     {
         $command = "echo 'Shell Exec Test'";
-        $result = shell_exec('pdftoppm -jpeg /var/www/7p/7p-api/public/media/RDrive/archive/5108215873699_1_0320a81a6d4dba1b3e4f01661c9ced6f.pdf /var/www/7p/7p-api/public/media/RDrive/archive/5108215873699_1_0320a81a6d4dba1b3e4f01661c9ced6f.pdf');
-        //        $result = shell_exec($command); 
-        //        $result = shell_exec('pdftoppm -jpeg /Users/iftekhar/Documents/projects/7p-api/public/media/RDrive/archive/5108215873699_1_0320a81a6d4dba1b3e4f01661c9ced6f.pdf /Users/iftekhar/Documents/projects/7p-api/public/media/RDrive/archive/5108215873699_1_0320a81a6d4dba1b3e4f01661c9ced6f.pdf');
+        $result = shell_exec('scp /var/www/7p/7p-api/public/media/RDrive/archive/test.jpg  var/www/7p/7p-api/public/assets/images/template_thumbs/test.jpg');
 
         if ($result !== null) {
             return ("shell_exec is enabled and working. Output: " . $result);
