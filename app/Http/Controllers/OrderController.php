@@ -22,7 +22,7 @@ use Ship\Shipper;
 
 class OrderController extends Controller
 {
-    private $domain = "http://7p.test";
+    private $domain = "http://7p-api.test";
     protected $archiveFilePath = "";
     protected $remotArchiveUrl = "https://7papi.monogramonline.com/media/archive/";
     protected $sort_root = '/media/RDrive/';
@@ -743,7 +743,6 @@ class OrderController extends Controller
 
     public function getShopifyOrder(Request $request)
     {
-        info("getShopifyOrder");
         if ($request->get('orderid')) {
             $ids = $request->get('orderid');
         } else {
@@ -765,7 +764,6 @@ class OrderController extends Controller
         } catch (\Exception $e) {
             Log::error('getShopifyOrderError = ' . $e->getMessage());
         }
-
         if (isset($orderInfo['errors'])) {
             return response()->json([
                 'message' => $orderInfo['errors'],
@@ -779,6 +777,8 @@ class OrderController extends Controller
                 'data' => []
             ]);
         }
+//        dd('hello');
+//        dd($orderInfo);
 
         // return response()->json([
         //     'message' => "This is response data. Just remove this return  in line 778 in getShopifyOrder function in OrderController to store these records",
@@ -795,7 +795,7 @@ class OrderController extends Controller
         $helper = new Helper;
 
         foreach ($orderInfos as $orderIds) {
-            try {
+//            try {
                 foreach ($orderIds as $orderId) {
 
 
@@ -942,14 +942,16 @@ class OrderController extends Controller
                     ###################
                     // CRON-TODO : Need to check this domain
 
-                    info("pushPurchaseToOms3");
-                    $url = $this->domain . "/hook";
-                    $response = $this->curlPost($url, $purchaseData);
-                    $result = json_decode($response, true);
+//                    dd("pushPurchaseToOms3");
+                    $request = new Request();
+                    $data = $request->merge($purchaseData);
+                    $result = $this->hook($data);
+
+
                     // $res = Http::post($url, $purchaseData);
                     // $result = $res->json(); // If the response is JSON
 
-                    info($result);
+                    dd($result);
                     info("pushPurchaseToOms4");
                     //                    dd($result);
                     //
@@ -957,9 +959,9 @@ class OrderController extends Controller
                     Log::info("------------ Insert status----------------  " .  $orderId['id'] . " created_at= " . $orderId['created_at']);
                     //                    Log::info($result['message']);
                 }
-            } catch (Exception $e) {
-                Log::info('Shopify Order push error = (' . $e->getMessage() . ') sent');
-            }
+//            } catch (Exception $e) {
+//                Log::info('Shopify Order push error = (' . $e->getMessage() . ') sent');
+//            }
         }
     }
 
@@ -1140,9 +1142,9 @@ class OrderController extends Controller
             );
 
             $helper = new Helper;
-            $orderInfo = $helper->shopify_call("/admin/api/2023-01/orders.json", $array, 'GET');
+            $orderInfo = $helper->shopify_call("/admin/api/2022-01/orders.json", $array, 'GET');
             $orderInfo = json_decode($orderInfo['response'] ?? [], JSON_PRETTY_PRINT);
-
+//            dd($orderInfo);
 
 
             if (isset($orderInfo['errors'])) {
@@ -1151,7 +1153,6 @@ class OrderController extends Controller
                     'message' => "Order not found",
                 ]);
             }
-
 
             $shopifyOrdeIdsWithName = [];
             foreach ($orderInfo['orders'] as $key => $order) {
@@ -1192,13 +1193,10 @@ class OrderController extends Controller
                 ]);
             }
 
-            $ch = curl_init();
-            foreach ($shopifyOrdeIds as $key => $orderId) {
-                $url = $this->domain . "/getshopifyorder?orderid=" . $orderId;
-                curl_setopt($ch, CURLOPT_URL, $url);
-                $result = curl_exec($ch);
+            foreach ($shopifyOrdeIds as $orderId) {
+                $data = $request->merge(['orderid' => $orderId]);
+                return $this->getshopifyorder($data);
             }
-            curl_close($ch);
 
             return response()->json([
                 'message' => 'Order Synced',
@@ -1221,7 +1219,8 @@ class OrderController extends Controller
 
     public function hook(Request $request)
     {
-        try {
+//        dd($request->all());
+//        try {
             $helper = new Helper;
             set_time_limit(0);
             $order_id = $request->get('ID');
@@ -1447,7 +1446,7 @@ class OrderController extends Controller
                 $item->data_parse_type = 'hook';
                 $item->child_sku = Helper::getChildSku($item);
                 $item->save();  # Save Later
-
+//                dd($item);
                 ########## Create a New logic if Custom_EPS_download_link exist with valid url download the image in Archive file #######
 
                 if (isset($ItemOption['Custom_EPS_download_link'])) {
@@ -1455,7 +1454,7 @@ class OrderController extends Controller
                     if ($headers && strpos($headers[0], '200') !== false) {
                         $fileName = basename(parse_url($ItemOption['Custom_EPS_download_link'], PHP_URL_PATH));
                         $fileName = $short_order . "_" . $item->id . "_" . $fileName;
-                        $this->archiveFilePath = $this->sort_root . "archive/" . $fileName;
+                        $this->archiveFilePath = public_path()."/media/RDrive/archive/" . $fileName;
                         //$this->jdbg(__LINE__." ** ".$image_path." -- ".$ItemOption['Custom_EPS_download_link']." --> ", $ItemOption);
                         $fleSaveStatus = $helper->dowFileToDir(
                             $ItemOption['Custom_EPS_download_link'],
@@ -1487,8 +1486,8 @@ class OrderController extends Controller
                         $thmFileName = basename($this->archiveFilePath);
                         $filenameWithoutExtension = pathinfo($thmFileName, PATHINFO_FILENAME);
                         //                        $thumb = '/assets/images/template_thumbs/' . $filenameWithoutExtension . '.jpg';
-                        $thumb = '/assets/images/template_thumbs/' . $item->order_id . "-" . $item->id . '.jpg';
-                        ImageHelper::createThumb($this->archiveFilePath, 0, base_path() . '/public_html' . $thumb, 350);
+                        $thumb = public_path().'/assets/images/template_thumbs/' . $item->order_id . "-" . $item->id . '.jpg';
+                        ImageHelper::createThumb($this->archiveFilePath, 0, $thumb, 350);
                         $item_thumb = $this->domain . $thumb;
                     } catch (Exception $e) {
                         $item_thumb = $this->domain . '/assets/images/no_image.jpg';
@@ -1534,6 +1533,7 @@ class OrderController extends Controller
 
                 $item->item_option = json_encode($ItemOption);
                 $item->item_thumb = $item_thumb;
+//                dd('item :', $item);
                 $item->save();  # Save Later
 
                 try {
@@ -1651,15 +1651,15 @@ class OrderController extends Controller
                 'error' => false,
                 'message' => 'data inserted',
             ], 200);
-        } catch (Exception $e) {
-            // Notification::orderFailure($order_id);
-            Log::error('Hook: ' . $e->getMessage());
-
-            return response()->json([
-                'error' => true,
-                'message' => 'error',
-            ], 200);
-        }
+//        } catch (Exception $e) {
+//            // Notification::orderFailure($order_id);
+//            Log::error('Hook: ' . $e->getMessage());
+//
+//            return response()->json([
+//                'error' => true,
+//                'message' => 'error',
+//            ], 200);
+//        }
     }
 
     private function jdbg($label, $obj)
