@@ -19,7 +19,8 @@ use Ship\ImageHelper;
 class ItemController extends Controller
 {
 
-    private $domain = "http://7p.test";
+    // private $domain = "http://7p.test";
+    private $domain = "https://7papi.monogramonline.com";
     /**
      * Display a listing of the resource.
      */
