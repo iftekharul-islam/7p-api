@@ -380,5 +380,9 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
 
 
 
+
+    Route::get('deleteorderbyid/{id}', [OrderController::class, 'deleteOrderById']);
+    Route::get('deleteorderbydate', [OrderController::class, 'deleteOrderByDate']);
+
     Route::get('test-api', [ItemController::class, 'test']);
 });
