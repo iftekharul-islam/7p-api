@@ -6,7 +6,7 @@ use Imagick;
 use Illuminate\Support\Facades\Log;
 use App\Models\Batch;
 use App\Models\Item;
-use Monogram\ImageHelper;
+use Ship\ImageHelper;
 
 class Sure3d
 {
