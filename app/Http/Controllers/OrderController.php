@@ -1488,7 +1488,7 @@ class OrderController extends Controller
                     $filenameWithoutExtension = pathinfo($thmFileName, PATHINFO_FILENAME);
                     //                        $thumb = '/assets/images/template_thumbs/' . $filenameWithoutExtension . '.jpg';
                     $thumb = '/assets/images/template_thumbs/' . $item->order_id . "-" . $item->id . '.jpg';
-                    ImageHelper::createThumb($this->archiveFilePath, 0, $thumb, 350);
+                    ImageHelper::createThumb(public_path() . $this->archiveFilePath, 0, public_path() . $thumb, 350);
                     $item_thumb = $this->domain . $thumb;
                 } catch (Exception $e) {
                     $item_thumb = $this->domain . '/assets/images/no_image.jpg';
