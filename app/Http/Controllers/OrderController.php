@@ -1753,7 +1753,7 @@ class OrderController extends Controller
             $pdfFilePath,
             public_path() . DIRECTORY_SEPARATOR . 'media' . DIRECTORY_SEPARATOR . 'zakeke' . DIRECTORY_SEPARATOR . $pdfFile
         )) {
-            return 'http://' . $this->domain . '/media/zakeke/' . $pdfFile;
+            return  $this->domain . '/media/zakeke/' . $pdfFile;
         } else {
             return false;
         }
