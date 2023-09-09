@@ -1138,7 +1138,7 @@ class OrderController extends Controller
             $array = array(
                 "created_at_min" => $created_at_min, #2020-04-01T00:00:00-05:00
                 "created_at_max" => $created_at_max, #2020-04-13T23:59:59-05:00
-                "limit" => 10,
+                "limit" => $request->get('limit') ?? 10,
                 "fields" => "created_at,id,name,total-price"
             );
 
