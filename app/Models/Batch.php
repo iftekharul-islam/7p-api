@@ -888,15 +888,19 @@ class Batch extends Model
         } else {
             $file_path = sprintf("%s/", $savepath);
         }
-
-        // TODO - check if is this needed permission or not
-        if (!file_exists(public_path().'/'.$file_path)) {
-            if (!mkdir(public_path().'/'.$file_path, 0755, true)) {
-                Batch::note($batch->batch_number, $batch->station_id, '7', 'Error Exporting ' . $format);
-                Log::error('Batch Export: could not create directory ' . $file_path);
-                return ['error' => 'Could not create directory ' . $file_path . '  - Batch: ' . $id];
+        try {
+            // TODO - check if is this needed permission or not
+            if (!file_exists($file_path)) {
+                if (!mkdir($file_path, 0755, true)) {
+                    Batch::note($batch->batch_number, $batch->station_id, '7', 'Error Exporting ' . $format);
+                    Log::error('Batch Export: could not create directory ' . $file_path);
+                    return ['error' => 'Could not create directory ' . $file_path . '  - Batch: ' . $id];
+                }
             }
+        } catch (\Exception $e){
+            Log::error('Batch Export: could not create directory with error: ' . $e->getMessage());
         }
+
 
 
         if (empty($csv_extension)) {
