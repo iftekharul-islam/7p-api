@@ -898,7 +898,7 @@ class Batch extends Model
                 }
             }
         } catch (\Exception $e){
-            Log::error('Batch Export: could not create directory with error: ' . $e->getMessage());
+            Log::error('Batch Export: could not create directory with file : '. $file_path .' and error : ' . $e->getMessage());
         }
 
 
