@@ -328,7 +328,7 @@ class Item extends Model
         /*return $this->belongsTo('App\Product', 'item_id', 'id_catalog')
                     ->where('is_deleted', 0);*/
         return $this->belongsTo(Product::class, 'item_code', 'product_model')
-            ->where('is_deleted', 0);
+            ->where('is_deleted', '0');
     }
 
     public function store()

@@ -163,7 +163,7 @@ class OrderController extends Controller
         }
         logger('test start date', [$start, $request->get('end_date')]);
 
-        $orders = Order::with('store', 'items', 'customer')
+        $orders = Order::with('store', 'items.product', 'customer')
             ->where('is_deleted', '0')
             ->storeId($request->get('store'))
             ->status($status)
@@ -1866,11 +1866,15 @@ class OrderController extends Controller
     public function shopifyThumb($orderId, $item_id, $flag = false)
     {
         $data = $this->shopifyOrderById($orderId, true);
+        info($data['orders']);
         if (!isset($data['orders'])) {
             Log::error('order is not available');
             return response()->json([
                 'message' => "Order is not available",
             ], 200);
+        }
+        if (!isset($data['orders'][0])) {
+            return false;
         }
         $order = $data['orders'][0];
         if (!empty($order)) {
@@ -1899,7 +1903,7 @@ class OrderController extends Controller
 
     public function updateShopifyThumb($orderId, $item_id)
     {
-        $dummy_Image = 'https://' . $this->domain . '/assets/images/no_image.jpg';
+        $dummy_Image = $this->domain . '/assets/images/no_image.jpg';
         $item = Item::where('item_id', $item_id)->first();
         if ($item) {
             $product = Product::where('product_model', $item->item_code)->first();

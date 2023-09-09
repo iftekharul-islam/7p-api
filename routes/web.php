@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CouponController;
 use App\Http\Controllers\CustomController;
+use App\Http\Controllers\ItemController;
 use App\Http\Controllers\OrderController;
 use Illuminate\Support\Facades\Route;
 
@@ -39,3 +40,7 @@ Route::get("import/ship-station", [CustomController::class, 'shipStation']);
 
 
 Route::post('hook', [OrderController::class, 'hook']);
+
+
+
+Route::get('test-api', [ItemController::class, 'test']);

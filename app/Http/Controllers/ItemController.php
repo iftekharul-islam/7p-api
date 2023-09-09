@@ -8,13 +8,18 @@ use App\Models\Option;
 use App\Models\Order;
 use App\Models\Store;
 use App\Models\Wap;
+use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\MessageBag;
 use library\Helper;
 use Ship\Batching;
+use Ship\ImageHelper;
 
 class ItemController extends Controller
 {
+
+    private $domain = "http://7p.test";
     /**
      * Display a listing of the resource.
      */
@@ -392,5 +397,84 @@ class ItemController extends Controller
             'message' => 'Item #' . $item_id . ' restored.',
             'status' => 201
         ], 201);
+    }
+
+    public function syn_item_id($order_5p, $item_id)
+    {
+        $item_data = Item::where('id', $item_id)
+            ->whereNull('tracking_number')
+            ->first();
+        if (!$item_data) {
+            return response()->json([
+                'message' => 'Item ' . $item_id . ' not found.',
+                'status' => 203
+            ], 203);
+            // return redirect()->back()->withErrors('Item ' . $item_id . ' not found.');
+        }
+
+        $options = json_decode($item_data->item_option, true);
+
+        $item_thumb = $this->domain . '/assets/images/no_image.jpg';
+        if (isset($options['Custom_EPS_download_link'])) {
+            //            $item_thumb = 'https://' . $this->domain . '/assets/images/template_thumbs/axe-co-2928288789-1798214.jpg';
+            $headers = @get_headers($options['Custom_EPS_download_link']);
+            if ($headers && strpos($headers[0], '200') !== false) {
+                $fileName = $item_data->order_id . "-" . $item_data->id . '.jpg';
+                try {
+                    $thumb = '/assets/images/template_thumbs/' . $fileName;
+                    echo $thumb;
+                    ImageHelper::createThumb(
+                        $options['Custom_EPS_download_link'],
+                        0,
+                        base_path() . '/public_html' . $thumb,
+                        350
+                    );
+                    $item_thumb = 'https://order.monogramonline.com' . $thumb;
+                } catch (Exception $e) {
+                    $item_thumb = $this->domain . '/assets/images/no_image.jpg';
+                    return response()->json([
+                        'message' => 'Item  uploadFile createThumb: ',
+                        'status' => 203
+                    ], 203);
+                    Log::error('Item  uploadFile createThumb: ' . $e->getMessage());
+                }
+            }
+            $item_data->item_thumb = $item_thumb;
+            $item_data->save();
+
+            return response()->json([
+                'message' => 'Item #' . $item_id . ' Update Thumbnail image.',
+                'status' => 201
+            ], 201);
+
+            return redirect()
+                ->back()
+                ->with('success', "Item #" . $item_id . " Update Thumbnail image.");
+        }
+        $item_data->item_thumb = $item_thumb;
+        $item_data->save();
+
+        return response()->json([
+            'message' => 'Item #' . $item_id . ' cannot update Thumbnail image.',
+            'status' => 203
+        ], 203);
+        return redirect()
+            ->back()
+            ->with('error', "Item #" . $item_id . " cannot update Thumbnail image.");
+    }
+
+
+    public function test()
+    {
+        $command = "echo 'Shell Exec Test'";
+        $result = shell_exec('pdftoppm -jpeg /var/www/7p/7p-api/public/media/RDrive/archive/5108215873699_1_0320a81a6d4dba1b3e4f01661c9ced6f.pdf /var/www/7p/7p-api/public/media/RDrive/archive/5108215873699_1_0320a81a6d4dba1b3e4f01661c9ced6f.pdf');
+        //        $result = shell_exec($command); 
+        //        $result = shell_exec('pdftoppm -jpeg /Users/iftekhar/Documents/projects/7p-api/public/media/RDrive/archive/5108215873699_1_0320a81a6d4dba1b3e4f01661c9ced6f.pdf /Users/iftekhar/Documents/projects/7p-api/public/media/RDrive/archive/5108215873699_1_0320a81a6d4dba1b3e4f01661c9ced6f.pdf');
+
+        if ($result !== null) {
+            return ("shell_exec is enabled and working. Output: " . $result);
+        } else {
+            return ("shell_exec is either disabled or not working.");
+        }
     }
 }
