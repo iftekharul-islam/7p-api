@@ -952,7 +952,7 @@ class OrderController extends Controller
                 // $res = Http::post($url, $purchaseData);
                 // $result = $res->json(); // If the response is JSON
 
-                dd($result);
+//                dd($result);
                 info("pushPurchaseToOms4");
                 //                    dd($result);
                 //
