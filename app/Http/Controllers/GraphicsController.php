@@ -22,6 +22,7 @@ use Ship\Wasatch;
 
 class GraphicsController extends Controller
 {
+    protected $domain = 'https://7papi.monogramonline.com';
     protected $main_dir = '/media/RDrive/MAIN/';
     protected $sort_root = '/media/RDrive/';
     protected $old_sort_root = '/media/RDrive/';
@@ -34,6 +35,8 @@ class GraphicsController extends Controller
     // protected $sub_dir = '/media/RDrive/sublimation/'; 
     public static $archive = '/media/RDrive/archive/';
     protected $old_archive = '/media/RDrive/archive';
+
+
 
     protected $printers = [
         'SOFT-1' => 'SOFT-1',
@@ -1947,17 +1950,14 @@ class GraphicsController extends Controller
                 ->where('batch_number', $select_batch)
                 ->get();
             foreach ($batche as $batch) {
-                info("A");
                 foreach ($batch->items as $items) {
-                    info("B");
-
                     if ($items->id == $item_id) {
                         if (empty($items->tracking_number)) {
                             $thumb = '/assets/images/template_thumbs/' . $items->order_id . "-" . $items->id . '.jpg';
                             $items->tracking_number = NULL;
                             $items->item_status = 1;
                             $items->reached_shipping_station = 0;
-                            $items->item_thumb = 'http://order.monogramonline.com' . $thumb;
+                            $items->item_thumb = $this->domain . $thumb;
                             $items->save();
 
                             $batch->status = 2;
@@ -1977,7 +1977,7 @@ class GraphicsController extends Controller
 
                             if (move_uploaded_file($request->file('upload_file'), $_SERVER['DOCUMENT_ROOT'] . $this->sort_root . "archive/" . $filename)) {
                                 try {
-                                    ImageHelper::createThumb($this->sort_root . "archive/" . $filename, 0, base_path() . '/public_html' . $thumb, 350);
+                                    ImageHelper::createThumb(public_path() . $this->sort_root . "archive/" . $filename, 0, public_path() . $thumb, 350);
                                 } catch (\Exception $e) {
                                     Log::error('Batch uploadFile createThumb: ' . $e->getMessage());
                                 }
@@ -2018,7 +2018,6 @@ class GraphicsController extends Controller
         $filename = $this->uniqueFilename($this->main_dir, $filename);
 
         if (move_uploaded_file($request->file('upload_file'), $this->main_dir . $filename)) {
-            info("A");
             Batch::note($batch->batch_number, $batch->station_id, '11', 'Graphic Uploaded to Main');
             return response()->json([
                 'status' => 201,

@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\StoreItem;
 use GuzzleHttp\Client;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Http;
 
 class Helper
 {
@@ -499,6 +500,36 @@ class Helper
 
             // Return headers and Shopify's response
             return array('headers' => $headers, 'response' => $response[1]);
+        }
+    }
+
+    public function shopify_call_7p($startDate, $endDate)
+    {
+        $token = "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";
+        $shop = "monogramonline";
+
+        info("shopify_call_7p");
+        info($startDate);
+        info($startDate);
+
+        // Build URL
+        $url = "https://$shop.myshopify.com/admin/api/2021-07/orders.json?created_at_min=$startDate&created_at_max=$endDate";
+
+        info($url);
+
+        $response = Http::withHeaders([
+            'X-Shopify-Access-Token' => $token,
+        ])->get($url);
+
+
+
+        return array('orders' => $response->json()['orders']);
+
+        if ($response->successful()) {
+            return array('orders' => $response->json()['orders']);
+        } else {
+            // Handle error here
+            return array('errors' => 'Failed to retrieve orders.');
         }
     }
 

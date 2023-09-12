@@ -415,13 +415,14 @@ class ItemController extends Controller
         $options = json_decode($item_data->item_option, true);
 
         $item_thumb = $this->domain . '/assets/images/no_image.jpg';
+
         if (isset($options['Custom_EPS_download_link'])) {
             $headers = @get_headers($options['Custom_EPS_download_link']);
             if ($headers && strpos($headers[0], '200') !== false) {
                 $fileName = $item_data->order_id . "-" . $item_data->id . '.jpg';
                 try {
                     $thumb = '/assets/images/template_thumbs/' . $fileName;
-                    ImageHelper::createThumb($options['Custom_EPS_download_link'], 0, public_path() . $thumb,350);
+                    ImageHelper::createThumb(public_path() . str_replace($this->domain, "", $options['Custom_EPS_download_link']), 0, public_path() . $thumb, 350);
                     $item_thumb = $this->domain . $thumb;
                 } catch (Exception $e) {
                     Log::error('Item  uploadFile createThumb: ' . $e->getMessage());
@@ -459,5 +460,11 @@ class ItemController extends Controller
         } else {
             return ("shell_exec is either disabled or not working.");
         }
+    }
+
+    public function deleteOrderItemData()
+    {
+        Order::truncate();
+        Item::truncate();
     }
 }

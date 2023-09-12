@@ -162,7 +162,7 @@ class OrderController extends Controller
         } else {
             $status = 'not_cancelled';
         }
-        logger('test start date', [$start, $request->get('end_date')]);
+        // logger('test start date', [$start, $request->get('end_date')]);
 
         $orders = Order::with('store', 'items.product', 'customer')
             ->where('is_deleted', '0')
@@ -952,7 +952,7 @@ class OrderController extends Controller
                 // $res = Http::post($url, $purchaseData);
                 // $result = $res->json(); // If the response is JSON
 
-//                dd($result);
+                //                dd($result);
                 info("pushPurchaseToOms4");
                 //                    dd($result);
                 //
@@ -1121,16 +1121,15 @@ class OrderController extends Controller
         $ordersIn5p = [];
 
         if ($request->get("created_at_min")) {
-            $created_at_min = $request->get("created_at_min");
+            $created_at_min = $request->get("created_at_min") . "T00:00:00-04:00";
         } else {
-            #$created_at_min = date("Y-m-d"); // 2020-03-01
-            $created_at_min =  date("Y-m-d TH:i:s", strtotime('-2 hour'));
+            $created_at_min =  date("Y-m-d") . "T00:00:00-04:00";
         }
 
         if ($request->get("created_at_max")) {
-            $created_at_max = $request->get("created_at_max") . " T23:59:59-05:00";
+            $created_at_max = $request->get("created_at_max") . "T23:59:59-04:00";
         } else {
-            $created_at_max = date("Y-m-d") . " T23:59:59-05:00"; // 2020-03-01
+            $created_at_max = date("Y-m-d") . "T23:59:59-04:00"; // 2020-03-01
         }
 
         if ($created_at_max) {
@@ -1143,7 +1142,8 @@ class OrderController extends Controller
             );
 
             $helper = new Helper;
-            $orderInfo = $helper->shopify_call("/admin/api/2022-01/orders.json", $array, 'GET');
+            $orderInfo = $helper->shopify_call("/admin/api/2023-01/orders.json", $array, 'GET');
+            // $orderInfo = $helper->shopify_call_7p($created_at_min, $created_at_max);
             $orderInfo = json_decode($orderInfo['response'] ?? [], JSON_PRETTY_PRINT);
             //            dd($orderInfo);
 
@@ -1388,7 +1388,7 @@ class OrderController extends Controller
                         Order::note(substr($key, $len) . ' - ' . $value, $order->id, $order->order_id);
                     } elseif (substr(strtolower($key), $len, 14) == '_zakekezip') {
                         Log::info('Waiting for Zakeke personalization file ' . $value);
-                        sleep(120);
+                        sleep(5);
 
                         $pdfUrl = $this->_processZakekeZip($value);
 
@@ -1396,7 +1396,7 @@ class OrderController extends Controller
                             while (!is_string($this->_processZakekeZip($value))) {
                                 Log::info('Processing to get _processZakekeZip' . $value);
                                 $pdfUrl = $this->_processZakekeZip($value);
-                                sleep(120);
+                                sleep(5);
                             }
                         }
 
@@ -1462,7 +1462,7 @@ class OrderController extends Controller
                         public_path() . $this->archiveFilePath
                     );
                     if ($fleSaveStatus == 200) {
-                        $ItemOption['Custom_EPS_download_link'] = $this->remotArchiveUrl . $fileName;
+                        $ItemOption['Custom_EPS_download_link'] = $this->domain . $this->archiveFilePath;
                     }
                     //$this->jdbg(__LINE__." -- After check  --", $headers[0]);
                     //$this->jdbg(__LINE__." -- fleSaveStatus --", $fleSaveStatus);
@@ -1826,7 +1826,7 @@ class OrderController extends Controller
                 $item->item_id = $product->id_catalog;
                 $item->item_option = json_encode($options);
                 $item->item_quantity = $order_item->item_quantity;
-                $item->item_thumb = isset($product->product_thumb) ? $product->product_thumb : 'http://order.monogramonline.com/assets/images/no_image.jpg';
+                $item->item_thumb = isset($product->product_thumb) ? $product->product_thumb : 'https://7papi.monogramonline.com/assets/images/no_image.jpg';
                 $item->item_unit_price = $price;
                 $item->item_url = isset($product->product_url) ? $product->product_url : null;
                 $item->data_parse_type = 'hook';
@@ -1859,7 +1859,7 @@ class OrderController extends Controller
         }
 
         return response()->json([
-            'message' => 'Order found',
+            // 'message' => 'Order found',
             'data' => $orderInfo
         ]);
     }
@@ -1910,6 +1910,8 @@ class OrderController extends Controller
             $product = Product::where('product_model', $item->item_code)->first();
             if ($product) {
                 $thumb = $this->shopifyThumb($orderId, $item_id, true);
+                info("OrderController : Thumb checking");
+                info($thumb);
                 $product->product_thumb = $thumb ? $thumb : $dummy_Image;
                 $product->save();
 
@@ -2072,7 +2074,7 @@ class OrderController extends Controller
     {
         $order = Order::where('short_order', $id)->first();
         if ($order) {
-            $order->is_deleted = "1";
+            $order->is_deleted = 1;
             $order->save();
             Item::where('order_5p', $order->id)->update(['is_deleted' => 1]);
             Customer::where('id', $order->customer_id)->update(['is_deleted' => 1]);
@@ -2090,15 +2092,18 @@ class OrderController extends Controller
 
     public function deleteOrderByDate(Request $request)
     {
-        $orders = Order::where('is_deleted', '0')->where(
+        $orders = Order::where('is_deleted', '0')->whereDate(
             'order_date',
             '>=',
-            $request->get('from') . ' 00:00:00'
-        )->where(
+            $request->get('from')
+        )->whereDate(
             'order_date',
             '<=',
-            $request->get('to') . ' 23:59:59'
+            $request->get('to')
         )->get();
+
+        info("OrderController : Date" . $request->get('from'));
+        info($orders);
 
         $error_list = [];
         $success_list = [];
