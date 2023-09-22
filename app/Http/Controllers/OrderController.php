@@ -173,7 +173,7 @@ class OrderController extends Controller
             ->search($request->get('search_for_first'), $request->get('operator_first'), $request->get('search_in_first'))
             ->search($request->get('search_for_second'), $request->get('operator_second'), $request->get('search_in_second'));
         // ->get();
-        $orders = $orders->paginate($request->get('perPage', 10));
+        $orders = $orders->orderBy("order_date", "asc")->paginate($request->get('perPage', 10));
 
         $total = Order::where('is_deleted', '0')
             ->storeId($request->get('store'))
