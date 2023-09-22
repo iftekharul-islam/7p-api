@@ -259,9 +259,13 @@ class Sure3d
     $graphic_count = 0;
 
     foreach ($batch->items as $item) {
+      info("This is Item Sure3d");
+      info($item->sure3d);
       if ($item->sure3d != NULL) {
         $graphic_count++;
-        $this->getImage($item, 1);
+        $url = $this->getImage($item, 1);
+        info("This is Image created by getImage function");
+        info($url);
         for ($x = 0; $x < $item->item_quantity; $x++) {
           $graphics[] = $item->order->short_order . '-' . $item->id . substr($item->sure3d, strrpos($item->sure3d, '.'));
         }
@@ -285,29 +289,36 @@ class Sure3d
         return false;
       }
 
-      $dir = $this->main . $batch->batch_number . $batch->route->csv_extension;
+      info($batch->route);
 
-      if (strtolower($batch->route->graphic_dir) == '' && count($graphics) > 1) {
-        ini_set('memory_limit', '256M');
-        $this->layout($graphics, $batch->batch_number, $dir);
-      } else {
-        mkdir($dir);
-        touch($dir . '/lock');
-        foreach ($graphics as $key => $sure3d) {
-          if (file_exists($this->download_dir . $sure3d) && strtolower($batch->route->graphic_dir) == '') {
-            copy($this->download_dir . $sure3d, $dir . '/' . $batch->batch_number . '-' . $key . substr($sure3d, strrpos($sure3d, '.')));
-          } else if (file_exists($this->download_dir . $sure3d)) {
-            copy($this->download_dir . $sure3d, $dir . '/' . $sure3d);
-          } else if (file_exists($this->old_download_dir . $sure3d) && strtolower($batch->route->graphic_dir) == '') {
-            copy($this->old_download_dir . $sure3d, $dir . '/' . $batch->batch_number . '-' . $key . substr($sure3d, strrpos($sure3d, '.')));
-          } else if (file_exists($this->old_download_dir . $sure3d)) {
-            copy($this->old_download_dir . $sure3d, $dir . '/' . $sure3d);
-          } else {
-            Log::error('Sure3d: Graphic not found ' . $sure3d);
-            Batch::note($batch->batch_number, $batch->station_id, '9', 'Sure3d: Graphic not found ' . $sure3d);
+      $dir = $this->main . $batch->batch_number . $batch->route->csv_extension;
+      info($dir);
+
+      try {
+        if (strtolower($batch->route->graphic_dir) == '' && count($graphics) > 1) {
+          ini_set('memory_limit', '256M');
+          $this->layout($graphics, $batch->batch_number, $dir);
+        } else {
+          mkdir($dir);
+          touch($dir . '/lock');
+          foreach ($graphics as $key => $sure3d) {
+            if (file_exists($this->download_dir . $sure3d) && strtolower($batch->route->graphic_dir) == '') {
+              copy($this->download_dir . $sure3d, $dir . '/' . $batch->batch_number . '-' . $key . substr($sure3d, strrpos($sure3d, '.')));
+            } else if (file_exists($this->download_dir . $sure3d)) {
+              copy($this->download_dir . $sure3d, $dir . '/' . $sure3d);
+            } else if (file_exists($this->old_download_dir . $sure3d) && strtolower($batch->route->graphic_dir) == '') {
+              copy($this->old_download_dir . $sure3d, $dir . '/' . $batch->batch_number . '-' . $key . substr($sure3d, strrpos($sure3d, '.')));
+            } else if (file_exists($this->old_download_dir . $sure3d)) {
+              copy($this->old_download_dir . $sure3d, $dir . '/' . $sure3d);
+            } else {
+              Log::error('Sure3d: Graphic not found ' . $sure3d);
+              Batch::note($batch->batch_number, $batch->station_id, '9', 'Sure3d: Graphic not found ' . $sure3d);
+            }
           }
+          unlink($dir . '/lock');
         }
-        unlink($dir . '/lock');
+      } catch (\Throwable $e) {
+        Log::error('Sure3d Export : MAIN Dir ' . $dir . ' - ' . $e->getMessage());
       }
     }
 

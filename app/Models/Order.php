@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -422,8 +423,8 @@ class Order extends Model
         if (!$start_date) {
             return;
         }
-        $starting = sprintf("%s 00:00:00", $start_date);
-        $ending = sprintf("%s 23:59:59", $end_date ? $end_date : $start_date);
+        $starting = Carbon::parse($start_date)->format('Y-m-d');
+        $ending = $end_date ? Carbon::parse($end_date)->format('Y-m-d') : Carbon::parse($start_date)->format('Y-m-d');
         //        logger('starting ending', [$starting, $ending]);
 
         return $query->whereDate('order_date', '>=', $starting)

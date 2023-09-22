@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Ship\CSV;
 use Ship\Shipper;
+use Illuminate\Support\Facades\Http;
 
 class Dropship
 {
@@ -430,6 +431,154 @@ class Dropship
         ];
     }
 
+    public static function getDropShipOrdersDyDate($orderDateStart, $orderDateEnd)
+    {
+        $tag = "41195"; // Personalized;
+        $username = "8f6fd3ba674246bea607af316e4cd311";
+        $password = "12554651d87449c5acca216568a5d4e6";
+
+
+        $response = Http::withBasicAuth($username, $password)
+            ->get('https://ssapi.shipstation.com/orders', [
+                'orderDateStart' => $orderDateStart,
+                'orderDateEnd' => $orderDateEnd,
+            ]);
+
+        if ($response->successful()) {
+            // The request was successful
+            $data = $response->json();
+            logger('Data of api response of ship station:', [$data]);
+            // Handle the ShipStation API response data here
+        } else {
+            logger('Error: ' . $response->status(). ' and ' . $response->json());
+            return false;
+            // The request failed
+//            $statusCode = $response->status();
+//            $errorResponse = $response->json();
+            // Handle the error response here
+        }
+
+//        $data = json_decode($response, true);
+
+        $csvData = [];
+        $line = [
+            'order',
+            'name',
+            'address1',
+            'address2',
+            'city',
+            'state',
+            'zip',
+            'country',
+            'phone',
+            'comment',
+            'color',
+            'sku',
+            'child_sku',
+            'qty',
+            'price',
+            'thumbnail',
+            'graphic',
+            // new entries
+            'ship via',
+            'Ship By Date',
+        ];
+
+        $csvData[] = $line;
+
+        /*
+         * Loop through the order now
+         */
+
+
+        /**
+         *  A small hack that tries to loop through all the orders
+         *  and attempt to fix the zip code.
+         *
+         */
+
+        //        foreach ($data['orders'] as $index => $order) {
+        //
+        //            $zipcode = $order['shipTo']['postalCode'];
+        //
+        //            if(stripos($zipcode, "-") !== false) {
+        //                $data['orders'][$index]['shipTo']['postalCode'] = explode("-", $zipcode)[0];
+        //            }
+        //        }
+
+
+        foreach ($data['orders'] as $order) {
+            foreach ($order['items'] as $item) {
+
+
+                $zipcode = $order['shipTo']['postalCode'];
+
+
+                if (stripos($zipcode, "-") !== false) {
+                    $zipcode = explode("-", $zipcode)[0];
+                }
+
+                $itemInfo = StoreItem::searchStore("axe-co")
+                    ->where('is_deleted', '0')
+                    ->where("vendor_sku", $item['sku'])
+                    ->first();
+
+                $price = $itemInfo['cost'] ?? 0;
+                $shipDate = Dropship::getShipDateFromStarting(Carbon::parse($order['createDate']))->toDateTimeString();
+
+                $line = [
+                    $order['orderNumber'],
+                    $order['shipTo']['name'],
+                    $order['shipTo']['street1'],
+                    $order['shipTo']['street2'],
+                    $order['shipTo']['city'],
+                    $order['shipTo']['state'],
+                    (string) $zipcode,
+                    $order['shipTo']['country'],
+                    $order['shipTo']['phone'] ?? "",
+                    "", // $order['customerNotes'] ?? "", // he said remove it
+                    "",
+                    $item['sku'],
+                    $item['sku'],
+                    $item["quantity"],
+                    $price,
+                    $item['imageUrl'],
+                    $item['imageUrl'],
+                    "have to work on this....",
+                    $shipDate
+                ];
+
+
+                /* -----------------------------------------------------------------------------------
+                 * FYI                                                                               -
+                 * In Excel you cannot have leading zeros in numbers, so it will ignore it           -
+                 * -----------------------------------------------------------------------------------
+                 */
+
+
+                //                if($line[6][0] == 0) {
+                //                    $line[6] = "'" . $line[6] . "'";
+                //                }
+
+                $csvData[] = $line;
+                unset($line);
+                unset($zipcode);
+            }
+        }
+
+
+        $filename = 'ShipStation_' . "Axe" . '_' . date('ymd_His') . '.' . uniqid() . '.csv';
+        $csv = new CSV;
+
+        $path = storage_path() . "/EDI/General/";
+
+        $path = $csv->createFile($csvData, $path, null, $filename, ',');
+
+        $import = new ShipStationImport();
+        $import->importCsv($path);
+
+        return $path;
+    }
     public static function getDropShipOrders()
     {
         $tag = "41195"; // Personalized;
