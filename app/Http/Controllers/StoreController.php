@@ -792,4 +792,35 @@ class StoreController extends Controller
         }
         return $data;
     }
+
+    public static function retrieveData () {
+
+//			$gxs = new GXSConnection;
+//			$gxs->getFiles();
+
+        $stores = Store::where('is_deleted', '0')
+            ->orderBy('sort_order')
+            ->get();
+
+        foreach  ($stores as $store) {
+
+            if ($store->input == '1')	{
+                //load class dynamically
+                try {
+                    $className =  'Market\\' . $store->class_name;
+                    $controller =  new $className;
+                    $controller->getInput($store->store_id);
+
+                    if ($store->batch == '2')	{
+                        Batching::auto(0, $store->store_id, null);
+                    }
+                } catch (\Exception $e) {
+                    Log::error($e->getMessage());
+                }
+
+            }
+        }
+
+//			$gxs->sendFiles();
+    }
 }

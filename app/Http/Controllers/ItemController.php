@@ -467,4 +467,12 @@ class ItemController extends Controller
         Order::truncate();
         Item::truncate();
     }
+
+    public function autoBatch($max_units, $store_id = null)
+    {
+        Log::info('AutoBatch Intiated - Max Units ' . $max_units);
+
+        Batching::auto($max_units, $store_id);
+
+    }
 }

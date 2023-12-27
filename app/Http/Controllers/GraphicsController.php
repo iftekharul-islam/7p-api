@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Log;
 use Ship\ApiClient;
 use Ship\FileHelper;
 use Ship\ImageHelper;
+use Ship\Sure3d;
 use Ship\Wasatch;
 
 class GraphicsController extends Controller
@@ -2046,5 +2047,310 @@ class GraphicsController extends Controller
         //            ]
         //        );
         return redirect()->back()->withInput()->withSuccess("Successfully fetched graphic from Zakeke");
+    }
+
+
+    public function sortFiles(Request $request)
+    {
+//        $helper = new Helper();
+        if(!file_exists($this->sort_root)) {
+            Log::error('Sortfiles: Cannot find Graphics Directory');
+            return;
+        }
+
+        $error_files = $this->findErrorFiles();
+//        $helper->jdbg("error_files", $error_files);
+        $manual_files = $this->getManual('list');
+//        $helper->jdbg("manual_files", $manual_files);
+        $dir_list = array_diff(scandir($this->main_dir), array('..', '.', 'lock'));
+//        $helper->jdbg("dir_list", $dir_list);
+
+        $id = rand(1000, 9999);
+
+
+        /* TEMP REMOVED
+        if ($request->has("location")) {
+            Log::info("------- SORT WAS CALLED BY: " . $request->get("location"));
+        }
+        */
+
+        if(count($dir_list) > 0) {
+//          echo "<pre>";
+//              print_r($dir_list);
+//          echo "</pre>";
+            //    Log::info('STARTING SORTFILES ' . $id);
+        } else {
+            //  Log::info("Nothing to sort from " . $this->main_dir);
+            //   echo "Nothing to sort from " . $this->main_dir;
+        }
+
+
+        foreach ($dir_list as $dir) {
+
+            $result = shell_exec("lsof | grep " . $this->main_dir . $dir . "*");
+
+            if($result != null || substr($dir, -5) == '.lock' || !file_exists($this->main_dir . $dir) ||
+                !is_writable($this->main_dir . $dir) || file_exists($this->main_dir . $dir . "/lock") ||
+                file_exists($this->main_dir . $dir . '.lock')) {
+                Log::info('1.Sortfiles Locked -------sortFiles ' . $id . ': ' . $this->main_dir . $dir);
+                continue;
+            }
+
+            touch($this->main_dir . $dir . '.lock');
+
+            $batch_number = $this->getBatchNumber($dir);
+
+            if(isset($error_files[$batch_number])) {
+                foreach ($error_files[$batch_number] as $error_file) {
+                    Log::info('sortFiles ' . $id . ':  Remove Error File ' . $error_file);
+                    if(!$this->removeFile($error_file)) {
+                        unlink($this->main_dir . $dir . '.lock');
+                        continue;
+                    }
+                }
+            }
+
+            if(isset($manual_files[$batch_number])) {
+                Log::info('sortFiles ' . $id . ':  Remove Manual File ' . $manual_files[$batch_number]);
+                if(!$this->removeFile($manual_files[$batch_number])) {
+                    unlink($this->main_dir . $dir . '.lock');
+                    continue;
+                }
+            }
+            $batch = Batch::with('route')
+                ->where('batch_number', $batch_number)
+                ->first();
+
+            try {
+                $to_file = $this->uniqueFilename(self::$archive, $dir);
+
+                if(file_exists(self::$archive . $to_file)) {
+                    Log::error('sortFiles ' . $id . ': File already in archive ' . self::$archive . $to_file);
+                }
+                $this->recurseAppend($this->main_dir . $dir, self::$archive . $to_file);
+
+                if($batch) {
+                    Batch::note($batch->batch_number, $batch->station_id, '6', 'Moving to archived');
+
+
+                    $batch->archived = '1';
+                    $batch->save();
+                    Batch::note($batch->batch_number, $batch->station_id, '6', 'Graphics Archived');
+                }
+            } catch (\Exception $e) {
+                Log::error('sortFiles ' . $id . ': Error archiving file ' . $to_file . ' - ' . $e->getMessage());
+                if($batch) {
+                    $batch->archived = '2';
+                    $batch->save();
+                    Batch::note($batch->batch_number, $batch->station_id, '6', 'Graphics Archiving Error');
+                }
+                continue;
+            }
+
+            if($batch && $batch->route) {
+                $graphic_dir = $batch->route->graphic_dir . '/';
+            } else {
+                $graphic_dir = 'MISC/';
+                Log::error('sortFiles ' . $id . ':  Graphic Directory Not Set ' . $dir . "in route name: ");
+                if($batch) {
+                    Batch::note($batch->batch_number, $batch->station_id, '6', 'Graphic Directory Not Set');
+                }
+            }
+
+
+            if(!file_exists($this->sort_root . $graphic_dir)) {
+                mkdir($this->sort_root . $graphic_dir);
+            }
+
+            $result = shell_exec("lsof | grep " . $this->sort_root . $graphic_dir . $dir . "*");
+
+            if($result != null) {
+                Log::info('sortFiles ' . $id . ':  Destination File in use ' . $graphic_dir . $dir);
+                if($batch) {
+                    Batch::note($batch->batch_number, $batch->station_id, '6',
+                        'Error moving file to graphic directory - Destination File in use');
+                }
+                continue;
+            }
+
+            try {
+
+                //$this->removeFile($this->sort_root . $graphic_dir . $dir);
+                //$moved = @rename($this->main_dir . $dir, $this->sort_root . $graphic_dir . $dir);
+
+                if($graphic_dir != '/') {
+                    $this->recurseAppend($this->main_dir . $dir, $this->sort_root . $graphic_dir . $dir);
+                }
+                $this->removeFile($this->main_dir . $dir);
+
+                if($batch) {
+                    $batch->graphic_found = '1';
+                    $batch->to_printer = '0';
+                    $batch->save();
+
+                    Batch::note($batch->batch_number, $batch->station_id, '6',
+                        "Graphic $dir moved to $graphic_dir directory");
+                    $msg = $this->moveNext($batch, 'graphics');
+                }
+
+            } catch (\Exception $e) {
+                Log::error('sortFiles ' . $id . ':  Error moving file to graphic directory ' . $dir . ' ' . $e->getMessage());
+
+                if($batch) {
+                    $batch->graphic_found = '2';
+                    $batch->save();
+
+                    Batch::note($batch->batch_number, $batch->station_id, '6',
+                        'Error moving file to graphic directory');
+                }
+                continue;
+            }
+
+            if($batch) {
+                Batch::note($batch->batch_number, $batch->station_id, '6', 'Moved to next station');
+
+                try {
+                    Log::info("2.Sortfiles " . $batch->batch_number . ' Now -------sortFiles ' . $id . ': ' . $this->main_dir . $dir);
+
+                    if($msg['error'] != '') {
+                        Log::info('sortFiles ' . $id . ': ' . $msg['error'] . ' - ' . $dir);
+                        Batch::note($batch->batch_number, $batch->station_id, '6', 'Graphics Sort - ' . $msg['error']);
+                    }
+
+                } catch (\Exception $e) {
+                    Log::error('sortFiles ' . $id . ': Error moving batch ' . $dir . ' - ' . $e->getMessage());
+                    Batch::note($batch->batch_number, $batch->station_id, '6',
+                        'Exception moving Batch - Graphics Sort');
+                }
+            } else {
+                Log::error('sortFiles ' . $id . ': Batch not found ' . $dir);
+            }
+
+            try {
+                unlink($this->main_dir . $dir . '.lock');
+            } catch (\Exception $e) {
+                Log::error('sortFiles ' . $id . ': Lock could not be unlinked ' . $dir);
+            }
+        }
+
+        if(count($dir_list) > 0) {
+            Log::info('ENDING SORTFILES ' . $id);
+        }
+
+        Design::updateGraphicInfo();
+
+        // FileHelper::removeEmptySubFolders($this->sub_dir);
+
+//      return ;
+    }
+
+
+    public function downloadSure3d()
+    {
+        try {
+            $s = new Sure3d();
+            $s->download();
+        } catch (\Exception $e) {
+            Log::error('downloadSure3d: ' . $e->getMessage());
+        }
+        log::info('downloadSure3d: Sure3d Download Complete');
+        return;
+    }
+
+    // TODO Remove unique file saving
+
+    public function autoPrint()
+    {
+        set_time_limit(0);
+
+        $w = new Wasatch;
+        $queues = $w->getQueues();
+
+        $config = Printer::configurations('A');
+
+        foreach ($config as $number => $station) {
+            if(isset($queues['PRINTER_' . $number]) && count($queues['PRINTER_' . $number]['STAGED_XML']) > 6) {
+                unset($config[$number]);
+            }
+        }
+
+        if(count($config) < 1) {
+            return;
+        }
+
+        if(!file_exists($this->sort_root)) {
+            Log::error('AutoPrint: Sublimation Directory Not Found');
+            return;
+        }
+
+        $batches = Batch::with('route')
+            ->join('stations', 'batches.station_id', '=', 'stations.id')
+            ->where('batches.section_id', 6)
+            ->searchStatus('active')
+            ->where('stations.type', 'G')
+            ->where('stations.id', 92)
+            ->where('graphic_found', '1')
+            ->where('to_printer', '0')
+            // ->where('min_order_date', '>', $from_date)
+            // ->where('min_order_date', '<', $to_date)
+            ->whereIn('production_station_id', $config)
+            ->select('batch_number', 'batch_route_id', 'min_order_date', 'production_station_id')
+            ->orderBy('min_order_date')
+            ->get();
+
+        $counts = array();
+
+        foreach ($config as $number => $station) {
+            $counts[$station] = 0;
+        }
+
+        $stations = array_flip($config);
+
+
+        foreach ($batches as $batch) {
+
+            if($counts[$batch->production_station_id] < 10) {
+
+                $notInQueue = $w->notInQueue($batch->batch_number);
+
+                if($notInQueue != '1') {
+                    continue;
+                }
+
+                if(strpos(strtolower($batch->route->csv_extension), 'soft')) {
+                    $type = 'SOFT-';
+                } elseif(strpos(strtolower($batch->route->csv_extension), 'hard')) {
+                    $type = 'HARD-';
+                } else {
+                    continue;
+                }
+
+                $file = $this->getArchiveGraphic($batch->batch_number);
+
+                $printer = $type . $stations[$batch->production_station_id];
+
+                $result = $this->printSubFile($file, $printer, $batch->batch_number);
+
+                if($result == 'success') {
+                    $counts[$batch->production_station_id]++;
+                }
+            }
+
+            if(array_sum($counts) == (count($counts) * 10)) {
+                return;
+            }
+
+        }
+
+        return;
+
+    }
+
+    public function printWasatch()
+    {
+
+        $w = new Wasatch;
+        return $w->stagedXml();
+
     }
 }

@@ -2124,4 +2124,19 @@ class OrderController extends Controller
             'success list' => $success_list,
         ]);
     }
+
+    public function checkShipDate()
+    {
+
+        $holds = Order::where('order_status', 12)->get();
+
+        foreach ($holds as $order) {
+            if($order->ship_date <= date("Y-m-d")) {
+                $order->order_status = 4;
+                $order->save();
+            }
+        }
+
+        log::info('Ship Date Check Complete');
+    }
 }

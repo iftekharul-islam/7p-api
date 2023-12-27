@@ -2,8 +2,16 @@
 
 use App\Http\Controllers\CouponController;
 use App\Http\Controllers\CustomController;
+use App\Http\Controllers\GraphicsController;
+use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\StoreController;
+use App\Http\Controllers\TaskController;
+use App\Http\Controllers\ZakekeController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -21,6 +29,21 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('graphics/sort', [GraphicsController::class, 'sortFiles']);
+Route::get("zakeke/fetch-all/{type}", [ZakekeController::class, "fetchAll"]);
+Route::get("ship_station/check", [ZakekeController::class, "shipStationCheckOrder"]);
+Route::get('scripts/ship_date', [OrderController::class, 'checkShipDate']);
+Route::get('prints/sendbyscript', [NotificationController::class, 'shipNotify']);
+Route::get('scripts/getInput', [StoreController::class, 'retrieveData']);
+Route::get('graphics/sort', [GraphicsController::class, 'sortFiles']);
+Route::get('download_sure3d', [GraphicsController::class, 'downloadSure3d']);
+Route::get('tasks/due', [TaskController::class, 'tasksDue']);
+Route::get('stock_update', [InventoryController::class, 'updateStock']);
+Route::get('auto_batch/{max_units}', [ItemController::class, 'autoBatch']);
+Route::get('graphics/auto_print', [GraphicsController::class, 'autoPrint']);
+Route::get('graphics/print_wasatch', [GraphicsController::class, 'printWasatch']);
+Route::get('screenshot', [ReportController::class, 'screenshot']);
+Route::get('downloadSure3d', [ProductController::class, 'downloadSure3d']);
 
 Route::get('getshopifyorder', [OrderController::class, 'getShopifyOrder']);
 Route::get('shopify-order/{id}', [OrderController::class, 'shopifyOrderById']);
