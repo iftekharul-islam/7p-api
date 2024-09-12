@@ -63,7 +63,15 @@ Route::get("import/ship-station", [CustomController::class, 'shipStation']);
 
 
 Route::post('hook', [OrderController::class, 'hook']);
-
+Route::get('make-pdf-bundle', [OrderController::class, 'pdfBundle']);
+Route::get('make-pdf-summary', [OrderController::class, 'makeJpgToPdfSummary']);
+Route::get('make-jpg-to-pdf', [OrderController::class, 'makeJpgToPdf']);
+Route::get('convert-image', [OrderController::class, 'convertImage']);
+Route::post('create-&-merge-pdf', [OrderController::class, 'createAndMergePdf']);
+Route::get('make-image-mirror', [OrderController::class, 'imageMirror']);
+Route::get('make-image-rotate', [OrderController::class, 'imageRotate']);
+Route::get('make-image-resize', [OrderController::class, 'resizeImageInInches']);
+Route::get('shopify-tracking-update', [OrderController::class, 'shopifyTrackingUpdate']);
 
 
 Route::get('test-api', [ItemController::class, 'test']);
