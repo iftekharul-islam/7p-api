@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Inventory;
 use App\Models\InventoryAdjustment;
+use App\Models\InventoryUnit;
 use App\Models\Item;
+use App\Models\Option;
+use App\Models\PurchaseProduct;
 use App\Models\Section;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -364,5 +367,96 @@ class InventoryController extends Controller
             ];
         });
         return $stocks;
+    }
+
+    public function updateStock ()
+    {
+        $child_skus = Option::leftJoin('inventory_unit', 'inventory_unit.child_sku', '=', 'parameter_options.child_sku')
+            ->whereNull('inventory_unit.child_sku')
+            ->select('parameter_options.child_sku')
+            ->get();
+
+        foreach ($child_skus as $child_sku) {
+
+            $unit = new InventoryUnit();
+            $unit->child_sku = $child_sku->child_sku;
+            $unit->unit_qty = 1;
+            $unit->stock_no_unique = 'ToBeAssigned';
+            $unit->save();
+        }
+
+        $inventoryTbl = Inventory::where('is_deleted', '0')->get();
+
+        if ( ! $inventoryTbl ) {
+            Log::info('updateStockTable: Stock # Query Failed.');
+            return false;
+        }
+
+        $last30 = date("Y-m-d 00:00:00", strtotime('-30 days'));
+        $last90 = date("Y-m-d 00:00:00", strtotime('-90 days'));
+        $last180 = date("Y-m-d 00:00:00", strtotime('-180 days'));
+
+        $items = Item::leftJoin('inventory_unit', 'inventory_unit.child_sku', '=', 'items.child_sku')
+            ->where('items.is_deleted', '=', '0')
+            ->selectRaw(
+                'inventory_unit.stock_no_unique,
+										 SUM(CASE WHEN items.item_status  NOT IN (5,6) THEN inventory_unit.unit_qty * items.item_quantity ELSE 0 END ) as Sales,
+										 SUM(CASE WHEN items.item_status  NOT IN (5,6) AND items.created_at > "' . $last30 .
+                '" THEN inventory_unit.unit_qty * items.item_quantity ELSE 0 END ) as Sales_30,
+										 SUM(CASE WHEN items.item_status  NOT IN (5,6) AND items.created_at > "' . $last90 .
+                '" THEN inventory_unit.unit_qty * items.item_quantity ELSE 0 END ) as Sales_90,
+										 SUM(CASE WHEN items.item_status  NOT IN (5,6) AND items.created_at > "' . $last180 .
+                '" THEN inventory_unit.unit_qty * items.item_quantity ELSE 0 END ) as Sales_180,
+										 SUM(CASE WHEN items.item_status IN (1,3,4,7,9) THEN inventory_unit.unit_qty * items.item_quantity ELSE 0 END ) as Allocated'
+            )
+            ->groupBy('inventory_unit.stock_no_unique')
+            ->get();
+
+        $purchases = PurchaseProduct::where('is_deleted', '0')
+            ->selectRaw(
+                'stock_no,
+												 SUM(CASE WHEN purchased_products.receive_quantity > 0 THEN purchased_products.receive_quantity ELSE 0 END ) as Purchases,
+												 SUM(balance_quantity) as Expected'
+            )
+            ->groupBy('stock_no')
+            ->get();
+
+        // $inv_products = PurchasedInvProducts::latest()->get();
+
+        foreach ($inventoryTbl as $stock) {
+
+            $itemQuantity = $items->where('stock_no_unique', $stock->stock_no_unique)->first();
+            $purchaseQuantity = $purchases->where('stock_no', $stock->stock_no_unique)->first();
+
+            if ($itemQuantity && $itemQuantity->stock_no_unique != NULL){
+
+                $stock->total_sale = $itemQuantity->Sales;
+                $stock->qty_alloc = $itemQuantity->Allocated;
+                $stock->sales_30 = $itemQuantity->Sales_30;
+                $stock->sales_90 = $itemQuantity->Sales_90;
+                $stock->sales_180 = $itemQuantity->Sales_180;
+
+            }else{
+                $stock->total_sale = 0;
+                $stock->qty_alloc = 0;
+                $stock->sales_30 = 0;
+                $stock->sales_90 = 0;
+                $stock->sales_180 = 0;
+            }
+
+            if ($purchaseQuantity && $purchaseQuantity->stock_no != NULL){
+                $stock->total_purchase = $purchaseQuantity->Purchases;
+                $stock->qty_exp = $purchaseQuantity->Expected;
+            }else{
+                $stock->total_purchase = 0;
+                $stock->qty_exp = 0;
+            }
+
+            $stock->qty_av = $stock->qty_on_hand - $stock->qty_alloc;
+            $stock->until_reorder = $stock->qty_av - $stock->min_reorder;
+            $stock->save();
+        }
+
+        return 'success';
     }
 }

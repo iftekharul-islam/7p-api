@@ -252,4 +252,14 @@ class TaskController extends Controller
             'all_msg' => $all_msg
         ]);
     }
+
+    public function tasksDue ()
+    {
+        $tasks = Task::where('status', 'O')
+            ->where('due_date', '<=', date("Y-m-d"))
+            ->update(['msg_read' => '0']);
+
+        info('Due Tasks Updated');
+        return;
+    }
 }

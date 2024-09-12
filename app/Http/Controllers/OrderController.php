@@ -16,9 +16,16 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use library\Helper;
+use PHPShopify\ShopifySDK;
 use Ship\Batching;
 use Ship\ImageHelper;
 use Ship\Shipper;
+use Intervention\Image\Facades\Image;
+use Shopify\Auth\FileSessionStorage;
+use Shopify\Clients\Rest;
+use TCPDF;
+use setasign\Fpdi\Tcpdf\Fpdi;
+use Shopify\Utils;
 
 class OrderController extends Controller
 {
@@ -162,7 +169,7 @@ class OrderController extends Controller
         } else {
             $status = 'not_cancelled';
         }
-        logger('test start date', [$start, $request->get('end_date')]);
+        // logger('test start date', [$start, $request->get('end_date')]);
 
         $orders = Order::with('store', 'items.product', 'customer')
             ->where('is_deleted', '0')
@@ -173,7 +180,7 @@ class OrderController extends Controller
             ->search($request->get('search_for_first'), $request->get('operator_first'), $request->get('search_in_first'))
             ->search($request->get('search_for_second'), $request->get('operator_second'), $request->get('search_in_second'));
         // ->get();
-        $orders = $orders->paginate($request->get('perPage', 10));
+        $orders = $orders->orderBy("order_date", "asc")->paginate($request->get('perPage', 10));
 
         $total = Order::where('is_deleted', '0')
             ->storeId($request->get('store'))
@@ -952,7 +959,7 @@ class OrderController extends Controller
                 // $res = Http::post($url, $purchaseData);
                 // $result = $res->json(); // If the response is JSON
 
-//                dd($result);
+                //                dd($result);
                 info("pushPurchaseToOms4");
                 //                    dd($result);
                 //
@@ -1121,16 +1128,15 @@ class OrderController extends Controller
         $ordersIn5p = [];
 
         if ($request->get("created_at_min")) {
-            $created_at_min = $request->get("created_at_min");
+            $created_at_min = $request->get("created_at_min") . "T00:00:00-04:00";
         } else {
-            #$created_at_min = date("Y-m-d"); // 2020-03-01
-            $created_at_min =  date("Y-m-d TH:i:s", strtotime('-2 hour'));
+            $created_at_min =  date("Y-m-d") . "T00:00:00-04:00";
         }
 
         if ($request->get("created_at_max")) {
-            $created_at_max = $request->get("created_at_max") . " T23:59:59-05:00";
+            $created_at_max = $request->get("created_at_max") . "T23:59:59-04:00";
         } else {
-            $created_at_max = date("Y-m-d") . " T23:59:59-05:00"; // 2020-03-01
+            $created_at_max = date("Y-m-d") . "T23:59:59-04:00"; // 2020-03-01
         }
 
         if ($created_at_max) {
@@ -1143,7 +1149,8 @@ class OrderController extends Controller
             );
 
             $helper = new Helper;
-            $orderInfo = $helper->shopify_call("/admin/api/2022-01/orders.json", $array, 'GET');
+            $orderInfo = $helper->shopify_call("/admin/api/2023-01/orders.json", $array, 'GET');
+            // $orderInfo = $helper->shopify_call_7p($created_at_min, $created_at_max);
             $orderInfo = json_decode($orderInfo['response'] ?? [], JSON_PRETTY_PRINT);
             //            dd($orderInfo);
 
@@ -1388,7 +1395,7 @@ class OrderController extends Controller
                         Order::note(substr($key, $len) . ' - ' . $value, $order->id, $order->order_id);
                     } elseif (substr(strtolower($key), $len, 14) == '_zakekezip') {
                         Log::info('Waiting for Zakeke personalization file ' . $value);
-                        sleep(120);
+                        sleep(5);
 
                         $pdfUrl = $this->_processZakekeZip($value);
 
@@ -1396,7 +1403,7 @@ class OrderController extends Controller
                             while (!is_string($this->_processZakekeZip($value))) {
                                 Log::info('Processing to get _processZakekeZip' . $value);
                                 $pdfUrl = $this->_processZakekeZip($value);
-                                sleep(120);
+                                sleep(5);
                             }
                         }
 
@@ -1462,7 +1469,7 @@ class OrderController extends Controller
                         public_path() . $this->archiveFilePath
                     );
                     if ($fleSaveStatus == 200) {
-                        $ItemOption['Custom_EPS_download_link'] = $this->remotArchiveUrl . $fileName;
+                        $ItemOption['Custom_EPS_download_link'] = $this->domain . $this->archiveFilePath;
                     }
                     //$this->jdbg(__LINE__." -- After check  --", $headers[0]);
                     //$this->jdbg(__LINE__." -- fleSaveStatus --", $fleSaveStatus);
@@ -1826,7 +1833,7 @@ class OrderController extends Controller
                 $item->item_id = $product->id_catalog;
                 $item->item_option = json_encode($options);
                 $item->item_quantity = $order_item->item_quantity;
-                $item->item_thumb = isset($product->product_thumb) ? $product->product_thumb : 'http://order.monogramonline.com/assets/images/no_image.jpg';
+                $item->item_thumb = isset($product->product_thumb) ? $product->product_thumb : 'https://7papi.monogramonline.com/assets/images/no_image.jpg';
                 $item->item_unit_price = $price;
                 $item->item_url = isset($product->product_url) ? $product->product_url : null;
                 $item->data_parse_type = 'hook';
@@ -1859,7 +1866,7 @@ class OrderController extends Controller
         }
 
         return response()->json([
-            'message' => 'Order found',
+            // 'message' => 'Order found',
             'data' => $orderInfo
         ]);
     }
@@ -1910,6 +1917,8 @@ class OrderController extends Controller
             $product = Product::where('product_model', $item->item_code)->first();
             if ($product) {
                 $thumb = $this->shopifyThumb($orderId, $item_id, true);
+                info("OrderController : Thumb checking");
+                info($thumb);
                 $product->product_thumb = $thumb ? $thumb : $dummy_Image;
                 $product->save();
 
@@ -2072,7 +2081,7 @@ class OrderController extends Controller
     {
         $order = Order::where('short_order', $id)->first();
         if ($order) {
-            $order->is_deleted = "1";
+            $order->is_deleted = 1;
             $order->save();
             Item::where('order_5p', $order->id)->update(['is_deleted' => 1]);
             Customer::where('id', $order->customer_id)->update(['is_deleted' => 1]);
@@ -2090,15 +2099,18 @@ class OrderController extends Controller
 
     public function deleteOrderByDate(Request $request)
     {
-        $orders = Order::where('is_deleted', '0')->where(
+        $orders = Order::where('is_deleted', '0')->whereDate(
             'order_date',
             '>=',
-            $request->get('from') . ' 00:00:00'
-        )->where(
+            $request->get('from')
+        )->whereDate(
             'order_date',
             '<=',
-            $request->get('to') . ' 23:59:59'
+            $request->get('to')
         )->get();
+
+        info("OrderController : Date" . $request->get('from'));
+        info($orders);
 
         $error_list = [];
         $success_list = [];
@@ -2118,5 +2130,795 @@ class OrderController extends Controller
             'error list' => $error_list,
             'success list' => $success_list,
         ]);
+    }
+
+    public function checkShipDate()
+    {
+
+        $holds = Order::where('order_status', 12)->get();
+
+        foreach ($holds as $order) {
+            if($order->ship_date <= date("Y-m-d")) {
+                $order->order_status = 4;
+                $order->save();
+            }
+        }
+
+        log::info('Ship Date Check Complete');
+    }
+
+    public function pdfBundle(Request $request)
+    {
+//        $style = $this->makeJpgToPdf($request);
+
+        $style = $this->convertImage($request);
+//        $summary = $this->makeJpgToPdfSummary($request);
+
+        if($style['success']) {
+            return response()->json([
+                'success' => true,
+                'message' => 'style :'. $style['message'] ,
+                'status' => 201,
+                'files' => [
+                    $style['link']
+                ],
+            ]);
+        } else {
+            logger('style :'. $style['message'] );
+            return response()->json([
+                'message' => 'style :'. $style['message'] ,
+                'status' => 203
+            ]);
+        }
+
+        // TODO :: link with summary
+//        if($style['success'] && $summary['success']) {
+//            return response()->json([
+//                'success' => true,
+//                'message' => 'style :'. $style['message'] . 'and summary: ' . $summary['message'],
+//                'status' => 201,
+//                'files' => [
+//                    $style['link'],
+//                    $summary['link']
+//                ],
+//            ]);
+//        } else {
+//            logger('style :'. $style['message'] . 'and summary: ' . $summary['message']);
+//            return response()->json([
+//                'message' => 'style :'. $style['message'] . 'and summary: ' . $summary['message'],
+//                'status' => 203
+//            ]);
+//        }
+
+    }
+
+
+
+    function makeJpgToPdf(Request $request)
+    {
+        logger('makeJpgToPdf started');
+        logger($request->all());
+
+        // Image and output path
+        $imageFile = '/media/RDrive/archive/'. $request->get('img_name');
+        $outputPath = '/media/RDrive/archive/'.  $request->get('batch') .'-'.$request->get('child_sku').'.pdf';
+
+        // Define the text to add
+        $textLines = [
+            'img_url : ' .$request->get('img_url'),
+            'order : '. $request->get('order'),
+            'batch : '. $request->get('batch'),
+            'child_sku : '. $request->get('child_sku'),
+            'product : '. $request->get('product'),
+            'customer  : '. $request->get('customer'),
+            'Address  : '. $request->get('Address'),
+            'QTY  : '. $request->get('QTY'),
+        ];
+
+        // Set Barcode content (change '692155' to the desired content)
+        $barcodeContent = $request->get('batch');
+
+        // Get the dimensions of the image
+        list($imgWidthPixels, $imgHeightPixels) = getimagesize($imageFile);
+
+        // Convert image dimensions from pixels to mm (assuming 300 dpi)
+        $dpi = 300;
+        $imgWidthMm = ($imgWidthPixels / $dpi) * 25.4; // mm
+        $imgHeightMm = ($imgHeightPixels / $dpi) * 25.4; // mm
+
+        // Additional space at the bottom for text and barcode (2 inches converted to mm)
+        $additionalHeightMm = 2 * 25.4; // mm
+
+        // Create a new PDF document with custom dimensions
+        $pdf = new TCPDF(PDF_PAGE_ORIENTATION, 'mm', array($imgWidthMm, $imgHeightMm + $additionalHeightMm ), true, 'UTF-8', false);
+
+        // Set document information
+        $pdf->SetCreator(PDF_CREATOR);
+        $pdf->SetAuthor('Your Name');
+        $pdf->SetTitle('Custom PDF with Image, Text, and Barcode');
+
+        // Remove default header and footer
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+
+        // Add a page with custom dimensions
+        $pdf->AddPage();
+
+        // Image position and size (full resolution)
+        $pdf->Image($imageFile, 0, 0, $imgWidthMm, $imgHeightMm, '', '', '', false, 300, '', false, false, 0, false, false, false);
+
+        // Define the text to add (all in one line, separated by commas)
+        $textLine = "Item 1, Item 2, Item 3, Item 4, Item 5";
+
+        // Set font for the text
+        $pdf->SetFont('helvetica', '', 6);
+
+        // Text position (at the bottom left of the image)
+        $textX = 2; // X coordinate in mm (10mm from the left edge)
+        $textY = $imgHeightMm + 0.4; // Y coordinate in mm (10mm below the image)
+
+        foreach ($textLines as $line) {
+            $pdf->Text($textX, $textY, $line);
+            $textY +=  2; // Increase Y coordinate for next line; adjust as needed for line spacing
+        }
+
+        // Barcode style
+        $style = array(
+            'position' => '',
+            'align' => 'L', // Align the barcode to the left
+            'stretch' => false,
+            'fitwidth' => true,
+            'cellfitalign' => '',
+            'border' => false,
+            'hpadding' => 'auto',
+            'vpadding' => 'auto',
+            'fgcolor' => array(0,0,0),
+            'bgcolor' => false, //array(255,255,255),
+            'text' => true,
+            'font' => 'helvetica',
+            'fontsize' => 4, // Smaller font size for the barcode text
+            'stretchtext' => 4
+        );
+
+        $barcodeWidth = 20 ; // mm, now 50% of the original width
+
+        // Adjust the height of the barcode accordingly
+        $barcodeHeight = 8; // mm, now 50% of the original height
+
+        // X position for the right-aligned barcode (end of the line)
+        $barcodeX = $imgWidthMm - $barcodeWidth - 10; // 10mm from the right edge
+
+        // Add Barcode on the same line as the text, aligned to the right
+        $pdf->write1DBarcode($barcodeContent, 'C128', $textX + 50, $textY - 15, '', 18, 0.4, $style, 'N');
+
+        // Close and output the PDF document
+        $pdf->Output($outputPath, 'F'); // 'F' saves the PDF to a file. Use 'I' to send to browser, or 'D' to force download
+
+        if (file_exists($outputPath)) {
+            return [
+                'success' => true,
+                'link' => $outputPath
+            ];
+        } else {
+            return [
+                'success' => false,
+            ];
+        }
+
+        return "PDF matching the image size has been generated!";
+    }
+
+    public function makeJpgToPdfSummary(Request $request)
+    {
+        logger('makeJpgToPdfSummary started');
+        logger($request->all());
+
+        $imageFile = '/media/RDrive/archive/'. $request->get('img_name');
+        $outputPath = '/media/RDrive/archive/'.  $request->get('batch') .'-summary.pdf';
+
+        // Define the text to add
+        $textLines = [
+            'img_url : ' .$request->get('img_url'),
+            'order : '. $request->get('order'),
+            'batch : '. $request->get('batch'),
+            'child_sku : '. $request->get('child_sku'),
+            'product : '. $request->get('product'),
+            'customer  : '. $request->get('customer'),
+            'Address  : '. $request->get('Address'),
+            'QTY  : '. $request->get('QTY'),
+        ];
+
+        // Set Barcode content (change '692155' to the desired content)
+        $barcodeContent = $request->get('batch');
+
+        // Create a new PDF document
+        $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+
+        // Set document information
+        $pdf->SetCreator(PDF_CREATOR);
+        $pdf->SetAuthor('Your Name');
+        $pdf->SetTitle('PDF with Image on Left, Text and Barcode on Right');
+
+        // Remove default header and footer
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+
+        // Add a page
+        $pdf->AddPage();
+
+        // Specify the file path to your image
+
+
+        // Image dimensions and position (left side of the page)
+        $imgWidth = 80;  // Width in mm
+        $imgHeight = 50;  // Height in mm
+        $imgX = 2;       // X position from the left of the page in mm
+        $imgY = 50;       // Y position from the top of the page in mm
+
+        // Add the image to the PDF
+        $pdf->Image($imageFile, $imgX, $imgY, $imgWidth, $imgHeight, '', '', '', false, 300, '', false, false, 0, false, false, false);
+
+        // Text position (right side of the page)
+        $textX = 84 ; // X coordinate in mm (adjust as needed)
+        $textY = 50;  // Y coordinate in mm; starts at the same top position as the image
+
+        // Set font for the text
+        $pdf->SetFont('helvetica', '', 10);
+
+        // Add each line of text to the PDF and update $textY to the bottom of the text
+        foreach ($textLines as $line) {
+            $pdf->Text($textX, $textY, $line);
+            $textY += 6; // Increase Y coordinate for next line; adjust as needed for line spacing
+        }
+
+
+        // Barcode style
+        $style = array(
+            'position' => '',
+            'align' => 'C',
+            'stretch' => false,
+            'fitwidth' => true,
+            'cellfitalign' => '',
+            'border' => false,
+            'hpadding' => 'auto',
+            'vpadding' => 'auto',
+            'fgcolor' => array(0,0,0),
+            'bgcolor' => false, //array(255,255,255),
+            'text' => true,
+            'font' => 'helvetica',
+            'fontsize' => 8,
+            'stretchtext' => 4
+        );
+
+        // Add Barcode on the right side, below the text
+        $pdf->write1DBarcode($barcodeContent, 'C128', $textX, $textY + 10, '', 18, 0.4, $style, 'N');
+
+        // Close and output the PDF document
+        $pdf->Output($outputPath, 'F'); // 'F' saves the PDF to a file. Use 'I' to send to browser, or 'D' to force download
+
+        logger('$outputPath');
+        logger($outputPath);
+        if (file_exists($outputPath)) {
+            return [
+                'success' => true,
+                'link' => $outputPath,
+                'message' => 'image created on pdf summary'
+            ];
+        } else {
+            logger('image not created on pdf summary');
+            return [
+                'success' => false,
+                'message' => 'image not created on pdf summary'
+            ];
+        }
+
+        dd('https://order.monogramonline.com/media/archive/692155-summary.pdf');
+
+    }
+
+    public function createAndMergePdf(Request $request)
+    {
+        logger('number of images : '. count($request->all()));
+        logger($request->all());
+        $files = [];
+        $data = $request->all();
+        foreach ($data as $key => $value) {
+            $result = $this->makeJpgToPdfSummaryInternal($value);
+            logger('------'. $key + 1);
+            logger('got the result from makeJpgToPdfSummaryInternal');
+            logger($result['message']);
+            if($result['success']) {
+                $files[] = $result['link'];
+            } else {
+                logger($result['message']);
+                return [
+                    'success' => false,
+                    'message' => $result['message']
+                ];
+            }
+
+        }
+
+        if (count($files) == 0) {
+            logger('image not created on pdf summary');
+            return [
+                'success' => false,
+                'message' => 'image not created on pdf summary'
+            ];
+        }
+
+        $outputPath = '/media/RDrive/archive/combine-summary-'. time() .'.pdf';
+        $pdf = new Fpdi();
+
+        // Iterate through each file
+        foreach ($files as $file) {
+            // Get the page count
+            $pageCount = $pdf->setSourceFile($file);
+
+            // Import each page
+            for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {
+                $pdf->AddPage();
+                $templateId = $pdf->importPage($pageNo);
+                $pdf->useTemplate($templateId);
+            }
+            if( file_exists($file) ) unlink($file);
+        }
+
+        // Output the merged PDF to a file
+        $pdf->Output($outputPath, 'F');
+
+        return [
+                'success' => true,
+                'file' => $outputPath,
+                'message' => 'image created on pdf summary'
+            ];
+    }
+
+    public function makeJpgToPdfSummaryInternal($request)
+    {
+
+        $imageFile = '/media/RDrive/archive/'. $request['img_name'];
+        $outputPath = '/media/RDrive/archive/'.  $request['batch'] .'-summary.pdf';
+
+        if(!file_exists($imageFile)) {
+            logger('image not found in server : '.$request['img_url']);
+            return [
+                'success' => false,
+                'message' => 'image not found in server : '. $request['img_url']
+            ];
+        }
+
+        // Define the text to add
+        $textLines = [
+            'img_url : ' .$request['img_url'],
+            'order : '. $request['order'],
+            'batch : '. $request['batch'],
+            'child_sku : '. $request['child_sku'],
+            'product : '. $request['product'],
+            'customer  : '. $request['customer'],
+            'Address  : '. $request['Address'],
+            'QTY  : '. $request['QTY'],
+        ];
+
+        // Set Barcode content (change '692155' to the desired content)
+        $barcodeContent = $request['batch'];
+
+        // Create a new PDF document
+        $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+
+        // Set document information
+        $pdf->SetCreator(PDF_CREATOR);
+        $pdf->SetAuthor('Your Name');
+        $pdf->SetTitle('PDF with Image on Left, Text and Barcode on Right');
+
+        // Remove default header and footer
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+
+        // Add a page
+        $pdf->AddPage();
+
+        // Specify the file path to your image
+
+
+        // Image dimensions and position (left side of the page)
+        $imgWidth = 80;  // Width in mm
+        $imgHeight = 50;  // Height in mm
+        $imgX = 2;       // X position from the left of the page in mm
+        $imgY = 50;       // Y position from the top of the page in mm
+
+        // Add the image to the PDF
+        $pdf->Image($imageFile, $imgX, $imgY, $imgWidth, $imgHeight, '', '', '', false, 300, '', false, false, 0, false, false, false);
+
+        // Text position (right side of the page)
+        $textX = 84 ; // X coordinate in mm (adjust as needed)
+        $textY = 50;  // Y coordinate in mm; starts at the same top position as the image
+
+        // Set font for the text
+        $pdf->SetFont('helvetica', '', 10);
+
+        // Add each line of text to the PDF and update $textY to the bottom of the text
+        foreach ($textLines as $line) {
+            $pdf->Text($textX, $textY, $line);
+            $textY += 6; // Increase Y coordinate for next line; adjust as needed for line spacing
+        }
+
+
+        // Barcode style
+        $style = array(
+            'position' => '',
+            'align' => 'C',
+            'stretch' => false,
+            'fitwidth' => true,
+            'cellfitalign' => '',
+            'border' => false,
+            'hpadding' => 'auto',
+            'vpadding' => 'auto',
+            'fgcolor' => array(0,0,0),
+            'bgcolor' => false, //array(255,255,255),
+            'text' => true,
+            'font' => 'helvetica',
+            'fontsize' => 8,
+            'stretchtext' => 4
+        );
+
+        // Add Barcode on the right side, below the text
+        $pdf->write1DBarcode($barcodeContent, 'C128', $textX, $textY + 10, '', 18, 0.4, $style, 'N');
+
+        // Close and output the PDF document
+        $pdf->Output($outputPath, 'F'); // 'F' saves the PDF to a file. Use 'I' to send to browser, or 'D' to force download
+
+        if (file_exists($outputPath)) {
+            return [
+                'success' => true,
+                'link' => $outputPath,
+                'message' => 'image created on pdf summary'
+            ];
+        } else {
+            logger('image not created on pdf summary');
+            return [
+                'success' => false,
+                'message' => 'image not created on pdf summary'
+            ];
+        }
+
+        dd('https://order.monogramonline.com/media/archive/692155-summary.pdf');
+
+    }
+
+    public function convertImage(Request $request)
+    {
+        // replace the child sku backslash
+        $child_sku = str_replace('/', '-', $request->child_sku);
+        $imagePath = '/media/RDrive/archive/' . $request->get('img_name');
+        $savePath = '/media/RDrive/archive/'. $request->get('batch') .'-'. $child_sku . '-QTY-'. $request->get('QTY') .'.jpg';
+
+        if (!file_exists($imagePath)) {
+            return [
+                'success' => false,
+                'message' => 'image not found in server'
+            ];
+        }
+        if (file_exists($savePath)) {
+            unlink($savePath);
+        }
+
+        if ($request->get('width') && $request->get('height')) {
+            $desiredWidth = $request->get('width') ;
+            $desiredHeight = $request->get('height') ;
+        } else {
+            copy($imagePath, $savePath);
+            logger('default image updated on jpg converter');
+            return [
+                'success' => true,
+                'link' => $savePath,
+                'message' => 'default image updated on jpg converter'
+            ];
+        }
+
+//        $desiredWidth = 800;
+//        $desiredHeight = 600;
+
+        // Resize the image
+        $resizedImage = Image::make($imagePath)->resize($desiredWidth, $desiredHeight);
+
+
+        // Save the resized image
+        $resizedImage->save($savePath);
+
+        if (file_exists($savePath)) {
+            return [
+                'success' => true,
+                'link' => $savePath,
+                'message' => 'image created on jpg converter'
+            ];
+        } else {
+            logger('image not created on jpg converter');
+            return [
+                'success' => false,
+                'message' => 'image not created on jpg converter'
+            ];
+        }
+
+        dd('https://order.monogramonline.com/media/archive/692155_update.jpg');
+    }
+
+    public function imageMirror(Request $request){
+        $imageName = $request->get('image');
+        $thumbName = $request->get('thumb');
+        $image = $this->imageMirrorConvert($imageName);
+        if(!$image){
+            return [
+                'success' => false,
+                'message' => 'image not found in server'
+            ];
+        }
+        logger([$imageName, $thumbName]);
+        if($imageName != $thumbName){
+            logger('image and thumb not same');
+            $thumb = $this->imageMirrorConvert($thumbName);
+            if (!$thumb) {
+                return [
+                    'success' => false,
+                    'message' => 'thumb not found in server'
+                ];
+            }
+        }
+        return [
+            'success' => true,
+            'message' => 'image and thumb mirrored'
+        ];
+    }
+    public function imageMirrorConvert($originalImagePath)
+    {
+        try {
+            // Open the original image
+            $originalImage = Image::make($originalImagePath);
+
+            // Mirror the original image horizontally
+            $mirroredImage = $originalImage->flip('h');
+
+            // Save the mirrored image with the same filename to replace the original
+            $mirroredImage->save($originalImagePath);
+
+            // Return a message or do whatever you need
+            return true;
+        } catch (\Exception $e) {
+            // Handle any exceptions that might occur during the process
+            return false;
+            return 'Error: ' . $e->getMessage();
+        }
+    }
+
+    public function imageRotate(Request $request){
+        $image = $request->get('image');
+        $thumb = $request->get('thumb');
+        $image = $this->imageRotationConvert($image);
+        if(!$image){
+            return [
+                'success' => false,
+                'message' => 'image not found in server'
+            ];
+        }
+        $thumb = $this->imageRotationConvert($thumb);
+        if (!$thumb) {
+            return [
+                'success' => false,
+                'message' => 'thumb not found in server'
+            ];
+        }
+        return [
+            'success' => true,
+            'message' => 'image and thumb mirrored'
+        ];
+    }
+    public function imageRotationConvert($originalImagePath)
+    {
+        try {
+            // Open the original image
+            $originalImage = Image::make($originalImagePath);
+
+            // Mirror the original image horizontally
+            $mirroredImage = $originalImage->rotate(90);
+
+            // Save the mirrored image with the same filename to replace the original
+            $mirroredImage->save($originalImagePath);
+
+            // Return a message or do whatever you need
+            return true;
+        } catch (\Exception $e) {
+            // Handle any exceptions that might occur during the process
+            return false;
+            return 'Error: ' . $e->getMessage();
+        }
+    }
+
+    public function resizeImageInInches(Request $request)
+    {
+        // Path to the original image
+//        $originalImagePath = '/media/RDrive/archive/693695_cp.jpg';
+//        $originalImagePath = '/media/RDrive/archive/693695.jpg';
+        $originalImagePath = $request->get('image');
+
+        if (!file_exists($originalImagePath)) {
+            return 'Original image not found.';
+        }
+
+        // Desired size in inches
+        $desiredWidthInInches = $request->get('width');
+        $desiredHeightInInches = $request->get('height');
+
+        // DPI (dots per inch) of the image
+        $dpi = $request->get('dpi'); // Change this to the actual DPI of your image
+
+        try {
+            // Open the original image
+            $originalImage = Image::make($originalImagePath);
+
+            // Calculate the desired size in pixels
+            $desiredWidthInPixels = $desiredWidthInInches * $dpi;
+            $desiredHeightInPixels = $desiredHeightInInches * $dpi;
+
+            // Resize the original image to the desired size
+            $resizedImage = $originalImage->resize($desiredWidthInPixels, $desiredHeightInPixels);
+
+            // Save the resized image, overwriting the original
+            $resizedImage->save();
+
+            // Return a message or do whatever you need
+            return [
+                'success' => true,
+                'message' => 'Original image resized and overwritten successfully.'
+            ];
+            return 'Original image resized and overwritten successfully.';
+        } catch (\Exception $e) {
+            // Handle any exceptions that might occur during the process
+            return 'Error: ' . $e->getMessage();
+        }
+    }
+
+    public function createToken()
+    {
+        $api_key = "8d31a3f2242c3b3d1370d6cba9442b47";
+        $shared_secret = "92d88d03d53edc80847dab0fdf9ef46e";
+
+        $config = array(
+            'ShopUrl' => 'monogramonline.myshopify.com',
+            'ApiKey' => $api_key,
+            'SharedSecret' => $shared_secret,
+        );
+
+        ShopifySDK::config($config);
+
+
+    }
+
+    public function shopifyTrackingUpdate(Request $request)
+    {
+        try {
+            $oms_order_id = $request->get('order_id');
+            $oms_line_item_id = $request->get('line_item_id');
+            $oms_tracking_number = $request->get('tracking_number');
+            $oms_tracking_url = $request->get('tracking_url');
+            $oms_tracking_company = $request->get('tracking_company');
+            //sample location id
+            $location = 37822398597;
+
+            logger('Requested data for shopify tracking update');
+            logger([$oms_order_id, $oms_line_item_id, $oms_tracking_number, $oms_tracking_url, $oms_tracking_company]);
+
+            if (!$oms_tracking_company || !$oms_tracking_number || !$oms_tracking_url || !$oms_order_id || !$oms_line_item_id) {
+                logger('Order id or OMS line item or tracking number or tracking company not found');
+                return response()->json([
+                    'message' => 'Order id or OMS line item or tracking number or tracking company not found',
+                    'data' => null,
+                    'status' => 'failed',
+                    'code' => 203
+                ], 203);
+            }
+
+            // Shopify store credentials
+            $shopifyStoreUrl = 'https://monogramonline.myshopify.com';
+            $version = '2023-04';
+
+            // OMS sync shopify app credentials
+            $AccessToken = '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';
+            $api_key = "8d31a3f2242c3b3d1370d6cba9442b47";
+            $shared_secret = "92d88d03d53edc80847dab0fdf9ef46e";
+
+            //TODO::NOTE monogramApp developer app shopify credentials
+//        $accessToken = '4530d72680c305704fc51f08c5f2683f';
+//        $api_key = 'cc0899e6b2c60c80c7e7135361f03f05';
+//        $api_secret = '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';
+
+
+            // Set your API credentials
+            $shopify = ShopifySDK::config([
+                'ShopUrl' => $shopifyStoreUrl,
+                'AccessToken' => $AccessToken,
+                'ApiVersion' => $version,
+            ]);
+
+            $FulfillmentOrder = $shopify->Order($oms_order_id)->FulfillmentOrder->get();
+            $line_item_id = null;
+            $quantity = 1;
+            $order_id = null;
+            if (count($FulfillmentOrder) && !empty($FulfillmentOrder[0]['line_items']) && count($FulfillmentOrder[0]['line_items'])) {
+                foreach ($FulfillmentOrder[0]['line_items'] as $line_item) {
+                    if ($oms_line_item_id == $line_item['line_item_id']) {
+//                    return $line_item;
+                        $order_id = $line_item['fulfillment_order_id'];
+                        $line_item_id = $line_item['id'];
+                        $quantity = $line_item['quantity'];
+                        break;
+                    }
+                }
+            }
+//        return [$line_item_id, $quantity, $order_id];
+
+            if (!empty($order_id) && !empty($line_item_id)) {
+                // for order fulfillment
+//            $fulfillment = [
+//                "location_id" => $location,
+//                "notify_customer" => false,
+//                "line_items_by_fulfillment_order" => [
+//                    [
+//                        "fulfillment_order_id" => $FulfillmentOrder[0]['id']
+//                    ],
+//                ],
+//                "tracking_info" => [
+//                    'company' => 'USPS',
+//                    "number" => '9400136110322549730479',
+//                    "url" => 'https://tools.usps.com/go/TrackConfirmAction?tLabels=9400136110322549837529'
+//                ],
+//            ];
+                // for specific line item fulfillment
+                $fulfillment = [
+//                "message" => "The package was shipped this morning.",
+                    "notify_customer" => false,
+                    "tracking_info" => [
+                        'company' => $oms_tracking_company,
+                        "number" => $oms_tracking_number,
+                        "url" => $oms_tracking_url
+                    ],
+                    "line_items_by_fulfillment_order" => [
+                        [
+                            "fulfillment_order_id" => $order_id,
+                            "fulfillment_order_line_items" => [
+                                [
+                                    "id" => $line_item_id,
+                                    "quantity" => $quantity
+                                ]
+                            ]
+                        ],
+                    ],
+                ];
+                $fulfill = $shopify->Fulfillment()->post($fulfillment);
+                logger('Fulfillment successfully updated for order id: ' . $order_id . ' & item id: ' . $oms_line_item_id);
+                return response()->json([
+                    'message' => 'Fulfillment successfully updated for order id: ' . $order_id . ' & item id: ' . $oms_line_item_id,
+                    'data' => $fulfill,
+                    'status' => 'success',
+                    'code' => 201
+                ], 201);
+            } else {
+                logger('Fulfillment order not found' . $oms_order_id);
+                return response()->json([
+                    'message' => 'Fulfillment order not found',
+                    'data' => null,
+                    'status' => 'failed',
+                    'code' => 203
+                ], 203);
+            }
+        } catch (\Exception $e) {
+            logger('Catch exceptions: ', [$e->getMessage(), $e->getCode()]);
+            logger('Fulfillment order not found' . $oms_order_id);
+            return response()->json([
+                'message' => $e->getMessage() . ' or Tracking number already updated before',
+                'data' => null,
+                'status' => 'failed',
+                'code' => $e->getCode()
+            ], 203);
+        }
     }
 }

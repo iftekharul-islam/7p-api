@@ -174,254 +174,6 @@ class ZakekeController extends Controller
         return $response;
     }
 
-    /*
-     * This is being used by the cron job, to automatically
-     * fetch the graphics for PWS & Axe n Co
-     */
-    public function fetchAll(string $type)
-    {
-        //
-        //        if (!Cache::get("ZAKEKE_" . strtoupper($type))) {
-        //
-        //            Log::info("Zakeke Status was off for  " . print_r(\request()->all(), true));
-        //
-        //            dd(
-        //                [
-        //                    "Status" => true,
-        //                    "Message" => "The cronjob has been turned off, cannot fetch"
-        //                ]
-        //            );
-        //        }
-
-        /*
-         * Turned on, can now continue
-         */
-
-        if (strtolower($type) == "axe") {
-            $orders = Order::with("items")
-                ->where('is_deleted', '0')
-                ->storeId("axe-co")
-                ->whereIn("order_status", [23]) //23 = other hold, 4 = to be processed
-                ->get();
-        } else {
-            if (\request()->has("switch_store")) {
-                $orders = Order::with("items")
-                    ->where('is_deleted', '0')
-                    ->storeId("axe-co")
-                    ->whereIn("order_status", [23]) //23 = other hold, 4 = to be processed
-                    ->get();
-            } else {
-                $orders = Order::with("items")
-                    ->where('is_deleted', '0')
-                    ->storeId("Etsy")
-                    ->whereIn("order_status", [23, 4])
-                    ->get();
-            }
-        }
-
-        //        foreach ($orders as $order) {
-        //            foreach ($order->items as $item) {
-        //                $b = Batch::where("batch_number", $item->batch_number)->first();
-        //
-        //                $b->station_id = 295;
-        //                $b->save();
-        //            }
-        //        }
-        //
-        //        $batch = Batch::where("batch_number", 653904)->get();
-        //        dd("stop here", count($orders), $batch);
-
-
-
-        //        $newOrders = [];
-        //
-        //        foreach ($orders as $order) {
-        //            if($order->id == 1185551) {
-        //                $newOrders[] = $order;
-        //            }
-        //        }
-        //
-        //        $testOrder = Order::where("id", 1185551)->first();
-        //
-        //        $options = json_decode($testOrder->items[0]->item_option, true);
-        //        dd($options, isset($options['PWS Zakeke']));
-
-
-        // Working filter
-
-        //        $orders = $orders->filter(function ($order) {
-        //           return $order->short_order == 2623287047;
-        //        });
-
-        //        $newOrder = [];
-        //        foreach ($orders as $order) {
-        //            $newOrder[] = $order->short_order;
-        //        }
-        //        dd($newOrder);
-
-
-        //    dd($orders[0]->items[0]);
-
-        $filteredNum = count($orders);
-
-
-        //    $orderBefore = clone $orders;
-        //    $orders = $orders->filter(function ($order) {
-        //        if(count($order->items) >= 2) {
-        //            return true;
-        //        }
-        //
-        //        foreach ($order->items as $item) {
-        //            if($item->item_quantity >= 2) {
-        //                return true;
-        //            }
-        //        }
-        //
-        //        return false;
-        //    });
-
-
-
-        $before = [];
-        foreach ($orders as $order) {
-            $temp = (string) $order->short_order;
-            if (strlen($temp) > 5) {
-                $before[] = $order->short_order;
-            }
-        }
-
-        $filteredNum = $filteredNum - count($before);
-        $zakekeFilters = implode(",", $before);
-
-
-        $hasGraphic = [];
-        $skipped = [];
-        $willNotUpdate = [];
-
-
-        if ($type === "axe") {
-            $response = shell_exec("zakeke -user 65580 -key zccXIpB1k2J-quu2BBbwuNZVpvussjoWgTJpCS1lYyM. -data " . $zakekeFilters);
-        } else {
-            if ($type === "pws") {
-                $response = shell_exec("zakeke -user 44121 -key 2d91PpFG6QJ0NmXsImWCXSzAMPCiRwMuX6D7DUHSIcM. -data " . $zakekeFilters);
-            } else {
-                $response = null;
-            }
-        }
-
-        $data = @json_decode($response, true);
-
-
-        if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
-            Log::info("Data from zakeke returned null " . print_r(\request()->all(), true));
-            return response()->json(['Zakeke API seems to be down, try again later!']);
-        } else {
-            foreach ($orders as $order) {
-
-                foreach ($order->items as $index => $item) {
-
-                    // Make sure the batch is not empty
-                    if ($item->batch_number !== "") {
-
-                        if (!isset($data[$order->short_order])) {
-                            continue;
-                        }
-
-                        $options = json_decode($item->item_option, true);
-
-
-                        /*
-                         * Check to make sure the item graphic has not yet been updated
-                         */
-                        if (isset($options['Internal_Zakeke_Fetch'])) {
-                            //                        $date = Carbon::parse($options['Internal_Zakeke_Fetch']);
-                            //
-                            //                        if($date instanceof Carbon) {
-                            //                            if($date->day == Carbon::now()->day) {
-                            //                                $skipped[$order->id] = $options;
-                            //                               continue;
-                            //                            }
-                            //                        }
-
-                        }
-
-
-                        /*
-                         * Checks and fixes the index of the item if not exist
-                         */
-                        if ($index !== 0 && !isset($data[$order->short_order]['Links'][$index]['PDF']) or $data[$order->short_order]['Links'][$index]['PDF'] === "") {
-                            $index = 0;
-                        }
-
-                        /*
-                         * Ensure it exists, and the PNG link is not empty
-                         */
-
-                        if (isset($data[$order->short_order]['Links'][$index]['PDF']) && $data[$order->short_order]['Links'][$index]['PDF'] !== "") {
-
-
-                            $link = $data[$order->short_order]['Links'][$index]['PDF'];
-
-
-                            $linkEncoded = base64_encode($link);
-                            $batch = $item->batch_number;
-                            $id = $item->id;
-
-                            $hasGraphic[$order->id] = "https://order.monogramonline.com/orders/details/" . $order->id;
-
-
-                            if ($order->order_status !== 4) {
-                                $order->order_status = 4;
-                                $order->save();
-                            }
-
-                            $ctx = stream_context_create(array(
-                                'http' =>
-                                array(
-                                    'timeout' => 1200,  //1200 Seconds is 20 Minutes
-                                )
-                            ));
-
-                            $options['Custom_EPS_download_link'] = $link;
-                            $options['Internal_Zakeke_Fetch'] = Carbon::now()->toDateTimeString();
-
-                            $item->item_option = json_encode($options);
-                            $item->save();
-
-                            file_get_contents("http://order.monogramonline.com/lazy/link?link=$linkEncoded&batch_number=$batch&item_id=$id&updated_by=Cron", false, $ctx);
-                        }
-                    }
-                }
-                // sleep(1);
-            }
-        }
-
-
-        Log::info("---------------------------------------");
-        Log::info("          ZAKEKE MASS                  ");
-        Log::info("Successfully fetched " . count($hasGraphic) . " out of " . count($orders));
-        Log::info("Total Orders (did not match filter) " . abs($filteredNum));
-        Log::info("Total Graphic Updated" . count($hasGraphic));
-        Log::info("Orders Ids Updated" . print_r($hasGraphic, true));
-        Log::info("Orders that was in array " . implode(",", array_keys($before)));
-        Log::info("Skipped order (already updated) " . implode(",", array_keys($skipped)));
-        Log::info("---------------------------------------");
-
-        return response()->json(
-            [
-                "Status" => true,
-                "Message" => "Successfully fetched " . count($hasGraphic) . " out of " . count($orders),
-                "Total Orders (did not match filter)" => abs($filteredNum),
-                "Total Graphic Updated" => count($hasGraphic),
-                "Orders that was in array" => implode(",", array_values($before)),
-                "Orders Ids Updated" => implode(",", array_keys($hasGraphic)),
-                "Data" => $hasGraphic,
-                "Skipped order (already updated)" => $skipped,
-                "Will not update" => $willNotUpdate
-            ]
-        );
-    }
-
     public function require_all_files()
     {
         require("/var/www/order.monogramonline.com/library/LaravelShipStation/ShipStation.php");
@@ -581,12 +333,184 @@ class ZakekeController extends Controller
         // dd($response);
     }
 
+    /*
+     * This is being used by the cron job, to automatically
+     * fetch the graphics for PWS & Axe n Co
+     */
+    public function fetchAll(string $type, GraphicsController $graphicsController)
+    {
+//
+//        if (!Cache::get("ZAKEKE_" . strtoupper($type))) {
+//
+//            Log::info("Zakeke Status was off for  " . print_r(\request()->all(), true));
+//
+//            dd(
+//                [
+//                    "Status" => true,
+//                    "Message" => "The cronjob has been turned off, cannot fetch"
+//                ]
+//            );
+//        }
+
+        /*
+         * Turned on, can now continue
+         */
+
+        if(strtolower($type) == "axe") {
+            $orders = Order::with("items")
+                ->where('is_deleted', '0')
+                ->storeId("axe-co")
+                ->whereIn("order_status", [23]) //23 = other hold, 4 = to be processed
+//                ->where('short_order', '2883133630')
+                ->get();
+        } else {
+            if(\request()->has("switch_store")) {
+                $orders = Order::with("items")
+                    ->where('is_deleted', '0')
+                    ->storeId("axe-co")
+                    ->whereIn("order_status", [23]) //23 = other hold, 4 = to be processed
+                    ->get();
+            } else {
+                $orders = Order::with("items")
+                    ->where('is_deleted', '0')
+                    ->storeId("Etsy")
+                    ->whereIn("order_status", [23, 4])
+                    ->get();
+            }
+        }
+
+        $filteredNum = count($orders);
+
+        $before = [];
+        foreach ($orders as $order) {
+            $temp = (string)$order->short_order;
+            if(strlen($temp) > 5) {
+                $before[] = $order->short_order;
+            }
+        }
+
+        $filteredNum = $filteredNum - count($before);
+        $zakekeFilters = implode(",", $before);
+
+        $hasGraphic = [];
+        $skipped = [];
+        $willNotUpdate = [];
+
+
+        if($type === "axe") {
+            $response = shell_exec("zakeke -user 65580 -key zccXIpB1k2J-quu2BBbwuNZVpvussjoWgTJpCS1lYyM. -data " . $zakekeFilters);
+        } else {
+            if($type === "pws") {
+                $response = shell_exec("zakeke -user 44121 -key 2d91PpFG6QJ0NmXsImWCXSzAMPCiRwMuX6D7DUHSIcM. -data " . $zakekeFilters);
+            } else {
+                $response = null;
+            }
+        }
+        $data = @json_decode($response, true);
+
+
+        $pdfUrlWithOrderNo = [];
+        foreach ($data as $shoerOrderNo => $links) {
+            set_time_limit(0);
+            foreach ($links['Links'] as $lineNo => $filesWithUrl) {
+                foreach ($filesWithUrl as $fileFormet => $fileUrl) {
+                    if ($fileFormet == 'ZIP' && $fileUrl) {
+                        $pdfUrlWithOrderNo[$shoerOrderNo][$lineNo] = $this->_processZakekeZip($fileUrl);
+//                        $pdfUrlWithOrderNo[$shoerOrderNo][$lineNo] = "url ".$lineNo;
+                        sleep(30);
+                    }
+                }
+            }
+        }
+
+
+        if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
+            Log::info("Data from zakeke returned null " . print_r(\request()->all(), true));
+            return response()->json(['Zakeke API seems to be down, try again later!']);
+        } else {
+            foreach ($orders as $order) {
+                foreach ($order->items as $index => $item) {
+                    // Make sure the batch is not empty
+                    if($item->batch_number !== "") {
+
+                        if(!isset($pdfUrlWithOrderNo[$order->short_order][$index])) {
+                            continue;
+                        } else {
+                            if(!$pdfUrlWithOrderNo[$order->short_order][$index]) {
+                                $this->addOrderNote($item);
+                                continue;
+                            }
+                            $link = $pdfUrlWithOrderNo[$order->short_order][$index];
+                        }
+                        $options = json_decode($item->item_option, true);
+
+                        $hasGraphic[$order->id] = "https://dev.monogramonline.com/orders/details/" . $order->id;
+
+                        //convert pdf to jpg from $pdfUrlWithOrderNo[$shoerOrderNo][$lineNo]
+
+                        $options['Custom_EPS_download_link'] = $link;
+                        $options['Internal_Zakeke_Fetch'] = Carbon::now()->toDateTimeString();
+//                        dd($options);
+                        $item->item_option = json_encode($options);
+                        $item->save();
+
+                        // Create a new request with parameters
+                        $newRequest = [
+                            'batch_number' => $item->batch_number,
+                            'item_id' => $item->id,
+                            'short_order' => $order->short_order,
+                            'fetch_link_from_zakeke_cli' => true,
+                            'item_index' => $index . '' . isset($item->item_option['PWS Zakeke']),
+                        ];
+
+                        $request = Request::create('/', 'POST');
+                        $request->replace($newRequest);
+
+                        $graphicsController->uploadFileUsingLink($request, true);
+
+
+                        if($order->order_status !== 4) {
+                            $order->order_status = 4;
+                            $order->save();
+                        }
+                    }
+                }
+                // sleep(1);
+            }
+        }
+
+
+        Log::info("---------------------------------------");
+        Log::info("          ZAKEKE MASS                  ");
+        Log::info("Successfully fetched " . count($hasGraphic) . " out of " . count($orders));
+        Log::info("Total Orders (did not match filter) " . abs($filteredNum));
+        Log::info("Total Graphic Updated" . count($hasGraphic));
+        Log::info("Orders Ids Updated" . print_r($hasGraphic, true));
+        Log::info("Orders that was in array " . implode(",", array_keys($before)));
+        Log::info("Skipped order (already updated) " . implode(",", array_keys($skipped)));
+        Log::info("---------------------------------------");
+
+
+        return response()->json(
+            [
+                "Status" => true,
+                "Message" => "Successfully fetched " . count($hasGraphic) . " out of " . count($orders),
+                "Total Orders (did not match filter)" => abs($filteredNum),
+                "Total Graphic Updated" => count($hasGraphic),
+                "Orders that was in array" => implode(",", array_values($before)),
+                "Orders Ids Updated" => implode(",", array_keys($hasGraphic)),
+                "Data" => $hasGraphic,
+                "Skipped order (already updated)" => $skipped,
+                "Will not update" => $willNotUpdate
+            ]
+        );
+    }
     public function shipStationCheckOrder()
     {
 
         $data = ZakekeController::getShipStationOrders();
 
-        if ($data !== null && isset($data['orders'])) {
+        if($data !== null && isset($data['orders'])) {
             $csvData = [];
             $line = [
                 'order',
@@ -619,7 +543,6 @@ class ZakekeController extends Controller
              */
 
 
-
             foreach ($data['orders'] as $order) {
 
                 // For testing only
@@ -630,12 +553,14 @@ class ZakekeController extends Controller
                     /*
                      * Weird bug with ship station, inserts blank line items
                      */
-                    if ($item['sku'] === null) continue;
+                    if($item['sku'] === null) {
+                        continue;
+                    }
 
                     $zipcode = $order['shipTo']['postalCode'];
 
 
-                    if (stripos($zipcode, "-") !== false) {
+                    if(stripos($zipcode, "-") !== false) {
                         $zipcode = explode("-", $zipcode)[0];
                     }
 
@@ -646,19 +571,19 @@ class ZakekeController extends Controller
 
                     $price = $itemInfo['cost'];
 
-                    if (!$price || $price == 0) {
+                    if(!$price || $price == 0) {
                         $price = $item['price'] ?? 0;
                     }
                     $shipDate = Dropship::getShipDateFromStarting(Carbon::parse($order['createDate']))->toDateTimeString();
 
                     $status = false;
                     foreach ($order['tagIds'] as $id) {
-                        if ($id == '64962') {
+                        if($id == '64962') {
                             $status = true;
                         }
                     }
 
-                    if ((bool) $status === true) {
+                    if((bool)$status === true) {
                         $line = [
                             $order['orderNumber'],
                             $order['shipTo']['name'],
@@ -666,7 +591,7 @@ class ZakekeController extends Controller
                             $order['shipTo']['street2'],
                             $order['shipTo']['city'],
                             $order['shipTo']['state'],
-                            (string) $zipcode,
+                            (string)$zipcode,
                             $order['shipTo']['country'],
                             $order['shipTo']['phone'] ?? "",
                             "", // $order['customerNotes'] ?? "", // he (Sholomi said remove it
@@ -679,7 +604,7 @@ class ZakekeController extends Controller
                             $item['imageUrl'],
                             $order['serviceCode'],
                             $shipDate,
-                            'true' // PWS ESTY
+                            'true'// PWS ESTY
                         ];
                     } else {
                         $line = [
@@ -689,7 +614,7 @@ class ZakekeController extends Controller
                             $order['shipTo']['street2'],
                             $order['shipTo']['city'],
                             $order['shipTo']['state'],
-                            (string) $zipcode,
+                            (string)$zipcode,
                             $order['shipTo']['country'],
                             $order['shipTo']['phone'] ?? "",
                             "", // $order['customerNotes'] ?? "", // he (Sholomi said remove it
@@ -713,7 +638,7 @@ class ZakekeController extends Controller
                      */
 
 
-                    if ($item["quantity"] > 1) {
+                    if($item["quantity"] > 1) {
                         /*
                          * Duplicate line items until it maxes the quantity
                          */

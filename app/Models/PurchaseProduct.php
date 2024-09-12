@@ -10,13 +10,13 @@ class PurchaseProduct extends Model
 
     public function product_details()
     {
-        return $this->belongsTo('App\PurchasedInvProducts', 'product_id', 'id');
+        return $this->belongsTo(PurchasedInvProduct::class, 'product_id', 'id');
         // ->where('is_deleted', '0');
     }
 
     public function inventory()
     {
-        return $this->belongsTo('App\Inventory', 'stock_no', 'stock_no_unique')
+        return $this->belongsTo(Inventory::class, 'stock_no', 'stock_no_unique')
             ->where('is_deleted', '0');
     }
 

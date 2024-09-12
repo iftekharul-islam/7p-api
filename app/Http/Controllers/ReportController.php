@@ -544,4 +544,16 @@ class ReportController extends Controller
         }
         return $data;
     }
+
+    public function screenshot(Request $request)
+    {
+
+        if ($request->ip() == '96.57.0.130' || $request->ip() == '127.0.0.1') {
+
+            return $this->section(new Request)->render();
+        } else {
+
+            return view('errors.404');
+        }
+    }
 }

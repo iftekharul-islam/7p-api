@@ -155,6 +155,17 @@ class ShipStationImport
 
         foreach ($results as $line) {
 
+            logger('ship station order :'. $line[0] .' item log', [$line]);
+
+            if (empty($line[11])) {
+                continue;
+            }
+
+
+            if ($line[0] == 'order') {
+                continue;
+            }
+
             if ($line[0] == 'order') {
                 continue;
             }
@@ -386,7 +397,7 @@ class ShipStationImport
         $item->data_parse_type = 'CSV';
         $item->item_code = $sku;
         $item->item_id = $item_id;
-        $item->item_thumb = isset($data[15]) ? $data[15] : $thumb;
+        $item->item_thumb = isset($data[15]) ? $data[15] : $thumb ?? 'https://7papi.monogramonline.com/assets/images/no_image.jpg';
         $item->sure3d = isset($data[16]) ? $data[16] : null;
         $item->item_url = $url;
 
