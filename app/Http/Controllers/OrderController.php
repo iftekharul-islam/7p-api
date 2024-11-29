@@ -2589,10 +2589,10 @@ class OrderController extends Controller
     public function convertImage(Request $request)
     {
         // replace the child sku backslash
-        $product = $request->get('product');
+        $summary_msg_2 = $request->get('summary_msg_2');
         $child_sku = str_replace('/', '-', $request->child_sku);
         $imagePath = '/media/RDrive/archive/' . $request->get('img_name');
-        $savePath = '/media/RDrive/archive/'. $request->get('batch') .'-'. $child_sku . '-'.$product.'-QTY-'. $request->get('QTY') .'.jpg';
+        $savePath = '/media/RDrive/archive/'. $request->get('batch') .'-'. $child_sku . '-'.$summary_msg_2.'-QTY-'. $request->get('QTY') .'.jpg';
 
         if (!file_exists($imagePath)) {
             return [
