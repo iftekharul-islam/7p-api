@@ -2823,7 +2823,12 @@ class OrderController extends Controller
             $version = '2023-04';
 
             // OMS sync shopify app credentials
-            $AccessToken = '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';
+            $shop = "monogramonline";
+
+            // deprecated
+//            $AccessToken = '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';
+
+            $AccessToken = "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";
             $api_key = "8d31a3f2242c3b3d1370d6cba9442b47";
             $shared_secret = "92d88d03d53edc80847dab0fdf9ef46e";
 
