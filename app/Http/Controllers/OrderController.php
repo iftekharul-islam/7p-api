@@ -2823,8 +2823,12 @@ class OrderController extends Controller
 
             // OMS sync shopify app credentials
             $version = env('SHOPIFY_API_VERSION');
-            $shop = "monogramonline";
             $AccessToken = env('SHOPIFY_ACCESS_TOKEN');
+
+            logger('Shopify credentials from ENV', [$AccessToken, $version]);
+
+            $AccessToken = "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";
+            $version = "2025-01";
 
 
             // Set your API credentials
