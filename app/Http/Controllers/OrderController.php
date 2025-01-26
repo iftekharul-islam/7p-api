@@ -2820,22 +2820,11 @@ class OrderController extends Controller
 
             // Shopify store credentials
             $shopifyStoreUrl = 'https://monogramonline.myshopify.com';
-            $version = '2023-04';
 
             // OMS sync shopify app credentials
+            $version = env('SHOPIFY_API_VERSION');
             $shop = "monogramonline";
-
-            // deprecated
-//            $AccessToken = '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';
-
-            $AccessToken = "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";
-            $api_key = "8d31a3f2242c3b3d1370d6cba9442b47";
-            $shared_secret = "92d88d03d53edc80847dab0fdf9ef46e";
-
-            //TODO::NOTE monogramApp developer app shopify credentials
-//        $accessToken = '4530d72680c305704fc51f08c5f2683f';
-//        $api_key = 'cc0899e6b2c60c80c7e7135361f03f05';
-//        $api_secret = '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';
+            $AccessToken = env('SHOPIFY_ACCESS_TOKEN');
 
 
             // Set your API credentials
